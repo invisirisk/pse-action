@@ -45,7 +45,7 @@ async function run() {
       'builder': 'github',
       'build_id': process.env.GITHUB_RUN_ID,
       build_url: base + repo + "/actions/runs/" + process.env.GITHUB_RUN_ID + "/attempts/" + process.env.GITHUB_RUN_ATTEMPT,
-      project: base + repo,
+      project: process.env.GITHUB_REPOSITORY,
       builder_url: base,
       scm: 'git',
       scm_commit: process.env.GITHUB_SHA,
