@@ -2871,7 +2871,7 @@ async function run() {
       scm_origin: base + repo,
     });
     console.log(q.toString())
-    client.get('https://pse.invisirisk.com/start?' + q);
+    client.post('https://pse.invisirisk.com/start?' + q);
   } catch (error) {
     core.setFailed(error.message);
   }
