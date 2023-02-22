@@ -2855,7 +2855,9 @@ async function run() {
     client.get('https://pse.invisirisk.com/start?' + new URLSearchParams({
       'builder': 'github',
       'build_id': process.env.GITHUB_RUN_ID,
-    })
+    }), [], {
+      ignoreSslError: true,
+    }
     );
   } catch (error) {
     core.setFailed(error.message);
