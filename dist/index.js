@@ -2861,7 +2861,7 @@ async function run() {
     let q = new URLSearchParams({
       'builder': 'github',
       'build_id': process.env.GITHUB_RUN_ID,
-      build_url: base + repo + "/actions/runs/" + process.env.GITHUB_RUN_ID,
+      build_url: base + repo + "/actions/runs/" + process.env.GITHUB_RUN_ID + "/attempts/" + process.env.GITHUB_RUN_ATTEMPT,
       project: base + repo,
       builder_url: base,
       scm: 'git',
