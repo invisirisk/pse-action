@@ -1762,6 +1762,429 @@ exports.checkBypass = checkBypass;
 
 /***/ }),
 
+/***/ 884:
+/***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
+
+const { distros, get } = __nccwpck_require__(441)
+const { getPackageManager } = __nccwpck_require__(774)
+const { pathWinToLinux } = __nccwpck_require__(302)
+const name = () => get('NAME')
+const v = () => get('VERSION_ID')
+const isRoot = () => {
+  if (process.platform !== 'win32') {
+    return (process.getuid && process.getuid() === 0) || false
+  } else {
+    try {
+      __nccwpck_require__(129).execFileSync('net', ['session'], { stdio: 'ignore' })
+      return true
+    } catch (e) {
+      return false
+    }
+  }
+}
+const sudo = () => (isRoot() ? '' : 'sudo ')
+const getPM = (operation = 'install', dist, version) =>
+  getPackageManager(dist ? dist : name(), operation, version ? version : v())
+// Unique tags per distro and version
+// eg const ts = tags();
+// ['Alpine Linux3','Alpine Linux']
+function getKeyByValue(object, value) {
+  return Object.keys(object).find((key) => object[key] === value)
+}
+
+const tags = (prefix = '') => {
+  const nm = name()
+  const dv = v()
+  const k = getKeyByValue(distros, nm)
+
+  const tag2Number = parseInt(dv)
+  const tag3Number = parseInt(dv.replace('.', '').replace(',', ''))
+
+  return [
+    prefix + k,
+    prefix + k + tag2Number,
+    prefix + k + (tag2Number !== tag3Number ? tag3Number : dv.replace('.', '').replace(',', '')),
+  ]
+}
+
+const getTags = (distroName, version, prefix = '') => {
+  if (!version && distroName) {
+    throw new Error(`You need to pass both 'name' and 'version' or none.`)
+  }
+
+  if (!distroName) {
+    distroName = name()
+    version = v() //convert to number
+  }
+
+  version += ''
+
+  const k = getKeyByValue(distros, distroName)
+  const result = [
+    prefix + k,
+    prefix + k + parseInt(version),
+    prefix + k + parseInt(version.replace('.', '').replace(',', '')),
+  ]
+
+  const prop = (no) => ({
+    enumerable: false,
+    value: function () {
+      return this[no]
+    },
+  })
+
+  Object.defineProperties(result, {
+    first: prop(0),
+    second: prop(1),
+    third: prop(2),
+  })
+
+  return result
+}
+
+const replacePMByDistro = (cmd, distro, version) => {
+  const replacerInstall = getPM('install', distro, version)
+  const replacerUpdate = getPM('update', distro, version)
+  const replacerUninstall = getPM('uninstall', distro, version)
+  const replacerSearch = getPM('search', distro, version)
+  if (!cmd.replace) {
+    console.error(`@nexssp/os: There was an error. command should be string, but received: `, cmd)
+    process.exitCode = 1
+  } else {
+    return cmd
+      .replace(
+        new RegExp(
+          '(?:sudo?:(.*))?(apt -y install|apt-get -y install|apt-get install -y|apt install -y|apt install|apt-get install)',
+          'gs'
+        ),
+        replacerInstall
+      )
+      .replace(
+        new RegExp(
+          '(?:sudo?:(.*))?(apt -y update|apt-get -y update|apt-get update -y|apt update -y|apt update|apt-get update)',
+          'gs'
+        ),
+        replacerUpdate
+      )
+      .replace(
+        new RegExp(
+          '(?:sudo?:(.*))?(apt -y remove|apt-get -y remove|apt-get remove -y|apt remove -y|apt remove|apt-get remove)',
+          'gs'
+        ),
+        replacerUninstall
+      )
+      .replace(
+        new RegExp(
+          '(?:sudo?:(.*))?(apt -y search|apt-get -y search|apt-get search -y|apt search -y|apt search|apt-get search)',
+          'gs'
+        ),
+        replacerSearch
+      )
+  }
+}
+
+const getShell = (distro) => {
+  if (!distro) {
+    if (process.platform === 'freebsd') return '/bin/csh'
+    if (process.platform === 'darwin') return '/bin/zsh'
+    if (process.platform === 'win32') return true
+    distro = name()
+  }
+
+  switch (distro) {
+    case distros.ALPINE:
+    case distros.AMAZON_AMI:
+      return '/bin/sh'
+    case distros.WINDOWS:
+      return true
+    case distros.MACOS:
+      return '/bin/zsh'
+    default:
+      return '/bin/bash'
+  }
+}
+
+module.exports = {
+  isRoot,
+  sudo,
+  name,
+  v,
+  distros,
+  get,
+  getPM,
+  tags,
+  getTags,
+  replacePMByDistro,
+  getShell,
+  pathWinToLinux,
+}
+
+
+/***/ }),
+
+/***/ 441:
+/***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
+
+const cache = {}
+
+// Later implement async function
+// const osRelease = async (item, callback) => {
+//   if (cache[item]) {
+//     return process.nextTick(() => callback(null, cache[item]));
+//   }
+//   const { exec } = require('child_process');
+//   const results = await exec('cat /etc/*release').toString().trim();
+//   cache[item] = fileContent;
+//   return results;
+// };
+
+const osReleaseSync = () => {
+  const { execSync } = __nccwpck_require__(129)
+  if (process.platform === 'freebsd') {
+    return execSync('freebsd-version').toString().trim()
+  } else if (process.platform === 'darwin') {
+    return execSync('sw_vers').toString().trim()
+  } else if (process.platform !== 'win32') {
+    return execSync('cat /etc/*release').toString().trim()
+  }
+}
+
+module.exports.get = (item) => {
+  const platform = process.platform
+  if (platform === 'win32') {
+    const data = {
+      NAME: 'Windows',
+      VERSION_ID: __nccwpck_require__(87).release(),
+    }
+    return item ? data[item] : data
+  } else if (platform === 'freebsd') {
+    const freeBSDData = osReleaseSync()
+    const Version_ID = freeBSDData.match(/\d*.\d*/)[0]
+    const data = {
+      ID: 'freebsd',
+      NAME: 'FreeBSD',
+      VERSION: freeBSDData,
+      VERSION_ID: Version_ID,
+      PRETTY_NAME: `FreeBSD ${Version_ID}`,
+      HOME_URL: 'https://freebsd.org/',
+      BUG_REPORT_URL: 'https://bugs.freebsd.org/bugzilla/',
+    }
+    return item ? data[item] : data
+  } else {
+    const releaseData = osReleaseSync()
+
+    if (releaseData) {
+      const splitted = releaseData.split(/\r?\n/)
+      const parsed = splitted
+        .map((e) => {
+          var s = e.split(process.platform !== 'darwin' ? '=' : ':')
+          return { key: [s[0]], value: s[1].trim ? s[1].trim() : s[1] }
+        })
+        .reduce(
+          (acc, e) => ({
+            ...acc,
+            [e.key]: e.value && e.value.replace(/(^")|("$)/g, ''),
+          }),
+          {}
+        )
+      // GENTOO does not have VERSION_ID, we parse data to get it.
+      if (!parsed.VERSION_ID && releaseData.indexOf('Gentoo Base System release') > -1) {
+        parsed.VERSION_ID = splitted[0].match(/\d*.\d*$/)[0]
+      }
+
+      if (process.platform === 'darwin') {
+        // to keep consistency
+        parsed['NAME'] = parsed['ProductName']
+        parsed['VERSION'] = parsed['ProductVersion']
+        parsed['VERSION_ID'] = parsed['BuildVersion']
+      }
+
+      if (item) {
+        return parsed[item]
+      }
+      return parsed
+    }
+  }
+}
+
+module.exports.distros = {
+  ALPINE: 'Alpine Linux',
+  AMAZON: 'Amazon Linux',
+  AMAZON_AMI: 'Amazon Linux AMI',
+  ARCH: 'Arch Linux',
+  CENTOS: 'CentOS Linux',
+  DEBIAN: 'Debian GNU/Linux',
+  FREEBSD: 'FreeBSD',
+  FEDORA: 'Fedora',
+  GENTOO: 'Gentoo',
+  KALI: 'Kali GNU/Linux',
+  MINT: 'Linux Mint',
+  NIXOS: 'NixOS',
+  ORACLE: 'Oracle Linux Server',
+  RHEL: 'RHEL Linux',
+  SUSE_LEAP: 'openSUSE Leap',
+  SUSE_TUMBLEWEED: 'openSUSE Tumbleweed',
+  UBUNTU: 'Ubuntu',
+  WINDOWS: 'Windows',
+  MACOS: 'macOS',
+  MACOSX: 'Mac OS X',
+}
+
+
+/***/ }),
+
+/***/ 774:
+/***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
+
+const { distros } = __nccwpck_require__(441)
+
+// Package managers for each OS
+const pms = {
+  APK: {
+    install: 'apk add',
+    update: 'apk update',
+    uninstall: 'apk del',
+    search: 'apk search',
+  },
+  APT: {
+    install: 'apt-get install -y',
+    update: 'apt-get update -y',
+    uninstall: 'apt-get remove -y',
+    search: 'apt-cache search',
+  },
+  DNF: {
+    install: 'dnf install -y',
+    update: 'dnf update -y',
+    uninstall: 'dnf remove -y',
+    search: 'dnf search',
+  },
+  EMERGE: {
+    install: 'emerge',
+    update: 'emerge --update --deep',
+    uninstall: 'emerge --deselect',
+    search: 'emerge --search',
+  },
+  MACOS: {
+    install: 'brew install',
+    update: 'brew install',
+    uninstall: 'brew uninstall',
+    search: 'brew search',
+  },
+  NIX: {
+    install: 'nix-shell -p',
+    update: 'nix-channel --update',
+    uninstall: 'nix-store --delete',
+    search: 'nix search',
+  },
+  PACMAN: {
+    install: 'pacman -S --noconfirm',
+    update: 'pacman -Syu --noconfirm',
+    uninstall: 'pacman -R --noconfirm',
+    search: 'pacman -Ss',
+  },
+  PKG: {
+    install: 'pkg install',
+    update: 'pkg update',
+    uninstall: 'pkg delete',
+    search: 'pkg search',
+  },
+  SCOOP: {
+    install: 'scoop install',
+    update: 'scoop update',
+    uninstall: 'scoop uninstall',
+    search: 'scoop search',
+  },
+  YUM: {
+    install: 'yum install -y',
+    update: 'yum update -y',
+    uninstall: 'yum remove -y',
+    search: 'yum search',
+  },
+  ZYPPER: {
+    install: 'zypper -n install',
+    update: 'zypper -n update',
+    uninstall: 'zypper -n remove',
+    search: 'zypper search', // or se
+  },
+}
+
+const getPackageManager = (distro, operation = 'install', version) => {
+  switch (distro) {
+    case distros.WINDOWS:
+      return pms.SCOOP[operation]
+    case distros.ORACLE:
+      if (version * 1 >= 8 || !version) {
+        // TODO: recognize the slim version
+        return pms.DNF[operation]
+      } else {
+        return pms.YUM[operation]
+      }
+    case distros.ALPINE:
+      return pms.APK[operation]
+    case distros.ARCH:
+      return pms.PACMAN[operation]
+    case distros.FEDORA:
+      if (version * 1 >= 22 || !version) {
+        return pms.DNF[operation]
+      } else {
+        return pms.YUM[operation]
+      }
+    case distros.AMAZON_AMI:
+    case distros.AMAZON:
+    case distros.CENTOS:
+    case distros.RHEL:
+      return pms.YUM[operation]
+    case distros.SUSE_LEAP:
+    case distros.SUSE_TUMBLEWEED:
+      return pms.ZYPPER[operation]
+    case distros.NIXOS:
+      return pms.NIX[operation]
+    case distros.GENTOO:
+      return pms.EMERGE[operation]
+    case distros.FREEBSD:
+      return pms.PKG[operation]
+    case distros.KALI:
+    case distros.UBUNTU:
+      return pms.APT[operation]
+    case distros.MACOS:
+    case distros.MACOSX:
+      return pms.MACOS[operation]
+    default:
+      return pms.APT[operation]
+  }
+}
+module.exports = { packageManagers: pms, getPackageManager }
+
+
+/***/ }),
+
+/***/ 302:
+/***/ ((module) => {
+
+module.exports.pathWinToLinux = (p) => {
+  if (win32IsAbsolute(p)) {
+    let r = p.replace(/([a-zA-Z])\:/, '/mnt/$1').replace(/\\/g, '/')
+    r = r.split('')
+    r[5] = r[5].toLowerCase()
+    r = r.join('')
+    return r
+  } else {
+    return `./${p.replace(/\\/g, '/')}`
+  }
+}
+// This part is based on the great NodeJS sources!
+function win32IsAbsolute(path) {
+  var splitDeviceRe = /^([a-zA-Z]:|[\\\/]{2}[^\\\/]+[\\\/]+[^\\\/]+)?([\\\/])?([\s\S]*?)$/
+  var result = splitDeviceRe.exec(path),
+    device = result[1] || '',
+    isUnc = !!device && device.charAt(1) !== ':'
+  // UNC paths are always absolute
+  return !!result[2] || isUnc
+}
+
+
+/***/ }),
+
 /***/ 294:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
@@ -2713,6 +3136,14 @@ module.exports = require("assert");
 
 /***/ }),
 
+/***/ 129:
+/***/ ((module) => {
+
+"use strict";
+module.exports = require("child_process");
+
+/***/ }),
+
 /***/ 417:
 /***/ ((module) => {
 
@@ -2836,6 +3267,7 @@ var __webpack_exports__ = {};
 (() => {
 const core = __nccwpck_require__(186);
 const wait = __nccwpck_require__(258);
+const os = __nccwpck_require__(884)
 
 
 // most @actions toolkit packages have async methods
@@ -2844,7 +3276,7 @@ async function run() {
     const ms = core.getInput('milliseconds');
     core.info(`Waiting ${ms} milliseconds ...`);
     core.info(JSON.stringify(process.env));
-
+    core.info("os", os.name());
     core.debug((new Date()).toTimeString()); // debug is only output if you set the secret `ACTIONS_RUNNER_DEBUG` to true
     await wait(parseInt(ms));
     core.info((new Date()).toTimeString());
