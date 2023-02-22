@@ -1,13 +1,9 @@
-name: 'Wait'
-description: 'Wait a designated number of milliseconds'
-inputs:
-  milliseconds:  # id of input
-    description: 'number of milliseconds to wait'
-    required: true
-    default: '1000'
+name: 'InvisiRisk - PSE Action'
+description: 'Runs InvisiRisk - PSE'
 outputs:
   time: # output will be available to future steps
     description: 'The current time after waiting'
 runs:
   using: 'node16'
   main: 'dist/index.js'
+  post: 'cleanup.js'
