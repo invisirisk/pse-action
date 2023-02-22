@@ -6,15 +6,12 @@ const os = require('@nexssp/os/legacy')
 // most @actions toolkit packages have async methods
 async function run() {
   try {
-    const ms = core.getInput('milliseconds');
-    core.info(`Waiting ${ms} milliseconds ...`);
-    core.info(JSON.stringify(process.env));
-    core.info("os", os.name());
-    core.debug((new Date()).toTimeString()); // debug is only output if you set the secret `ACTIONS_RUNNER_DEBUG` to true
-    await wait(parseInt(ms));
-    core.info((new Date()).toTimeString());
 
-    core.setOutput('time', new Date().toTimeString());
+    console.log('get("name"): ', os.get('NAME'))
+
+
+    core.info(JSON.stringify(process.env));
+
   } catch (error) {
     core.setFailed(error.message);
   }
