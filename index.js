@@ -35,14 +35,27 @@ async function run() {
     const payload = JSON.stringify(github.context.payload, undefined, 2)
     console.log(`The event payload: ${payload}`);
 
+    let base = process.env.GITHUB_SERVER_URL + "/";
+    let repo = process.env.GITHUB_REPOSITORY;
+
     core.info(JSON.stringify(process.env));
     client = new http.HttpClient("pse-action", [], { ignoreSslError: true });
     fs.writeFileSync("/etc/ssl/certs/pse.pem", cert);
-    client.get('https://pse.invisirisk.com/start?' + new URLSearchParams({
+
+    let q = new URLSearchParams({
       'builder': 'github',
       'build_id': process.env.GITHUB_RUN_ID,
-    })
-    );
+      build_url: base + repo + "/actions/runs/" + process.env.GITHUB_RUN_ID,
+      project: base + repo,
+      builder_url: base,
+      scm: 'git',
+      scm_commit: process.env.GITHUB_SHA,
+      //      scm_prev_commit = process,
+      scm_branch: process.env.GITHUB_REF_NAME,
+      scm_origin: base + repo,
+    });
+    console.log(q.toString())
+    client.get('https://pse.invisirisk.com/start?' + q);
   } catch (error) {
     core.setFailed(error.message);
   }
