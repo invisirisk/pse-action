@@ -9,7 +9,12 @@ async function run() {
   try {
     core.info("cleanup");
     core.info(JSON.stringify(process.env));
-    client = new http.HttpClient("pse-action", [], { ignoreSslError: true });
+    client = new http.HttpClient("pse-action", [], {
+      ignoreSslError: true,
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded'
+      }
+    });
     let base = process.env.GITHUB_SERVER_URL + "/";
     let repo = process.env.GITHUB_REPOSITORY;
 
@@ -17,11 +22,11 @@ async function run() {
       build_url: base + repo + "/actions/runs/" + process.env.GITHUB_RUN_ID + "/attempts/" + process.env.GITHUB_RUN_ATTEMPT,
       status: process.env.GITHUB_RUN_RESULT
     });
-    client.post('https://pse.invisirisk.com/end?' + q);
+    client.post('https://pse.invisirisk.com/end', q);
 
   } catch (error) {
     core.setFailed(error.message);
   }
-}
+} ''
 
 run();

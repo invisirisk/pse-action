@@ -2855,7 +2855,12 @@ async function run() {
     let repo = process.env.GITHUB_REPOSITORY;
 
     core.info(JSON.stringify(process.env));
-    client = new http.HttpClient("pse-action", [], { ignoreSslError: true });
+    client = new http.HttpClient("pse-action", [], {
+      ignoreSslError: true,
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded'
+      }
+    });
     fs.writeFileSync("/etc/ssl/certs/pse.pem", cert);
 
     let q = new URLSearchParams({
@@ -2871,7 +2876,7 @@ async function run() {
       scm_origin: base + repo,
     });
     console.log(q.toString())
-    client.post('https://pse.invisirisk.com/start?' + q);
+    client.post('https://pse.invisirisk.com/start', q);
   } catch (error) {
     core.setFailed(error.message);
   }
