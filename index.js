@@ -1,6 +1,5 @@
 const core = require('@actions/core');
 const http = require("@actions/http-client");
-const github = require("@actions/github");
 
 const fs = require('fs');
 
@@ -32,8 +31,6 @@ Jd7tk7uYPXXaxAnh4QauzlESQ80=
 // most @actions toolkit packages have async methods
 async function run() {
   try {
-    const payload = JSON.stringify(github.context.payload, undefined, 2)
-    console.log(`The event payload: ${payload}`);
 
     let base = process.env.GITHUB_SERVER_URL + "/";
     let repo = process.env.GITHUB_REPOSITORY;

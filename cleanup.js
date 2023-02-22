@@ -8,6 +8,8 @@ const fs = require('fs');
 async function run() {
   try {
     core.info("cleanup");
+    core.info(JSON.stringify(process.env));
+
   } catch (error) {
     core.setFailed(error.message);
   }

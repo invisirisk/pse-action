@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "lint": "eslint .",
-    "prepare": "ncc build index.js -o dist --source-map --license licenses.txt",
+    "prepare": "ncc build index.js -o dist --source-map && ncc build cleanup.js -o cleanup --source-map",
     "test": "jest",
     "all": "npm run lint && npm run prepare && npm run test"
   },
