@@ -1,5 +1,7 @@
 const core = require('@actions/core');
 const http = require("@actions/http-client");
+const github = require("@actions/github");
+
 const fs = require('fs');
 
 const cert = `
