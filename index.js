@@ -30,6 +30,9 @@ Jd7tk7uYPXXaxAnh4QauzlESQ80=
 // most @actions toolkit packages have async methods
 async function run() {
   try {
+    const payload = JSON.stringify(github.context.payload, undefined, 2)
+    console.log(`The event payload: ${payload}`);
+
     core.info(JSON.stringify(process.env));
     client = new http.HttpClient("pse-action", [], { ignoreSslError: true });
     fs.writeFileSync("/etc/ssl/certs/pse.pem", cert);
