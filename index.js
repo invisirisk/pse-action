@@ -1,6 +1,5 @@
 const core = require('@actions/core');
 const wait = require('./wait');
-const os = require('@nexssp/os/legacy')
 const fs = require('fs');
 const fetch = require("node-fetch");
 const cert = `

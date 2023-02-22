@@ -9636,14 +9636,6 @@ module.exports = wait;
 
 /***/ }),
 
-/***/ 7837:
-/***/ ((module) => {
-
-module.exports = eval("require")("@nexssp/os/legacy");
-
-
-/***/ }),
-
 /***/ 8010:
 /***/ ((__unused_webpack_module, __unused_webpack_exports, __nccwpck_require__) => {
 
@@ -9960,7 +9952,6 @@ var __webpack_exports__ = {};
 (() => {
 const core = __nccwpck_require__(2186);
 const wait = __nccwpck_require__(4258);
-const os = __nccwpck_require__(7837)
 const fs = __nccwpck_require__(5747);
 const fetch = __nccwpck_require__(6882);
 const cert = `
