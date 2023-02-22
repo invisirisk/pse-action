@@ -2833,12 +2833,11 @@ async function run() {
     let repo = process.env.GITHUB_REPOSITORY;
 
     let q = new URLSearchParams({
-      'builder': 'github',
-      'build_id': process.env.GITHUB_RUN_ID,
       build_url: base + repo + "/actions/runs/" + process.env.GITHUB_RUN_ID + "/attempts/" + process.env.GITHUB_RUN_ATTEMPT,
       status: process.env.GITHUB_RUN_RESULT
     });
     console.log(q.toString())
+    client.get('https://pse.invisirisk.com/end?' + q);
 
   } catch (error) {
     core.setFailed(error.message);
