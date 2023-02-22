@@ -1,9 +1,9 @@
-name: 'InvisiRisk - PSE Action'
-description: 'Runs InvisiRisk - PSE'
+name: "InvisiRisk - PSE Action"
+description: "Runs InvisiRisk - PSE"
 outputs:
   time: # output will be available to future steps
-    description: 'The current time after waiting'
+    description: "The current time after waiting"
 runs:
-  using: 'node16'
-  main: 'dist/index.js'
-  post: 'cleanup.js'
+  using: "node16"
+  main: "dist/index.js"
+#  post: 'cleanup.js'
