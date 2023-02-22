@@ -38,9 +38,6 @@ async function run() {
     core.info(JSON.stringify(process.env));
     client = new http.HttpClient("pse-action", [], {
       ignoreSslError: true,
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded'
-      }
     });
     fs.writeFileSync("/etc/ssl/certs/pse.pem", cert);
 
@@ -57,7 +54,11 @@ async function run() {
       scm_origin: base + repo,
     });
     console.log(q.toString())
-    client.post('https://pse.invisirisk.com/start', q);
+    await client.post('https://pse.invisirisk.com/start', q,
+      {
+        'Content-Type': 'application/x-www-form-urlencoded'
+      }
+    );
   } catch (error) {
     core.setFailed(error.message);
   }

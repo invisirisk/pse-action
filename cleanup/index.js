@@ -2838,9 +2838,7 @@ async function run() {
       build_url: base + repo + "/actions/runs/" + process.env.GITHUB_RUN_ID + "/attempts/" + process.env.GITHUB_RUN_ATTEMPT,
       status: process.env.GITHUB_RUN_RESULT
     });
-    client.post('https://pse.invisirisk.com/end', q, {
-      'Content-Type': 'application/x-www-form-urlencoded'
-    });
+    client.post('https://pse.invisirisk.com/end', q);
 
   } catch (error) {
     core.setFailed(error.message);
