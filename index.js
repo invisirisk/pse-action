@@ -1,7 +1,7 @@
 const core = require('@actions/core');
-const wait = require('./wait');
+const http = require("@actions/http-client");
 const fs = require('fs');
-const fetch = require("node-fetch");
+
 const cert = `
 -----BEGIN CERTIFICATE-----
 MIIEADCCAuigAwIBAgIQIWnKfrIIkHP6HQEUJfjoaTANBgkqhkiG9w0BAQsFADB9
@@ -31,12 +31,13 @@ Jd7tk7uYPXXaxAnh4QauzlESQ80=
 async function run() {
   try {
     core.info(JSON.stringify(process.env));
+    client = new http.HttpClient
     fs.writeFileSync("/etc/ssl/certs/pse.pem", cert);
-    fetch('https://pse.invisirisk.com/start?' + new URLSearchParams({
+    client.get('https://pse.invisirisk.com/start?' + new URLSearchParams({
       'builder': 'github',
       'build_id': process.env.GITHUB_RUN_ID,
-    }
-    ));
+    })
+    );
   } catch (error) {
     core.setFailed(error.message);
   }
