@@ -54,11 +54,7 @@ async function run() {
       scm_origin: base + repo,
     });
     console.log(q.toString())
-    await client.post('https://pse.invisirisk.com/start', q,
-      {
-        'Content-Type': 'application/x-www-form-urlencoded'
-      }
-    );
+    await client.post('https://pse.invisirisk.com/start', q.toString());
   } catch (error) {
     core.setFailed(error.message);
   }
