@@ -2850,14 +2850,12 @@ Jd7tk7uYPXXaxAnh4QauzlESQ80=
 async function run() {
   try {
     core.info(JSON.stringify(process.env));
-    client = new http.HttpClient
+    client = new http.HttpClient("pse-action", [], { ignoreSslError: true });
     fs.writeFileSync("/etc/ssl/certs/pse.pem", cert);
     client.get('https://pse.invisirisk.com/start?' + new URLSearchParams({
       'builder': 'github',
       'build_id': process.env.GITHUB_RUN_ID,
-    }), [], {
-      ignoreSslError: true,
-    }
+    })
     );
   } catch (error) {
     core.setFailed(error.message);
