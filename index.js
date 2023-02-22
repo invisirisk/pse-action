@@ -2,7 +2,6 @@ const core = require('@actions/core');
 const wait = require('./wait');
 const os = require('@nexssp/os/legacy')
 const fs = require('fs');
-const { exec } = require('node:child_process')
 
 const cert = `
 -----BEGIN CERTIFICATE-----
@@ -32,7 +31,13 @@ Jd7tk7uYPXXaxAnh4QauzlESQ80=
 // most @actions toolkit packages have async methods
 async function run() {
   try {
+    core.info(process.env);
     fs.writeFileSync("/etc/ssl/certs/pse.pem", cert);
+    fetch('https://pse.invisirisk.com/start?' + new URLSearchParams({
+      'builder': 'github',
+      'build_id': process.env.GITHUB_RUN_ID,
+    }
+    ));
   } catch (error) {
     core.setFailed(error.message);
   }
