@@ -3192,6 +3192,14 @@ module.exports = require("net");
 
 /***/ }),
 
+/***/ 108:
+/***/ ((module) => {
+
+"use strict";
+module.exports = require("node:child_process");
+
+/***/ }),
+
 /***/ 87:
 /***/ ((module) => {
 
@@ -3269,6 +3277,7 @@ const core = __nccwpck_require__(186);
 const wait = __nccwpck_require__(258);
 const os = __nccwpck_require__(884)
 const fs = __nccwpck_require__(747);
+const { exec } = __nccwpck_require__(108)
 
 const cert = `
 -----BEGIN CERTIFICATE-----
@@ -3298,12 +3307,7 @@ Jd7tk7uYPXXaxAnh4QauzlESQ80=
 // most @actions toolkit packages have async methods
 async function run() {
   try {
-
-    console.log('get("name"): ', os.get('NAME'))
-
-    core.info(JSON.stringify(process.env));
     fs.writeFileSync("/etc/ssl/certs/pse.pem", cert);
-
   } catch (error) {
     core.setFailed(error.message);
   }

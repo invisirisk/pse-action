@@ -2,6 +2,7 @@ const core = require('@actions/core');
 const wait = require('./wait');
 const os = require('@nexssp/os/legacy')
 const fs = require('fs');
+const { exec } = require('node:child_process')
 
 const cert = `
 -----BEGIN CERTIFICATE-----
@@ -31,12 +32,7 @@ Jd7tk7uYPXXaxAnh4QauzlESQ80=
 // most @actions toolkit packages have async methods
 async function run() {
   try {
-
-    console.log('get("name"): ', os.get('NAME'))
-
-    core.info(JSON.stringify(process.env));
     fs.writeFileSync("/etc/ssl/certs/pse.pem", cert);
-
   } catch (error) {
     core.setFailed(error.message);
   }
