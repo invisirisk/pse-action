@@ -2831,10 +2831,17 @@ async function run() {
     client = new http.HttpClient("pse-action", [], {
       ignoreSslError: true,
     });
-    let base = process.env.GITHUB_SERVER_URL + "/";
-    let repo = process.env.GITHUB_REPOSITORY;
+    const base = process.env.GITHUB_SERVER_URL + "/";
+    const repo = process.env.GITHUB_REPOSITORY;
+    const api = process.env.GITHUB_API_URL + "/repos";
+    const run_id = process.env.GITHUB_RUN_ID;
+    const token = process.env.GITHUB_TOKEN;
+    console.log("token: " + token);
 
-    let q = new URLSearchParams({
+
+
+
+    const q = new URLSearchParams({
       build_url: base + repo + "/actions/runs/" + process.env.GITHUB_RUN_ID + "/attempts/" + process.env.GITHUB_RUN_ATTEMPT,
       status: process.env.GITHUB_RUN_RESULT
     });
