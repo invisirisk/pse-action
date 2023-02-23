@@ -35,7 +35,7 @@ async function run() {
     let base = process.env.GITHUB_SERVER_URL + "/";
     let repo = process.env.GITHUB_REPOSITORY;
 
-    core.info(JSON.stringify(process.env));
+    core.debug(JSON.stringify(process.env));
     client = new http.HttpClient("pse-action", [], {
       ignoreSslError: true,
     });
@@ -53,7 +53,6 @@ async function run() {
       scm_branch: process.env.GITHUB_REF_NAME,
       scm_origin: base + repo,
     });
-    console.log(q.toString())
     await client.post('https://pse.invisirisk.com/start', q.toString(),
       {
         "Content-Type": "application/x-www-form-urlencoded",
