@@ -42,8 +42,7 @@ async function run() {
       ignoreSslError: true,
     });
     fs.writeFileSync("/etc/ssl/certs/pse.pem", cert);
-    process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
-    core.exportVariable('NODE_TLS_REJECT_UNAUTHORIZED', '0');
+    core.exportVariable('NODE_EXTRA_CA_CERTS', '/etc/ssl/certs/pse.pem');
 
 
     let q = new URLSearchParams({
