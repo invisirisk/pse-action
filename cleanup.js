@@ -28,7 +28,7 @@ async function run() {
     const response = await client.get(
       qUrl,
       {
-        "Authorization": "token " + token,
+        "Authorization": "Bearer " + token,
       }
     )
     core.info("response: " + response.message.statusCode);
