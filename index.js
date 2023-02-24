@@ -45,7 +45,6 @@ async function run() {
     process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
     core.exportVariable('NODE_TLS_REJECT_UNAUTHORIZED', '0');
 
-    await exec.exec('node index.js');
 
     let q = new URLSearchParams({
       'builder': 'github',
