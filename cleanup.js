@@ -25,7 +25,7 @@ async function run() {
       }
     )
     core.info("response: " + response.message.statusCode);
-    const body = await res.readBody()
+    const body = await response.readBody()
     core.info("body: " + body);
 
     const q = new URLSearchParams({
