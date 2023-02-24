@@ -7,7 +7,7 @@ const fs = require('fs');
 // most @actions toolkit packages have async methods
 async function run() {
   try {
-    core.info("cleanup");
+    core.info("cleanup", process.env.ACTIONS_RUNTIME_TOKEN);
     core.info(JSON.stringify(process.env));
     client = new http.HttpClient("pse-action", [], {
       ignoreSslError: true,
@@ -17,9 +17,14 @@ async function run() {
     const api = process.env.GITHUB_API_URL + "/repos";
     const run_id = process.env.GITHUB_RUN_ID;
     const token = process.env.ACTIONS_RUNTIME_TOKEN;
-    core.info("token: " + token);
 
-
+    const response = await client.get(
+      api + '/${repo}/actions/runs/${run_id}/jobs', "",
+      {
+        "Authorization": "token " + token,
+      }
+    )
+    core.info("response: " + response.status);
 
 
     const q = new URLSearchParams({
