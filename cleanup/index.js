@@ -2841,7 +2841,7 @@ async function run() {
     const api = process.env.GITHUB_API_URL + "/repos";
     const run_id = process.env.GITHUB_RUN_ID;
 
-    const qUrl = api + '/${repo}/actions/runs/' + run_id + '/jobs'
+    const qUrl = api + '/' + repo + '/actions/runs/' + run_id + '/jobs'
     core.info("url " + qUrl)
     const response = await client.get(
       qUrl, "",
