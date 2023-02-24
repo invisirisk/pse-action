@@ -1,6 +1,5 @@
 const core = require('@actions/core');
 const http = require("@actions/http-client");
-const github = require("@actions/");
 
 
 const fs = require('fs');

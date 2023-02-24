@@ -2688,14 +2688,6 @@ exports.default = _default;
 
 /***/ }),
 
-/***/ 475:
-/***/ ((module) => {
-
-module.exports = eval("require")("@actions/");
-
-
-/***/ }),
-
 /***/ 357:
 /***/ ((module) => {
 
@@ -2827,7 +2819,6 @@ var __webpack_exports__ = {};
 (() => {
 const core = __nccwpck_require__(186);
 const http = __nccwpck_require__(255);
-const github = __nccwpck_require__(475);
 
 
 const fs = __nccwpck_require__(747);
