@@ -1,6 +1,6 @@
 const core = require('@actions/core');
 const http = require("@actions/http-client");
-const github = require("@actions/github");
+const github = require("@actions/");
 
 
 const fs = require('fs');
@@ -14,30 +14,12 @@ async function run() {
     }
 
     core.info("running cleanup ");
-    core.info(JSON.stringify(process.env));
     client = new http.HttpClient("pse-action", [], {
       ignoreSslError: true,
     });
     const base = process.env.GITHUB_SERVER_URL + "/";
     const repo = process.env.GITHUB_REPOSITORY;
-    const api = process.env.GITHUB_API_URL + "/repos";
-    const run_id = process.env.GITHUB_RUN_ID;
 
-    const octokit = github.getOctokit(token)
-
-    const qUrl = api + '/' + repo + '/actions/runs/' + run_id + '/jobs'
-    const oresp = await octokit.request('GET ' + '/' + repo + '/actions/runs/' + run_id + '/jobs')
-    core.info("oresp: " + oresp.status);
-    core.info("url " + qUrl)
-    const response = await client.get(
-      qUrl,
-      {
-        "Authorization": "Bearer " + token,
-      }
-    )
-    core.info("response: " + response.message.statusCode);
-    const body = await response.readBody()
-    core.info("body: " + body);
 
     const q = new URLSearchParams({
       build_url: base + repo + "/actions/runs/" + process.env.GITHUB_RUN_ID + "/attempts/" + process.env.GITHUB_RUN_ATTEMPT,
