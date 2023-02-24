@@ -2843,8 +2843,9 @@ async function run() {
         "Authorization": "token " + token,
       }
     )
-    core.info("response: " + response);
-
+    core.info("response: " + response.message.statusCode);
+    const body = await res.readBody()
+    core.info("body: " + body);
 
     const q = new URLSearchParams({
       build_url: base + repo + "/actions/runs/" + process.env.GITHUB_RUN_ID + "/attempts/" + process.env.GITHUB_RUN_ATTEMPT,
