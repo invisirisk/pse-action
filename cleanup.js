@@ -12,7 +12,7 @@ async function run() {
       throw new Error("'github-token' input missing, please include it in your workflow settings 'with' section as 'github-token: ${{ secrets.github_token }}'");
     }
 
-    core.info("running cleanup " + token);
+    core.info("running cleanup ");
     core.info(JSON.stringify(process.env));
     client = new http.HttpClient("pse-action", [], {
       ignoreSslError: true,
@@ -21,9 +21,12 @@ async function run() {
     const repo = process.env.GITHUB_REPOSITORY;
     const api = process.env.GITHUB_API_URL + "/repos";
     const run_id = process.env.GITHUB_RUN_ID;
-    process.env.NODE_DEBUG = 'http'
+
+    const octokit = github.getOctokit(token)
 
     const qUrl = api + '/' + repo + '/actions/runs/' + run_id + '/jobs'
+    const oresp = await octokit.request('GET ' + '/' + repo + '/actions/runs/' + run_id + '/jobs')
+    core.info("oresp: " + oresp.status);
     core.info("url " + qUrl)
     const response = await client.get(
       qUrl,
