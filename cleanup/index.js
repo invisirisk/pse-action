@@ -2840,9 +2840,11 @@ async function run() {
     const repo = process.env.GITHUB_REPOSITORY;
     const api = process.env.GITHUB_API_URL + "/repos";
     const run_id = process.env.GITHUB_RUN_ID;
-    core.info("url " + api + '/${repo}/actions/runs/${run_id}/jobs')
+
+    const qUrl = "url " + api + '/${repo}/actions/runs/' + run_id + '/jobs'
+    core.info("url " + qUrl)
     const response = await client.get(
-      api + '/${repo}/actions/runs/${run_id}/jobs', "",
+      qUrl, "",
       {
         "Authorization": "token " + token,
       }
