@@ -21,6 +21,7 @@ async function run() {
     const repo = process.env.GITHUB_REPOSITORY;
     const api = process.env.GITHUB_API_URL + "/repos";
     const run_id = process.env.GITHUB_RUN_ID;
+    process.env.NODE_DEBUG = 'http'
 
     const qUrl = api + '/' + repo + '/actions/runs/' + run_id + '/jobs'
     core.info("url " + qUrl)
