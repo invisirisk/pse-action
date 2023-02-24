@@ -7,10 +7,6 @@ const fs = require('fs');
 // most @actions toolkit packages have async methods
 async function run() {
   try {
-    const token = core.getInput('github-token');
-    if (!token || token == '') {
-      throw new Error("'github-token' input missing, please include it in your workflow settings 'with' section as 'github-token: ${{ secrets.github_token }}'");
-    }
 
     core.info("running cleanup ");
     client = new http.HttpClient("pse-action", [], {
