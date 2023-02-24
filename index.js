@@ -42,8 +42,8 @@ async function run() {
       ignoreSslError: true,
     });
     fs.writeFileSync("/etc/ssl/certs/pse.pem", cert);
-
-    exec.exec("npm config -g set cafile /etc/ssl/certs/pse.pem");
+    process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
+    core.exportVariable('NODE_TLS_REJECT_UNAUTHORIZED', '0');
 
     await exec.exec('node index.js');
 
