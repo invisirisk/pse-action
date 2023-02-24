@@ -2844,7 +2844,7 @@ async function run() {
     const qUrl = api + '/' + repo + '/actions/runs/' + run_id + '/jobs'
     core.info("url " + qUrl)
     const response = await client.get(
-      qUrl, "",
+      qUrl,
       {
         "Authorization": "token " + token,
       }
