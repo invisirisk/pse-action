@@ -2826,7 +2826,7 @@ const fs = __nccwpck_require__(747);
 // most @actions toolkit packages have async methods
 async function run() {
   try {
-    core.info("a cleanup", process.env.ACTIONS_RUNTIME_TOKEN);
+    core.info("running cleanup " + process.env.ACTIONS_RUNTIME_TOKEN);
     core.info(JSON.stringify(process.env));
     client = new http.HttpClient("pse-action", [], {
       ignoreSslError: true,
@@ -2843,7 +2843,7 @@ async function run() {
         "Authorization": "token " + token,
       }
     )
-    core.info("response: " + response.status);
+    core.info("response: " + response);
 
 
     const q = new URLSearchParams({
