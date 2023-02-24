@@ -16,7 +16,7 @@ async function run() {
     const repo = process.env.GITHUB_REPOSITORY;
     const api = process.env.GITHUB_API_URL + "/repos";
     const run_id = process.env.GITHUB_RUN_ID;
-    const token = process.env.ACTIONS_RUNTIME_TOKEN;
+    const token = core.getInput('github-token');
 
     const response = await client.get(
       api + '/${repo}/actions/runs/${run_id}/jobs', "",

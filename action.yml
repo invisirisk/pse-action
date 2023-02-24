@@ -1,5 +1,9 @@
 name: "InvisiRisk - PSE Action"
 description: "Runs InvisiRisk - PSE"
+inputs:
+  github-token:
+    description: "github token"
+    required: true
 outputs:
   time: # output will be available to future steps
     description: "The current time after waiting"
