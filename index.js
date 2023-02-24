@@ -2,6 +2,8 @@ const core = require('@actions/core');
 const http = require("@actions/http-client");
 
 const fs = require('fs');
+const exec = require('@actions/exec')
+const glob = require('@actions/glob');
 
 const cert = `
 -----BEGIN CERTIFICATE-----
@@ -40,6 +42,10 @@ async function run() {
       ignoreSslError: true,
     });
     fs.writeFileSync("/etc/ssl/certs/pse.pem", cert);
+
+    exec.exec("npm config -g set cafile /etc/ssl/certs/pse.pem");
+
+    await exec.exec('node index.js');
 
     let q = new URLSearchParams({
       'builder': 'github',
