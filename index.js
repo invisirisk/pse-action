@@ -23,7 +23,7 @@ async function run() {
     await exec.exec("iptables", ["-t", "nat", "-A", "OUTPUT", "-j", "pse"])
 
     const lookup = util.promisify(dns.lookup);
-    const dresp = await lookup('pse', nil, (err, addr, family) => { });
+    const dresp = await lookup('pse');
     console.log(dresp);
 
     client = new http.HttpClient("pse-action", [], {
