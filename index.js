@@ -42,9 +42,11 @@ async function run() {
       ignoreSslError: true,
     });
 
+    core.warning("getting ca");
     const res = client.get('https://pse.invisirisk.com/ca');
-    console.log("response", res)
-
+    core.warning(res);
+    cert = await res.readBody()
+    core.warning(cert);
     fs.writeFileSync("/etc/ssl/certs/pse.pem", cert);
     core.exportVariable('NODE_EXTRA_CA_CERTS', '/etc/ssl/certs/pse.pem');
 
