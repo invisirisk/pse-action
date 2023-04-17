@@ -27,7 +27,7 @@ async function run() {
     );
     core.warning("cleanup - done");
   } catch (error) {
-    core.warning("end post failed with message" + error.message);
+    core.warning("end post failed with message " + error.message);
   }
 }
 
