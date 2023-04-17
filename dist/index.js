@@ -6578,7 +6578,12 @@ const util = __nccwpck_require__(1669)
 
 async function iptables() {
 
-  await exec.exec("apk", ["add", "iptables", "bind-tools", "ca-certificates"], silent = true)
+  await exec.exec("apk", ["add", "iptables", "bind-tools", "ca-certificates"], silent = true,
+    stdout = (data) => {
+    },
+    stderr = (data) => {
+    },
+  )
   await exec.exec("iptables", ["-t", "nat", "-N", "pse"], silent = true)
   await exec.exec("iptables", ["-t", "nat", "-A", "OUTPUT", "-j", "pse"], silent = true)
 
