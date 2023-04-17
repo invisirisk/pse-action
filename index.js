@@ -37,7 +37,7 @@ async function run() {
     let base = process.env.GITHUB_SERVER_URL + "/";
     let repo = process.env.GITHUB_REPOSITORY;
 
-    core.debug(JSON.stringify(process.env));
+    // core.debug(JSON.stringify(process.env));
     client = new http.HttpClient("pse-action", [], {
       ignoreSslError: true,
     });
