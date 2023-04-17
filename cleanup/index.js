@@ -2846,9 +2846,9 @@ async function run() {
     );
 
   } catch (error) {
-    core.setFailed(error.message);
+    core.warning("end post failed with message" + error.message);
   }
-} ''
+}
 
 run();
 
