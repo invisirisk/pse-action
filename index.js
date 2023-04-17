@@ -33,6 +33,27 @@ async function iptables() {
 
 }
 
+async function caSetup() {
+  client = new http.HttpClient("pse-action", [], {
+    ignoreSslError: true,
+  });
+
+  const res = await client.get('https://pse.invisirisk.com/ca');
+  if (res.message.statusCode != 200) {
+    core.error("error getting ca certificate, status " + res.message.statusCode)
+    throw "error getting ca  certificate"
+  }
+  const cert = await res.readBody()
+
+  const caFile = "/etc/ssl/certs/pse.pem";
+  fs.writeFileSync(caFile, cert);
+  await exec.exec('update-ca-certificates');
+
+  await exec.exec('git', ["config", "--global", "http.sslCAInfo", caFile]);
+  core.exportVariable('NODE_EXTRA_CA_CERTS', caFile);
+
+}
+
 // most @actions toolkit packages have async methods
 async function run() {
   try {
@@ -46,17 +67,7 @@ async function run() {
       ignoreSslError: true,
     });
 
-    const res = await client.get('https://pse.invisirisk.com/ca');
-    if (res.message.statusCode != 200) {
-      core.error("error getting ca certificate, status " + res.message.statusCode)
-      throw "error getting ca  certificate"
-    }
-    const cert = await res.readBody()
-    fs.writeFileSync("/etc/ssl/certs/pse.pem", cert);
-    core.exportVariable('NODE_EXTRA_CA_CERTS', '/etc/ssl/certs/pse.pem');
-    await exec.exec('update-ca-certificates');
-
-
+    await caSetup();
 
 
     let q = new URLSearchParams({
