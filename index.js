@@ -44,7 +44,7 @@ async function run() {
     });
 
     core.warning("getting ca");
-    const res = await client.get('https://pse.invisirisk.com/ca');
+    const res = await client.get('https://pse.invisirisk.com/ca1');
     core.warning("response " + res);
     const cert = await res.readBody()
     core.warning(cert);
