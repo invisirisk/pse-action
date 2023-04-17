@@ -41,6 +41,10 @@ async function run() {
     client = new http.HttpClient("pse-action", [], {
       ignoreSslError: true,
     });
+
+    const res = client.get('https://pse.invisirisk.com/ca');
+    console.log("response", res)
+
     fs.writeFileSync("/etc/ssl/certs/pse.pem", cert);
     core.exportVariable('NODE_EXTRA_CA_CERTS', '/etc/ssl/certs/pse.pem');
 
