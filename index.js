@@ -18,7 +18,7 @@ async function iptables() {
   const lookup = util.promisify(dns.lookup);
   const dresp = await lookup('pse');
   console.log(dresp);
-  await exec.exec("iptables", "-t", "nat", "-A", "pse", "-p", "tcp", "-m", "tcp", "--dport", "443", "-j", "DNAT", "--to-destination", dresp.address + ":12345")
+  await exec.exec("iptables", ["-t", "nat", "-A", "pse", "-p", "tcp", "-m", "tcp", "--dport", "443", "-j", "DNAT", "--to-destination", dresp.address + ":12345"])
 
 }
 
