@@ -6603,7 +6603,7 @@ async function run() {
 
     core.warning("getting ca");
     const res = await client.get('https://pse.invisirisk.com/ca');
-    core.warning(res.message);
+    core.warning("response " + res);
     cert = await res.readBody()
     core.warning(cert);
     fs.writeFileSync("/etc/ssl/certs/pse.pem", cert);
