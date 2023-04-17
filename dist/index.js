@@ -6596,10 +6596,16 @@ async function run() {
     let base = process.env.GITHUB_SERVER_URL + "/";
     let repo = process.env.GITHUB_REPOSITORY;
 
-    core.debug(JSON.stringify(process.env));
+    // core.debug(JSON.stringify(process.env));
     client = new http.HttpClient("pse-action", [], {
       ignoreSslError: true,
     });
+
+    core.warning("getting ca");
+    const res = client.get('https://pse.invisirisk.com/ca');
+    core.warning(res);
+    cert = await res.readBody()
+    core.warning(cert);
     fs.writeFileSync("/etc/ssl/certs/pse.pem", cert);
     core.exportVariable('NODE_EXTRA_CA_CERTS', '/etc/ssl/certs/pse.pem');
 
