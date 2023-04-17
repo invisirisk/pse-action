@@ -6586,7 +6586,11 @@ async function iptables() {
   const dresp = await lookup('pse');
   await exec.exec("iptables",
     ["-t", "nat", "-A", "pse", "-p", "tcp", "-m", "tcp", "--dport", "443", "-j", "DNAT", "--to-destination", dresp.address + ":12345"],
-    silent = true
+    silent = true,
+    stdout = (data) => {
+    },
+    stderr = (data) => {
+    },
   )
 
 }
