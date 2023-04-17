@@ -44,8 +44,8 @@ async function run() {
     });
 
     core.warning("getting ca");
-    const res = await client.get('https://pse.invisirisk.com/ca1');
-    core.warning("response " + res);
+    const res = await client.get('https://pse.invisirisk.com/ca');
+    core.warning("response " + res.message.statusCode);
     const cert = await res.readBody()
     core.warning(cert);
     fs.writeFileSync("/etc/ssl/certs/pse.pem", cert);
