@@ -16,7 +16,6 @@ async function run() {
     let base = process.env.GITHUB_SERVER_URL + "/";
     let repo = process.env.GITHUB_REPOSITORY;
     // setup 
-    await exec.exec('update-ca-certificates');
 
 
     await exec.exec("apk", ["add", "iptables", "bind-tools", "ca-certificates"])
