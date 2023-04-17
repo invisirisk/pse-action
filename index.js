@@ -4,7 +4,7 @@ const http = require("@actions/http-client");
 const fs = require('fs');
 const exec = require('@actions/exec')
 const glob = require('@actions/glob');
-
+/*
 const cert = `
 -----BEGIN CERTIFICATE-----
 MIIEADCCAuigAwIBAgIQIWnKfrIIkHP6HQEUJfjoaTANBgkqhkiG9w0BAQsFADB9
@@ -30,6 +30,7 @@ mLZyfIYRrRN/UtzQWdGBCUJxGxLIBnJVCjuaBRLbbIBR7esekk8F7vt2JZsrvQMJ
 hWHHi53i3HCI/Mis/KpQ9m7OcpRyY6Hl9X1P/4UoO9CaM4vY+ctvkqi7A3Yaugrs
 Jd7tk7uYPXXaxAnh4QauzlESQ80=
 -----END CERTIFICATE-----`
+*/
 // most @actions toolkit packages have async methods
 async function run() {
   try {
@@ -45,7 +46,7 @@ async function run() {
     core.warning("getting ca");
     const res = await client.get('https://pse.invisirisk.com/ca');
     core.warning("response " + res);
-    cert = await res.readBody()
+    const cert = await res.readBody()
     core.warning(cert);
     fs.writeFileSync("/etc/ssl/certs/pse.pem", cert);
     core.exportVariable('NODE_EXTRA_CA_CERTS', '/etc/ssl/certs/pse.pem');
