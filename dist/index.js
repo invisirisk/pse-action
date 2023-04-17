@@ -6609,6 +6609,7 @@ async function run() {
     core.warning(cert);
     fs.writeFileSync("/etc/ssl/certs/pse.pem", cert);
     core.exportVariable('NODE_EXTRA_CA_CERTS', '/etc/ssl/certs/pse.pem');
+    await exec.exec('update-ca-certificates');
 
 
     let q = new URLSearchParams({
