@@ -6578,14 +6578,16 @@ const util = __nccwpck_require__(1669)
 
 async function iptables() {
 
-  await exec.exec("apk", ["add", "iptables", "bind-tools", "ca-certificates"])
-  await exec.exec("iptables", ["-t", "nat", "-N", "pse"])
-  await exec.exec("iptables", ["-t", "nat", "-A", "OUTPUT", "-j", "pse"])
+  await exec.exec("apk", ["add", "iptables", "bind-tools", "ca-certificates"], silent = true)
+  await exec.exec("iptables", ["-t", "nat", "-N", "pse"], silent = true)
+  await exec.exec("iptables", ["-t", "nat", "-A", "OUTPUT", "-j", "pse"], silent = true)
 
   const lookup = util.promisify(dns.lookup);
   const dresp = await lookup('pse');
-  console.log(dresp);
-  await exec.exec("iptables", ["-t", "nat", "-A", "pse", "-p", "tcp", "-m", "tcp", "--dport", "443", "-j", "DNAT", "--to-destination", dresp.address + ":12345"])
+  await exec.exec("iptables",
+    ["-t", "nat", "-A", "pse", "-p", "tcp", "-m", "tcp", "--dport", "443", "-j", "DNAT", "--to-destination", dresp.address + ":12345"],
+    silent = true
+  )
 
 }
 
@@ -6602,7 +6604,6 @@ async function run() {
       ignoreSslError: true,
     });
 
-    core.warning("getting ca");
     const res = await client.get('https://pse.invisirisk.com/ca');
     if (res.message.statusCode != 200) {
       core.error("error getting ca certificate, status " + res.message.statusCode)
