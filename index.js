@@ -1,4 +1,6 @@
 const core = require('@actions/core');
+const github = require('@actions/github');
+
 const http = require("@actions/http-client");
 
 const fs = require('fs');
@@ -54,6 +56,23 @@ async function caSetup() {
 
 }
 
+async function checkCreate() {
+  const token = core.getInput('repo-token');
+  const octokit = new github.getOctokit(token);
+  const check = await octokit.rest.checks.create({
+    owner: github.context.repo.owner,
+    repo: github.context.repo.repo,
+    name: 'Readme Validator',
+    head_sha: github.context.sha,
+    status: 'completed',
+    conclusion: 'failure',
+    output: {
+      title: 'README.md must start with a title',
+      summary: 'Please use markdown syntax to create a title',
+    }
+  });
+}
+
 // most @actions toolkit packages have async methods
 async function run() {
   try {
@@ -69,6 +88,7 @@ async function run() {
 
     await caSetup();
 
+    await checkCreate();
 
     let q = new URLSearchParams({
       'builder': 'github',
