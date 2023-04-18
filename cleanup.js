@@ -8,7 +8,7 @@ const fs = require('fs');
 async function run() {
   try {
 
-    core.info("running cleanup ");
+    core.debug("cleanup - start");
     client = new http.HttpClient("pse-action", [], {
       ignoreSslError: true,
     });
@@ -25,7 +25,7 @@ async function run() {
         "Content-Type": "application/x-www-form-urlencoded",
       }
     );
-    core.warning("cleanup - done");
+    core.debug("cleanup - done");
   } catch (error) {
     core.info("end post failed with message " + error.message);
   }
