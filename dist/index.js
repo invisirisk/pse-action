@@ -13573,6 +13573,7 @@ async function caSetup() {
 }
 
 async function checkCreate() {
+  /*
   const token = core.getInput('github-token');
   const octokit = new github.getOctokit(token);
   const check = await octokit.rest.checks.create({
@@ -13587,6 +13588,7 @@ async function checkCreate() {
       summary: 'Please use markdown syntax to create a title',
     }
   });
+  */
 }
 
 // most @actions toolkit packages have async methods
