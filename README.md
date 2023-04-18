@@ -21,7 +21,7 @@ The output is set as checks associated with the build. These checks can be summa
 - [X] npm module
 - [X] git operations
 - [X] web operations
-- [X] MVN operations
+- [ ] MVN operations
 - [ ] PyPI support
 - [ ] Ubuntu Container
 - [ ] Policy Interface
