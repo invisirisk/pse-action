@@ -10,21 +10,6 @@ This GitHub Action provides detailed analysis of all the network transactions do
 ## Design
 The PSE action sets up iptables rules to redirect all port 443 traffic to service container named PSE. The PSE container runs an SSL inspection proxy analyzing traffic flowing between your build and rest of the world. The PSE Action sets up CA certificate from the proxy service as a trusted certificate in your build container providing seamless service.
 
-## Output
-The output is set as checks associated with the build. These checks can be summarized using OpenAI ChatBot.
-
-### Roadmap
-- [X] Basic proxy for Alpine Container
-- [X] Provide output as Github Check
-- [X] Check of secrets in all POSTs
-- [X] go module
-- [X] npm module
-- [X] git operations
-- [X] web operations
-- [ ] MVN operations
-- [ ] PyPI support
-- [ ] Ubuntu Container
-- [ ] Policy Interface
 
 ## Input
 Service Container Environments
@@ -74,9 +59,23 @@ jobs:
       - run: make
 ```
 
+### Roadmap
+- [X] Basic proxy for Alpine Container
+- [X] Provide output as Github Check
+- [X] Check of secrets in all POSTs
+- [X] go module
+- [X] npm module
+- [X] git operations
+- [X] web operations
+- [ ] MVN operations
+- [ ] PyPI support
+- [ ] Ubuntu Container
+- [ ] Policy Interface
 
 
-### Example Output Report
+## Output
+The output is set as checks associated with the build. These checks can be summarized using OpenAI ChatBot.
+Here is an example Output Report
 
 <details>
 
