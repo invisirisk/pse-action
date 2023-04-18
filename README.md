@@ -52,7 +52,8 @@ jobs:
 
 ### Example Output Report
 
-```
+<details>
+
 ### $\color{green}{\textsf{git - pull - github.com/invisirisk-demo/demo-npm}}$
  #### OpenAI Summary
  The activity involved pulling data from invisirisk-demo/demo-npm on GitHub. The data downloaded had a mime type of "application/octet-stream" and a checksum of "3db9572b0c939a6943c7785b608ef67c". There is no related risk mentioned in this summary. However, there could be potential risks such as unintentionally downloading malicious code, vulnerabilities in dependencies, or introducing compatibility issues.
@@ -143,6 +144,6 @@ jobs:
  - URL: https://doc-04-6k-docs.googleusercontent.com/docs/securesc/ha0ro937gcuc7l7deffksulhg5h7mbp1/81gvr0usdnruqmaj7plk3djn4q3ikrct/1681842825000/16468198457265399954/*/1tzTSWJ54w2IjpUjCSnGQqj8ZXhblWEwe?e=download&uuid=8ff6be92-f0bb-45b6-a4fa-5e58a3f53686
  - Download-Type: mime: application/x-mach-binary
  - Download-Checksum: checksum b3bdceb133d47b7c32cfbdec319a81dd
- ```
  
+ </details>
 
