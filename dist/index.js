@@ -13573,7 +13573,7 @@ async function caSetup() {
 }
 
 async function checkCreate() {
-  const token = core.getInput('repo-token');
+  const token = core.getInput('github-token');
   const octokit = new github.getOctokit(token);
   const check = await octokit.rest.checks.create({
     owner: github.context.repo.owner,
