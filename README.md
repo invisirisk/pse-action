@@ -7,8 +7,32 @@ This GitHub Action provides detailed analysis of all the network transactions do
 - Build container must allow root access to run iptables.
 - Build container should be provided net_admin capability.
 
+## Design
+The PSE action sets up iptables rules to redirect all port 443 traffic to service container named PSE. The PSE container runs an SSL inspection proxy analyzing traffic flowing between your build and rest of the world. The PSE Action sets up CA certificate from the proxy service as a trusted certificate in your build container providing seamless service.
+
 ## Output
 The output is set as checks associated with the build. These checks can be summarized using OpenAI ChatBot.
+
+### Roadmap
+- [X] Basic proxy for Alpine Container
+- [X] Provide output as Github Check
+- [X] Check of secrets in all POSTs
+- [X] go module
+- [X] npm module
+- [X] git operations
+- [X] web operations
+- [X] MVN operations
+- [ ] PyPI support
+- [ ] Ubuntu Container
+- [ ] Policy Interface
+
+## Input
+Service Container Environments
+ - GITHUB_TOKEN: Required. Github token with permission to write checks
+ - OPENAI_AUTH_TOKEN: Optional. If provided, call out to OpenAI to summarize activities.
+
+Action Input
+ - github-token: Required. Github token
 
 ## Usage
 To use this action, add the following step to your workflow:
@@ -28,7 +52,7 @@ jobs:
   build:
 
     services:
-      # Run PSE as service
+      # Run PSE as service -> Service must be named PSE.
       pse:
         image: public.ecr.aws/i1j1q8l2/pse-public:latest
         env:
@@ -49,6 +73,8 @@ jobs:
       - uses: actions/checkout@v3
       - run: make
 ```
+
+
 
 ### Example Output Report
 
