@@ -174,5 +174,5 @@ jobs:
  </details>
 
 ### Licensing
-The project is licensed under Apaache License v2.
+The project is licensed under [Apache License v2](https://www.apache.org/licenses/LICENSE-2.0).
 
