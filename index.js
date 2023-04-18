@@ -57,7 +57,7 @@ async function caSetup() {
 // most @actions toolkit packages have async methods
 async function run() {
   try {
-
+    core.notice("starting build run")
     let base = process.env.GITHUB_SERVER_URL + "/";
     let repo = process.env.GITHUB_REPOSITORY;
 
