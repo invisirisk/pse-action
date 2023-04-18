@@ -173,3 +173,6 @@ jobs:
  
  </details>
 
+### Licensing
+The project is licensed under Apaache License v2.
+
