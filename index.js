@@ -57,33 +57,22 @@ async function caSetup() {
 }
 
 async function checkCreate() {
-
-  const token = core.getInput('github-token');
-  const octokit = new github.getOctokit(token);
-  await octokit.rest.checks.create({
-    owner: github.context.repo.owner,
-    repo: github.context.repo.repo,
-    name: 'Readme Validator',
-    head_sha: github.context.sha,
-    status: 'completed',
-    conclusion: 'failure',
-    output: {
-      title: 'README.md must start with a title',
-      summary: 'Please use markdown syntax to create a title',
-    }
-  });
-  await octokit.rest.checks.create({
-    owner: github.context.repo.owner,
-    repo: github.context.repo.repo,
-    name: 'Readme Validator',
-    head_sha: github.context.sha,
-    status: 'completed',
-    conclusion: 'failure',
-    output: {
-      title: 'README.md - 2 must start with a title',
-      summary: 'Please use markdown syntax to create a title',
-    }
-  });
+  /*
+    const token = core.getInput('github-token');
+    const octokit = new github.getOctokit(token);
+    await octokit.rest.checks.create({
+      owner: github.context.repo.owner,
+      repo: github.context.repo.repo,
+      name: 'Readme Validator',
+      head_sha: github.context.sha,
+      status: 'completed',
+      conclusion: 'failure',
+      output: {
+        title: 'README.md must start with a title',
+        summary: 'Please use markdown syntax to create a title',
+      }
+    });
+    */
 }
 
 // most @actions toolkit packages have async methods
