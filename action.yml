@@ -1,13 +1,11 @@
-name: 'Wait'
-description: 'Wait a designated number of milliseconds'
+name: "InvisiRisk - PSE Action"
+description: "Runs InvisiRisk - PSE"
 inputs:
-  milliseconds:  # id of input
-    description: 'number of milliseconds to wait'
+  github-token:
+    description: "github token"
     required: true
-    default: '1000'
-outputs:
-  time: # output will be available to future steps
-    description: 'The current time after waiting'
+
 runs:
-  using: 'node16'
-  main: 'dist/index.js'
+  using: "node16"
+  main: "dist/index.js"
+  post: "cleanup/index.js"

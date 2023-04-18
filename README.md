@@ -1,116 +1,178 @@
-# Create a JavaScript Action
+# PSE-Action
 
-<p align="center">
-  <a href="https://github.com/actions/javascript-action/actions"><img alt="javscript-action status" src="https://github.com/actions/javascript-action/workflows/units-test/badge.svg"></a>
-</p>
+This GitHub Action provides detailed analysis of all the network transactions done by the action. The action uses transparent HTTPS proxy using iptables. The iptables rules are set up by the action.
 
-Use this template to bootstrap the creation of a JavaScript action.:rocket:
+## Restrictions
+- Only works with Alpine container builds.
+- Build container must allow root access to run iptables.
+- Build container should be provided net_admin capability.
 
-This template includes tests, linting, a validation workflow, publishing, and versioning guidance.
+## Design
+The PSE action sets up iptables rules to redirect all port 443 traffic to service container named PSE. The PSE container runs an SSL inspection proxy analyzing traffic flowing between your build and rest of the world. The PSE Action sets up CA certificate from the proxy service as a trusted certificate in your build container providing seamless service.
 
-If you are new, there's also a simpler introduction.  See the [Hello World JavaScript Action](https://github.com/actions/hello-world-javascript-action)
+## Output
+The output is set as checks associated with the build. These checks can be summarized using OpenAI ChatBot.
 
-## Create an action from this template
+### Roadmap
+- [X] Basic proxy for Alpine Container
+- [X] Provide output as Github Check
+- [X] Check of secrets in all POSTs
+- [X] go module
+- [X] npm module
+- [X] git operations
+- [X] web operations
+- [ ] MVN operations
+- [ ] PyPI support
+- [ ] Ubuntu Container
+- [ ] Policy Interface
 
-Click the `Use this Template` and provide the new repo details for your action
+## Input
+Service Container Environments
+ - GITHUB_TOKEN: Required. Github token with permission to write checks
+ - OPENAI_AUTH_TOKEN: Optional. If provided, call out to OpenAI to summarize activities.
 
-## Code in Main
-
-Install the dependencies
-
-```bash
-npm install
-```
-
-Run the tests :heavy_check_mark:
-
-```bash
-$ npm test
-
- PASS  ./index.test.js
-  ✓ throws invalid number (3ms)
-  ✓ wait 500 ms (504ms)
-  ✓ test runs (95ms)
-...
-```
-
-## Change action.yml
-
-The action.yml defines the inputs and output for your action.
-
-Update the action.yml with your name, description, inputs and outputs for your action.
-
-See the [documentation](https://help.github.com/en/articles/metadata-syntax-for-github-actions)
-
-## Change the Code
-
-Most toolkit and CI/CD operations involve async operations so the action is run in an async function.
-
-```javascript
-const core = require('@actions/core');
-...
-
-async function run() {
-  try {
-      ...
-  }
-  catch (error) {
-    core.setFailed(error.message);
-  }
-}
-
-run()
-```
-
-See the [toolkit documentation](https://github.com/actions/toolkit/blob/master/README.md#packages) for the various packages.
-
-## Package for distribution
-
-GitHub Actions will run the entry point from the action.yml. Packaging assembles the code into one file that can be checked in to Git, enabling fast and reliable execution and preventing the need to check in node_modules.
-
-Actions are run from GitHub repos.  Packaging the action will create a packaged action in the dist folder.
-
-Run prepare
-
-```bash
-npm run prepare
-```
-
-Since the packaged index.js is run from the dist folder.
-
-```bash
-git add dist
-```
-
-## Create a release branch
-
-Users shouldn't consume the action from master since that would be latest code and actions can break compatibility between major versions.
-
-Checkin to the v1 release branch
-
-```bash
-git checkout -b v1
-git commit -a -m "v1 release"
-```
-
-```bash
-git push origin v1
-```
-
-Note: We recommend using the `--license` option for ncc, which will create a license file for all of the production node modules used in your project.
-
-Your action is now published! :rocket:
-
-See the [versioning documentation](https://github.com/actions/toolkit/blob/master/docs/action-versioning.md)
+Action Input
+ - github-token: Required. Github token
 
 ## Usage
+To use this action, add the following step to your workflow:
 
-You can now consume the action by referencing the v1 branch
+```
+name: CI-Build
 
-```yaml
-uses: actions/javascript-action@v1
-with:
-  milliseconds: 1000
+on:
+  push:
+  pull_request:
+
+permissions:
+  checks: write
+  contents: read
+  
+jobs:
+  build:
+
+    services:
+      # Run PSE as service -> Service must be named PSE.
+      pse:
+        image: public.ecr.aws/i1j1q8l2/pse-public:latest
+        env:
+           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # should have permissions to write checks
+           OPENAI_AUTH_TOKEN: ${{ secrets.OPENAI_AUTH_TOKEN }} # if set, use OpenAI chat to summarize
+           
+    container:
+      image: node:19-alpine
+      options: --cap-add=NET_ADMIN
+      
+    runs-on: ubuntu-latest
+    
+    steps:
+     # setup PSE action
+      - uses: invisirisk-demo/pse-action@v2
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+      - uses: actions/checkout@v3
+      - run: make
 ```
 
-See the [actions tab](https://github.com/actions/javascript-action/actions) for runs of this action! :rocket:
+
+
+### Example Output Report
+
+<details>
+
+### $\color{green}{\textsf{git - pull - github.com/invisirisk-demo/demo-npm}}$
+ #### OpenAI Summary
+ The activity involved pulling data from invisirisk-demo/demo-npm on GitHub. The data downloaded had a mime type of "application/octet-stream" and a checksum of "3db9572b0c939a6943c7785b608ef67c". There is no related risk mentioned in this summary. However, there could be potential risks such as unintentionally downloading malicious code, vulnerabilities in dependencies, or introducing compatibility issues.
+ #### Details
+ - Download-Type: mime: application/octet-stream
+ - Download-Checksum: checksum 3db9572b0c939a6943c7785b608ef67c
+ ### $\color{orange}{\textsf{git - pull - github.com/TheTorProject/gettorbrowser}}$
+ #### OpenAI Summary
+ The activity involved accessing the Github repository for the Tor Browser and pulling content. The related risk could be the potential for the introduction of malicious code into the build system.
+ #### Details
+ - Alert: accessing repo github.com/TheTorProject/gettorbrowser with action pull
+ - Download-Type: mime: text/plain; charset=utf-8
+ - Download-Checksum: checksum cddb06e275ca09d516bc759f77ac5efe
+ ### $\color{orange}{\textsf{git - pull - github.com/TheTorProject/gettorbrowser}}$
+ #### OpenAI Summary
+ The activity is a Git pull action to access the repository of gettorbrowser on GitHub. The downloaded file is of the application/octet-stream type with a checksum of c40a6f588d4678ce5d9e7a14419d40fd. The related risk from the build system could be the possibility of the downloaded file being corrupted or tampered with.
+ #### Details
+ - Alert: accessing repo github.com/TheTorProject/gettorbrowser with action pull
+ - Download-Type: mime: application/octet-stream
+ - Download-Checksum: checksum c40a6f588d4678ce5d9e7a14419d40fd
+ ### $\color{green}{\textsf{npm - get - color@4.2.3}}$
+ #### OpenAI Summary
+ The activity involved using npm to download the color package version 4.2.3, which resulted in the download of a gzip file with a specific checksum for verification. The related risk from the build system could involve potential errors or vulnerabilities in the downloaded package that could compromise the security or functionality of the system.
+ #### Details
+ - Repository: registry.npmjs.org
+ - Download-Type: mime: application/gzip
+ - Download-Checksum: checksum e3145dcd2b26316e4d3b470529587fde
+ ### $\color{green}{\textsf{npm - get - color-name@1.1.4}}$
+ #### OpenAI Summary
+ The activity involved downloading the color-name version 1.1.4 through npm and verifying its checksum to ensure its integrity. A related risk from the build system would be the possibility of downloading a compromised or malicious package, which could cause security or stability issues in the system.
+ #### Details
+ - Repository: registry.npmjs.org
+ - Download-Type: mime: application/gzip
+ - Download-Checksum: checksum a8d4412852471526b8027af2532d0d2b
+ ### $\color{green}{\textsf{npm - get - color-convert@2.0.1}}$
+ #### OpenAI Summary
+ The activity involved downloading the "color-convert" package version 2.0.1 using npm. The package was downloaded as a gzip file with a checksum value of 0248ebc952524207e296a622372faa1f for verification. The risk from the build system would be if the downloaded package was compromised or contained malicious code, which could potentially harm the system.
+ #### Details
+ - Repository: registry.npmjs.org
+ - Download-Type: mime: application/gzip
+ - Download-Checksum: checksum 0248ebc952524207e296a622372faa1f
+ ### $\color{green}{\textsf{npm - get - simple-swizzle@0.2.2}}$
+ #### OpenAI Summary
+ The activity involves downloading the package "simple-swizzle" version 0.2.2 using npm. The package is downloaded in gzip format with a checksum of 40accde4e2a22a6c05b871d0da2e8359 for verification. The related risk could be a mismatch in the checksum, which could indicate a potential tampering of the package during transit.
+ #### Details
+ - Repository: registry.npmjs.org
+ - Download-Type: mime: application/gzip
+ - Download-Checksum: checksum 40accde4e2a22a6c05b871d0da2e8359
+ ### $\color{green}{\textsf{npm - get - is-arrayish@0.3.2}}$
+ #### OpenAI Summary
+ This activity involves downloading the is-arrayish@0.3.2 package through the npm package manager. The package is downloaded in gzip format and is verified using a checksum of a9411b733475f463a53cdf8656ad0811. The related risk from the build system is the potential for the package to contain malicious code, as the package is not controlled by the user and could be compromised by a malicious actor.
+ #### Details
+ - Repository: registry.npmjs.org
+ - Download-Type: mime: application/gzip
+ - Download-Checksum: checksum a9411b733475f463a53cdf8656ad0811
+ ### $\color{green}{\textsf{npm - get - colorjs@0.1.9}}$
+ #### OpenAI Summary
+ The activity involves downloading the colorjs library version 0.1.9 using npm. The download type is gzip and the download checksum is 63acc5b5c45b136f2377f0c927fa5cfc. The related risk could be that the downloaded package could contain malicious code or vulnerabilities that could be exploited.
+ #### Details
+ - Repository: registry.npmjs.org
+ - Download-Type: mime: application/gzip
+ - Download-Checksum: checksum 63acc5b5c45b136f2377f0c927fa5cfc
+ ### $\color{green}{\textsf{npm - get - color-string@1.9.1}}$
+ #### OpenAI Summary
+ The activity is downloading the color-string package version 1.9.1 using npm. The download is in the gzip format, and the checksum value is verified to be 0ca6a6c76fa119f0b80d60a9ab286db4. A related risk could be if the checksum value was incorrect or if the package had been compromised, which could lead to security vulnerabilities or break the functioning of the build system.
+ #### Details
+ - Repository: registry.npmjs.org
+ - Download-Type: mime: application/gzip
+ - Download-Checksum: checksum 0ca6a6c76fa119f0b80d60a9ab286db4
+ ### $\color{green}{\textsf{npm - get - @invisirisk/ir-dep-npm@1.0.5}}$
+ #### OpenAI Summary
+ The activity involved downloading a specific npm package called "@invisirisk/ir-dep-npm" version 1.0.5. The downloaded content was identified as text/html, and the checksum was verified to match an expected value. The related risk from the build system would be any potential vulnerabilities or malware present within the downloaded package.
+ #### Details
+ - Repository: npm.pkg.github.com
+ - Download-Type: mime: text/html; charset=utf-8
+ - Download-Checksum: checksum d3f48c12112e0045bebb105f34bbe90a
+ ### $\color{green}{\textsf{web - GET - drive.google.com}}$
+ #### OpenAI Summary
+ The activity involves sending a GET request to drive.google.com and receiving a mime type of text/plain along with a checksum of d41d8cd98f00b204e9800998ecf8427e. The related risk of this activity is potentially downloading a file that has been tampered with or corrupted during the build process. It's crucial to perform regular integrity checks on downloaded files to ensure they haven't been modified or corrupted.
+ #### Details
+ - URL: https://drive.google.com/uc?export=download&id=1tzTSWJ54w2IjpUjCSnGQqj8ZXhblWEwe
+ - Download-Type: mime: text/plain
+ - Download-Checksum: checksum d41d8cd98f00b204e9800998ecf8427e
+ ### $\color{green}{\textsf{web - GET - doc-04-6k-docs.googleusercontent.com}}$
+ #### OpenAI Summary
+ The activity involved accessing a binary file from doc-04-6k-docs.googleusercontent.com. The file was identified as a machine binary application, and its checksum was verified as b3bdceb133d47b7c32cfbdec319a81dd. The related risk from build system could be the potential for the binary file to contain malware or be corrupted, which could harm the system or compromise sensitive data.
+ #### Details
+ - URL: https://doc-04-6k-docs.googleusercontent.com/docs/securesc/ha0ro937gcuc7l7deffksulhg5h7mbp1/81gvr0usdnruqmaj7plk3djn4q3ikrct/1681842825000/16468198457265399954/*/1tzTSWJ54w2IjpUjCSnGQqj8ZXhblWEwe?e=download&uuid=8ff6be92-f0bb-45b6-a4fa-5e58a3f53686
+ - Download-Type: mime: application/x-mach-binary
+ - Download-Checksum: checksum b3bdceb133d47b7c32cfbdec319a81dd
+ 
+ </details>
+
+### Licensing
+The project is licensed under [Apache License v2](https://www.apache.org/licenses/LICENSE-2.0).
+
