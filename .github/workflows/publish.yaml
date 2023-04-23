@@ -26,6 +26,8 @@ jobs:
         run:  NODE_OPTIONS=--openssl-legacy-provider  npm run prepare
         
 
-      - uses: JasonEtco/build-and-tag-action@v2
+      - uses: aboutte/build-and-tag-action@v2
         env:
           GITHUB_TOKEN: ${{ github.token }}
+        with:
+          additional_files: 'cleanup.js'
