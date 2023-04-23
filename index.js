@@ -42,7 +42,7 @@ async function caSetup() {
 
   const res = await client.get('https://pse.invisirisk.com/ca');
   if (res.message.statusCode != 200) {
-    core.error("error getting ca certificate, status " + res.message.statusCode)
+    core.error("error getting ca certificate, received status " + res.message.statusCode)
     throw "error getting ca  certificate"
   }
   const cert = await res.readBody()
