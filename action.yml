@@ -1,5 +1,5 @@
-name: "InvisiRisk - PSE Action"
-description: "Runs InvisiRisk - PSE"
+name: "Pipeline Security Engine"
+description: "Visibility and control over all the network activity from your pipeline."
 inputs:
   github-token:
     description: "github token"
