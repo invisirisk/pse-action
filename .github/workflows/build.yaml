@@ -8,12 +8,8 @@ jobs:
     steps:
     - run: apk add git
     - run: npm install -g @vercel/ncc
-    - run: git config --global --add safe.directory '*'
-    - run: git config --global user.email "${{ vars.BUILDER_EMAIL }}"
-    - run: git config --global user.name "${{ vars.BUILDER_NAME }}"
+
     - uses: actions/checkout@master
     - run: NODE_OPTIONS=--openssl-legacy-provider npm run prepare
     
-    - run: git add dist
-    - run: git commit -m "prepare new version of the action"
-    - run: git push
+
