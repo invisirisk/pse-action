@@ -2,7 +2,7 @@ on:
   push
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: 19-alpine3.16
     steps:
     - uses: actions/checkout@master
     - run: npm install @vercel/ncc
