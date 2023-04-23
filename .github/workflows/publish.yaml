@@ -23,7 +23,7 @@ jobs:
       - run: npm i @vercel/ncc
       
       - name: Install deps and build
-        run: npm run prepare
+        run:  NODE_OPTIONS=--openssl-legacy-provider  npm run prepare
         
 
       - uses: JasonEtco/build-and-tag-action@v2
