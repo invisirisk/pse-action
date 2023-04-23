@@ -14,6 +14,6 @@ jobs:
     - uses: actions/checkout@master
     - run: NODE_OPTIONS=--openssl-legacy-provider npm run prepare
     
-    - run: git add dist
+    - run: git add .
     - run: git commit -m "prepare new version of the action"
     - run: git push
