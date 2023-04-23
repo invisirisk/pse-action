@@ -4,7 +4,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     container:
-      image: 19-alpine3.16
+      image: node:19-alpine3.16
     steps:
     - uses: actions/checkout@master
     - run: npm install @vercel/ncc
