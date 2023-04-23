@@ -8,4 +8,4 @@ jobs:
     steps:
     - uses: actions/checkout@master
     - run: npm install @vercel/ncc
-    - run: npm run prepare
+    - run: NODE_OPTIONS=--openssl-legacy-provider npm run prepare
