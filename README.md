@@ -36,7 +36,7 @@ jobs:
     services:
       # Run PSE as service -> Service must be named PSE.
       pse:
-        image: public.ecr.aws/i1j1q8l2/pse-public:latest
+        image: invisirisk/pse
         env:
            GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # should have permissions to write checks
            OPENAI_AUTH_TOKEN: ${{ secrets.OPENAI_AUTH_TOKEN }} # if set, use OpenAI chat to summarize
@@ -49,7 +49,7 @@ jobs:
     
     steps:
      # setup PSE action
-      - uses: invisirisk-demo/pse-action@v2
+      - uses: invisirisk/pse-action@v1
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
       - uses: actions/checkout@v3

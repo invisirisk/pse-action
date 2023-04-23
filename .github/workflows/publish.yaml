@@ -30,4 +30,4 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.token }}
         with:
-          additional_files: 'cleanup.js'
+          additional_files: 'cleanup/index.js.map,cleanup/sourcemap-register.js,cleanup/index.js,dist/index.js,dist/sourcemap-register.js,dist/index.js.map'
