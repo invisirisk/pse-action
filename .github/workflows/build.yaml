@@ -1,19 +1,20 @@
+name: Publish
+
 on:
-  pull_request
+  push:
+  release:
+    types: [published, edited]
+
 jobs:
   build:
     runs-on: ubuntu-latest
-    container:
-      image: node:19-alpine3.16
     steps:
-    - run: apk add git
-    - run: npm install -g @vercel/ncc
-    - run: git config --global --add safe.directory '*'
-    - run: git config --global user.email "${{ vars.BUILDER_EMAIL }}"
-    - run: git config --global user.name "${{ vars.BUILDER_NAME }}"
-    - uses: actions/checkout@master
-    - run: NODE_OPTIONS=--openssl-legacy-provider npm run prepare
-    
-    - run: git add dist cleanup
-    - run: git commit -m "prepare new version of the action"
-    - run: git push
+      - name: Checkout
+        uses: actions/checkout@v2
+        with:
+          ref: ${{ github.event.release.tag_name }}
+
+      - uses: JasonEtco/build-and-tag-action@v2
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          
