@@ -1,11 +1,8 @@
-# PSE-Action
+# Pipeline Security Engine
 
-This GitHub Action provides detailed analysis of all the network transactions done by the action. The action uses transparent HTTPS proxy using iptables. The iptables rules are set up by the action.
+Pipeline Security Engine  provides detailed analysis and control of all the network transactions done by the action. The action uses transparent HTTPS proxy using iptables. The iptables rules are set up by the action.
 
-## Restrictions
-- Only works with Alpine container builds.
-- Build container must allow root access to run iptables.
-- Build container should be provided net_admin capability.
+
 
 ## Design
 The PSE action sets up iptables rules to redirect all port 443 traffic to service container named PSE. The PSE container runs an SSL inspection proxy analyzing traffic flowing between your build and rest of the world. The PSE Action sets up CA certificate from the proxy service as a trusted certificate in your build container providing seamless service.
@@ -72,6 +69,10 @@ jobs:
 - [ ] Ubuntu Container
 - [ ] Policy Interface
 
+## Restrictions
+- Only works with Alpine container builds.
+- Build container must allow root access to run iptables.
+- Build container should be provided net_admin capability.
 
 ## Output
 The output is set as checks associated with the build. These checks can be summarized using OpenAI ChatBot.
