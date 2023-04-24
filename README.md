@@ -78,7 +78,7 @@ jobs:
 The output is set as checks associated with the build. These checks can be summarized using OpenAI ChatBot.
 Here is an example Output Report
 
-<details>
+
 
 ### $\color{green}{\textsf{git - pull - github.com/invisirisk-demo/demo-npm}}$
  #### OpenAI Summary
@@ -171,7 +171,7 @@ Here is an example Output Report
  - Download-Type: mime: application/x-mach-binary
  - Download-Checksum: checksum b3bdceb133d47b7c32cfbdec319a81dd
  
- </details>
+
 
 ### Licensing
 The project is licensed under [Apache License v2](https://www.apache.org/licenses/LICENSE-2.0).
