@@ -41,6 +41,12 @@ jobs:
            GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # should have permissions to write checks
            OPENAI_AUTH_TOKEN: ${{ secrets.OPENAI_AUTH_TOKEN }} # if set, use OpenAI chat to summarize
            
+           POLICY_URL: https://api.github.com/repos/invisirisk/policy/tarball/main #if set the URL to pull policy bundle from
+           POLICY_AUTH_TOKEN: ${{ secrets.POLICY_AUTH_TOKEN }} # bearer auth token used when pull down policy
+           POLICY_LOG: t # if set enables policy logging
+           
+           PSE_DEBUG_FLAG: --alsologtostderr # enable PSE logging
+           
     container:
       image: node:19-alpine
       options: --cap-add=NET_ADMIN
@@ -56,28 +62,46 @@ jobs:
       - run: make
 ```
 
-### Roadmap
-- [X] Basic proxy for Alpine Container
-- [X] Provide output as Github Check
-- [X] Check of secrets in all POSTs
-- [X] go module
-- [X] npm module
-- [X] git operations
-- [X] web operations
-- [ ] MVN operations
-- [ ] PyPI support
-- [ ] Ubuntu Container
-- [ ] Policy Interface
+
 
 ## Restrictions
 - Only works with Alpine container builds.
 - Build container must allow root access to run iptables.
 - Build container should be provided net_admin capability.
 
+## Policy Interface
+PSE uses rego for policies. The PSE will fetch policy as a tarball from POLICY_URL. Policy auth can be set using POLICY_AUTH_TOKEN token.
+
+Here is example policy for controlling access to git:
+```
+package git
+
+import future.keywords.in
+
+# generate alert
+alert(repo, act) = output {
+	item := [repo, act]
+
+	output := sprintf("accessing repo %s with action %s", item)
+}
+
+# allow all access from invisirisk-demo
+read_allow {
+	glob.match("github.com/invisirisk-demo/**", [], input.details.repo)
+	input.action in ["pull"]
+}
+
+# warn if build tries to access anything else
+
+decision = {"result": "allow"} {
+	read_allow
+} else := {"result": "alert/warn", "details": alert(input.details.repo, input.action)}
+
+```
+
 ## Output
 The output is set as checks associated with the build. These checks can be summarized using OpenAI ChatBot.
 Here is an example Output Report
-
 
 
 ### $\color{green}{\textsf{git - pull - github.com/invisirisk-demo/demo-npm}}$
@@ -171,7 +195,18 @@ Here is an example Output Report
  - Download-Type: mime: application/x-mach-binary
  - Download-Checksum: checksum b3bdceb133d47b7c32cfbdec319a81dd
  
-
+### Roadmap
+- [X] Basic proxy for Alpine Container
+- [X] Provide output as Github Check
+- [X] Check of secrets in all POSTs
+- [X] go module
+- [X] npm module
+- [X] git operations
+- [X] web operations
+- [ ] MVN operations
+- [ ] PyPI support
+- [ ] Ubuntu Container
+- [X] Policy Interface
 
 ### Licensing
 The project is licensed under [Apache License v2](https://www.apache.org/licenses/LICENSE-2.0).
