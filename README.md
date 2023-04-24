@@ -12,6 +12,11 @@ The PSE action sets up iptables rules to redirect all port 443 traffic to servic
 Service Container Environments
  - GITHUB_TOKEN: Required. Github token with permission to write checks
  - OPENAI_AUTH_TOKEN: Optional. If provided, call out to OpenAI to summarize activities.
+ - POLICY_URL: URL from where to fetch policy
+ - POLICY_AUTH_TOKEN: Bearer token used to authenticate with policy provider
+ - POLICY_LOG: if set enable policy log
+ - 
+
 
 Action Input
  - github-token: Required. Github token
