@@ -32,7 +32,7 @@ async function iptables() {
   )
   core.error("apt-get returned " + rv)
 
-  if (rv.exitCode == 0) {
+  if (rv == 0) {
     core.error("setting apk " + rv)
 
     apk = false
