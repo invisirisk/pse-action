@@ -259,10 +259,10 @@ Here is an example Output Report
 - [X] web operations
 - [ ] MVN operations
 - [ ] PyPI support
-- [ ] Ubuntu Container
+- [X] Ubuntu, Debian Container
 - [X] Policy Interface
 ## Restrictions
-- Only works with Alpine container builds.
+- Only works with Alpine, Debian, and Ubuntu container builds.
 - Build container must allow root access to run iptables.
 - Build container should be provided net_admin capability.
 

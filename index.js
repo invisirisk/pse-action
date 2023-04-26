@@ -9,16 +9,49 @@ const glob = require('@actions/glob');
 
 const dns = require('dns')
 const util = require('util')
+const which = require('which')
 
+
+async function distribution() {
+  var result = osInfo({ mode: 'sync' })
+
+}
 
 async function iptables() {
 
-  await exec.exec("apk", ["add", "iptables", "bind-tools", "ca-certificates", "git"], silent = true,
-    stdout = (data) => {
-    },
-    stderr = (data) => {
-    },
-  )
+  var apk = false
+  core.error("checking apt-get")
+
+  if (await which('apt-get', { nothrow: true }) == null) {
+    apk = true
+
+  }
+
+
+  if (apk) {
+    await exec.exec("apk", ["add", "iptables", "ca-certificates", "git"], silent = true,
+
+      stdout = (data) => {
+      },
+      stderr = (data) => {
+      },
+    )
+  } else {
+
+    await exec.exec("apt-get", ["update"], silent = true,
+      stdout = (data) => {
+      },
+      stderr = (data) => {
+      },
+    )
+    await exec.exec("apt-get", ["install", "-y", "iptables", "ca-certificates", "git"], silent = true,
+      stdout = (data) => {
+      },
+      stderr = (data) => {
+      },
+    )
+  }
+
   await exec.exec("iptables", ["-t", "nat", "-N", "pse"], silent = true)
   await exec.exec("iptables", ["-t", "nat", "-A", "OUTPUT", "-j", "pse"], silent = true)
 
