@@ -67,8 +67,6 @@ jobs:
       - run: make
 ```
 
-
-
 ## Restrictions
 - Only works with Alpine container builds.
 - Build container must allow root access to run iptables.
@@ -108,6 +106,26 @@ decision = {"result": "allow"} {
 Policy return should include the following details:
 - result: allow, deny, alert/warn, alert/error, alert/crit
 - details: if result is alert, message associated with the alert
+
+#### Example alert report
+
+##### $\color{orange}{\textsf{git - pull - github.com/TheTorProject/gettorbrowser}}$
+ ###### OpenAI Summary
+ The activity involved accessing the Github repository for the Tor Browser and pulling content. The related risk could be the potential for the introduction of malicious code into the build system.
+ ###### Details
+ - Alert: accessing repo github.com/TheTorProject/gettorbrowser with action pull
+ - Download-Type: mime: text/plain; charset=utf-8
+ - Download-Checksum: checksum cddb06e275ca09d516bc759f77ac5efe 
+#### Example block report
+
+ ###### $\color{red}{\textsf{git - pull - github.com/TheTorProject/gettorbrowser}}$
+ ###### OpenAI Summary
+The activity of trying to pull code from the GitHub repository for gettorbrowser was blocked due to policy. There is no related risk from the build system.
+
+###### Details
+Blocked: Blocked by policy
+
+
 
 ## Output
 The output is set as checks associated with the build. These checks can be summarized using OpenAI ChatBot.
