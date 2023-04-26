@@ -13813,11 +13813,11 @@ async function distribution() {
 
 async function iptables() {
 
-  var apk = true
+  var apk = false
   core.error("checking apt-get")
 
   if (await which('apt-get', { nothrow: true }) == null) {
-    apk = false
+    apk = true
 
   }
 
