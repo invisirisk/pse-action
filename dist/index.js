@@ -13710,7 +13710,7 @@ async function distribution() {
 async function iptables() {
   if (commandExistsSync('apk')) {
 
-    await exec.exec("apk", ["add", "iptables", "bind-tools", "ca-certificates", "git"], silent = true,
+    await exec.exec("apk", ["add", "iptables", "ca-certificates", "git"], silent = true,
       stdout = (data) => {
       },
       stderr = (data) => {
@@ -13725,7 +13725,7 @@ async function iptables() {
         stderr = (data) => {
         },
       )
-      await exec.exec("apt-get", ["install", "iptables", "bind-tools", "ca-certificates", "git"], silent = true,
+      await exec.exec("apt-get", ["install", "iptables", "ca-certificates", "git"], silent = true,
         stdout = (data) => {
         },
         stderr = (data) => {
