@@ -9,16 +9,32 @@ const glob = require('@actions/glob');
 
 const dns = require('dns')
 const util = require('util')
+var commandExistsSync = require('command-exists').sync;
 
+
+
+async function distribution() {
+  var result = osInfo({ mode: 'sync' })
+
+}
 
 async function iptables() {
+  if (commandExistsSync('apk')) {
 
-  await exec.exec("apk", ["add", "iptables", "bind-tools", "ca-certificates", "git"], silent = true,
-    stdout = (data) => {
-    },
-    stderr = (data) => {
-    },
-  )
+    await exec.exec("apk", ["add", "iptables", "bind-tools", "ca-certificates", "git"], silent = true,
+      stdout = (data) => {
+      },
+      stderr = (data) => {
+      },
+    )
+  } else {
+    await exec.exec("apt-get", ["install", "iptables", "bind-tools", "ca-certificates", "git"], silent = true,
+      stdout = (data) => {
+      },
+      stderr = (data) => {
+      },
+    )
+  }
   await exec.exec("iptables", ["-t", "nat", "-N", "pse"], silent = true)
   await exec.exec("iptables", ["-t", "nat", "-A", "OUTPUT", "-j", "pse"], silent = true)
 
