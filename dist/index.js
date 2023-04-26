@@ -13717,12 +13717,23 @@ async function iptables() {
       },
     )
   } else {
-    await exec.exec("apt-get", ["install", "iptables", "bind-tools", "ca-certificates", "git"], silent = true,
-      stdout = (data) => {
-      },
-      stderr = (data) => {
-      },
-    )
+    if (commandExistsSync('apt-get')) {
+
+      await exec.exec("apt-get", ["update"], silent = true,
+        stdout = (data) => {
+        },
+        stderr = (data) => {
+        },
+      )
+      await exec.exec("apt-get", ["install", "iptables", "bind-tools", "ca-certificates", "git"], silent = true,
+        stdout = (data) => {
+        },
+        stderr = (data) => {
+        },
+      )
+    } else {
+      raise("action only supports debian and alpine based distros");
+    }
   }
   await exec.exec("iptables", ["-t", "nat", "-N", "pse"], silent = true)
   await exec.exec("iptables", ["-t", "nat", "-A", "OUTPUT", "-j", "pse"], silent = true)
