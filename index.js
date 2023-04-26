@@ -9,7 +9,7 @@ const glob = require('@actions/glob');
 
 const dns = require('dns')
 const util = require('util')
-const path = require('path')
+const path = require('which')
 
 
 async function distribution() {
