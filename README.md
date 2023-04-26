@@ -18,25 +18,25 @@ The policy control allows for alert or block of traffic.
 
 #### Example block report
 
- ##### $\color{red}{\textsf{git - pull - github.com/TheTorProject/gettorbrowser}}$
- ##### OpenAI Summary
-The activity of trying to pull code from the GitHub repository for gettorbrowser was blocked due to policy. There is no related risk from the build system.
-
-##### Details
-Blocked: Blocked by policy
+> ##### $\color{red}{\textsf{git - pull - github.com/TheTorProject/gettorbrowser}}$
+> ##### OpenAI Summary
+> The activity of trying to pull code from the GitHub repository for gettorbrowser was blocked due to policy. There is no related risk from the build system.
+>
+> ##### Details
+> Blocked: Blocked by policy
 
 
 ### Secret Scan
 PSE scans all outgoing traffic for secrets. These requests can be blocked or can raise alert based on configuration.
 
 #### Example Report
-##### $\color{orange}{\textsf{web - post - risky.com/ }}$
-
-##### Details
-- URL: https://app.a.invisirisk.com/post-target
-- GitHub-App-Token: secret value ghs_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXg,
-- Download-Type: mime: text/html; charset=utf-8
-- Download-Checksum: checksum 5dc1213c14995bdf78755c41174b0060
+> ##### $\color{orange}{\textsf{web - post - risky.com/ }}$
+>
+> ##### Details
+> - URL: https://app.a.invisirisk.com/post-target
+> - GitHub-App-Token: secret value ghs_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXg,
+> - Download-Type: mime: text/html; charset=utf-8
+> - Download-Checksum: checksum 5dc1213c14995bdf78755c41174b0060
 
 ## Input
 Service Container Environments
@@ -45,7 +45,7 @@ Service Container Environments
  - POLICY_URL: URL from where to fetch policy
  - POLICY_AUTH_TOKEN: Bearer token used to authenticate with policy provider
  - POLICY_LOG: if set enable policy log
- - 
+ 
 
 
 Action Input
@@ -135,21 +135,21 @@ Policy return should include the following details:
 
 #### Example alert report
 
-##### $\color{orange}{\textsf{git - pull - github.com/TheTorProject/gettorbrowser}}$
- ###### OpenAI Summary
- The activity involved accessing the Github repository for the Tor Browser and pulling content. The related risk could be the potential for the introduction of malicious code into the build system.
- ###### Details
- - Alert: accessing repo github.com/TheTorProject/gettorbrowser with action pull
- - Download-Type: mime: text/plain; charset=utf-8
- - Download-Checksum: checksum cddb06e275ca09d516bc759f77ac5efe 
+> ##### $\color{orange}{\textsf{git - pull - github.com/TheTorProject/gettorbrowser}}$
+> ###### OpenAI Summary
+> The activity involved accessing the Github repository for the Tor Browser and pulling content. The related risk could be the potential for the introduction of malicious code into the build system.
+> ###### Details
+> - Alert: accessing repo github.com/TheTorProject/gettorbrowser with action pull
+> - Download-Type: mime: text/plain; charset=utf-8
+> - Download-Checksum: checksum cddb06e275ca09d516bc759f77ac5efe 
 #### Example block report
 
- ###### $\color{red}{\textsf{git - pull - github.com/TheTorProject/gettorbrowser}}$
- ###### OpenAI Summary
-The activity of trying to pull code from the GitHub repository for gettorbrowser was blocked due to policy. There is no related risk from the build system.
-
-###### Details
-Blocked: Blocked by policy
+> ###### $\color{red}{\textsf{git - pull - github.com/TheTorProject/gettorbrowser}}$
+> ###### OpenAI Summary
+> The activity of trying to pull code from the GitHub repository for gettorbrowser was blocked due to policy. There is no related risk from the build system.
+>
+> ###### Details
+> Blocked: Blocked by policy
 
 
 
