@@ -9,7 +9,6 @@ const glob = require('@actions/glob');
 
 const dns = require('dns')
 const util = require('util')
-var commandExistsSync = require('command-exists').sync;
 
 
 
@@ -19,33 +18,44 @@ async function distribution() {
 }
 
 async function iptables() {
-  if (commandExistsSync('apk')) {
 
+  var apk = true
+  const rv = await exec.exec("apt-get", ["--help"],
+    silent = true,
+    ignoreReturnCode = true,
+    stdout = (data) => {
+    },
+    stderr = (data) => {
+    },
+
+  )
+  if (rv == 0) {
+    apk = false
+  }
+  if (apk) {
     await exec.exec("apk", ["add", "iptables", "ca-certificates", "git"], silent = true,
+
       stdout = (data) => {
       },
       stderr = (data) => {
       },
     )
   } else {
-    if (commandExistsSync('apt-get')) {
 
-      await exec.exec("apt-get", ["update"], silent = true,
-        stdout = (data) => {
-        },
-        stderr = (data) => {
-        },
-      )
-      await exec.exec("apt-get", ["install", "-y", "iptables", "ca-certificates", "git"], silent = true,
-        stdout = (data) => {
-        },
-        stderr = (data) => {
-        },
-      )
-    } else {
-      raise("action only supports debian and alpine based distros");
-    }
+    await exec.exec("apt-get", ["update"], silent = true,
+      stdout = (data) => {
+      },
+      stderr = (data) => {
+      },
+    )
+    await exec.exec("apt-get", ["install", "-y", "iptables", "ca-certificates", "git"], silent = true,
+      stdout = (data) => {
+      },
+      stderr = (data) => {
+      },
+    )
   }
+
   await exec.exec("iptables", ["-t", "nat", "-N", "pse"], silent = true)
   await exec.exec("iptables", ["-t", "nat", "-A", "OUTPUT", "-j", "pse"], silent = true)
 
