@@ -104,6 +104,11 @@ decision = {"result": "allow"} {
 
 ```
 
+### Policy return
+Policy return should include the following details:
+- result: allow, deny, alert/warn, alert/error, alert/crit
+- details: if result is alert, message associated with the alert
+
 ## Output
 The output is set as checks associated with the build. These checks can be summarized using OpenAI ChatBot.
 Here is an example Output Report
