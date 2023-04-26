@@ -7,6 +7,36 @@ Pipeline Security Engine  provides detailed analysis and control of all the netw
 ## Design
 The PSE action sets up iptables rules to redirect all port 443 traffic to service container named PSE. The PSE container runs an SSL inspection proxy analyzing traffic flowing between your build and rest of the world. The PSE Action sets up CA certificate from the proxy service as a trusted certificate in your build container providing seamless service.
 
+## Features
+### Full Network Traffic Visibility
+PSE scans all traffic from your build containers, providing full detailed view and control.
+
+### Policy Control
+Full policy control over what should be admitted to the build system. PSE uses [Rego](https://www.openpolicyagent.org/docs/latest/policy-language/) as the policy language.
+
+The policy control allows for alert or block of traffic.
+
+#### Example block report
+
+ ##### $\color{red}{\textsf{git - pull - github.com/TheTorProject/gettorbrowser}}$
+ ##### OpenAI Summary
+The activity of trying to pull code from the GitHub repository for gettorbrowser was blocked due to policy. There is no related risk from the build system.
+
+##### Details
+Blocked: Blocked by policy
+
+
+### Secret Scan
+PSE scans all outgoing traffic for secrets. These requests can be blocked or can raise alert based on configuration.
+
+#### Example Report
+##### $\color{orange}{\textsf{web - post - risky.com/ }}$
+
+##### Details
+- URL: https://app.a.invisirisk.com/post-target
+- GitHub-App-Token: secret value ghs_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXg,
+- Download-Type: mime: text/html; charset=utf-8
+- Download-Checksum: checksum 5dc1213c14995bdf78755c41174b0060
 
 ## Input
 Service Container Environments
@@ -68,12 +98,6 @@ jobs:
 ```
 
 
-
-## Restrictions
-- Only works with Alpine container builds.
-- Build container must allow root access to run iptables.
-- Build container should be provided net_admin capability.
-
 ## Policy Interface
 PSE uses rego for policies. The PSE will fetch policy as a tarball from POLICY_URL. Policy auth can be set using POLICY_AUTH_TOKEN token.
 
@@ -103,6 +127,31 @@ decision = {"result": "allow"} {
 } else := {"result": "alert/warn", "details": alert(input.details.repo, input.action)}
 
 ```
+
+### Policy return
+Policy return should include the following details:
+- result: allow, deny, alert/warn, alert/error, alert/crit
+- details: if result is alert, message associated with the alert
+
+#### Example alert report
+
+##### $\color{orange}{\textsf{git - pull - github.com/TheTorProject/gettorbrowser}}$
+ ###### OpenAI Summary
+ The activity involved accessing the Github repository for the Tor Browser and pulling content. The related risk could be the potential for the introduction of malicious code into the build system.
+ ###### Details
+ - Alert: accessing repo github.com/TheTorProject/gettorbrowser with action pull
+ - Download-Type: mime: text/plain; charset=utf-8
+ - Download-Checksum: checksum cddb06e275ca09d516bc759f77ac5efe 
+#### Example block report
+
+ ###### $\color{red}{\textsf{git - pull - github.com/TheTorProject/gettorbrowser}}$
+ ###### OpenAI Summary
+The activity of trying to pull code from the GitHub repository for gettorbrowser was blocked due to policy. There is no related risk from the build system.
+
+###### Details
+Blocked: Blocked by policy
+
+
 
 ## Output
 The output is set as checks associated with the build. These checks can be summarized using OpenAI ChatBot.
@@ -212,6 +261,10 @@ Here is an example Output Report
 - [ ] PyPI support
 - [ ] Ubuntu Container
 - [X] Policy Interface
+## Restrictions
+- Only works with Alpine container builds.
+- Build container must allow root access to run iptables.
+- Build container should be provided net_admin capability.
 
 ### Licensing
 The project is licensed under [Apache License v2](https://www.apache.org/licenses/LICENSE-2.0).
