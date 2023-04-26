@@ -13,7 +13,7 @@ const util = require('util')
 
 async function iptables() {
 
-  await exec.exec("apk", ["add", "iptables", "bind-tools", "ca-certificates"], silent = true,
+  await exec.exec("apk", ["add", "iptables", "bind-tools", "ca-certificates", "git"], silent = true,
     stdout = (data) => {
     },
     stderr = (data) => {
