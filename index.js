@@ -20,7 +20,6 @@ async function distribution() {
 async function iptables() {
 
   var apk = false
-  core.error("checking apt-get")
 
   if (await which('apt-get', { nothrow: true }) == null) {
     apk = true
