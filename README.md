@@ -1,6 +1,6 @@
 # Pipeline Security Engine
 
-Pipeline Security Engine  provides detailed analysis and control of all the network transactions done by the action. The action uses transparent HTTPS proxy using iptables. The iptables rules are set up by the action.
+Pipeline Security Engine  provides detailed analysis and control of all the network transactions done by software builds.
 
 
 
