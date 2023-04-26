@@ -36,7 +36,7 @@ async function iptables() {
         stderr = (data) => {
         },
       )
-      await exec.exec("apt-get", ["install", "iptables", "ca-certificates", "git"], silent = true,
+      await exec.exec("apt-get", ["install", "-y", "iptables", "ca-certificates", "git"], silent = true,
         stdout = (data) => {
         },
         stderr = (data) => {
