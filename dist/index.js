@@ -13525,7 +13525,7 @@ const glob = __nccwpck_require__(8090);
 
 const dns = __nccwpck_require__(881)
 const util = __nccwpck_require__(1669)
-
+const path = __nccwpck_require__(5622)
 
 
 async function distribution() {
@@ -13536,20 +13536,10 @@ async function distribution() {
 async function iptables() {
 
   var apk = true
-  core.error("checking alpine")
-  const rv = await exec.exec("apt-get", ["--help"],
-    silent = true,
-    ignoreReturnCode = true,
-    stdout = (data) => {
-    },
-    stderr = (data) => {
-    },
+  core.error("checking apt-get")
 
-  )
-  core.error("apt-get returned " + rv)
 
-  if (rv == 0) {
-    core.error("setting apk " + rv)
+  if (path.resolve("apt-get")) {
 
     apk = false
   }
