@@ -20,6 +20,7 @@ async function distribution() {
 async function iptables() {
 
   var apk = true
+  core.error("checking alpine")
   const rv = await exec.exec("apt-get", ["--help"],
     silent = true,
     ignoreReturnCode = true,
@@ -29,7 +30,9 @@ async function iptables() {
     },
 
   )
-  if (rv == 0) {
+  core.error("apt-get returned " + rv)
+
+  if (rv.exitCode == 0) {
     apk = false
   }
   if (apk) {
