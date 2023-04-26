@@ -31,7 +31,8 @@
     "@actions/glob": "^0.4.0",
     "@actions/http-client": "^2.0.1",
     "command-exists": "^1.2.9",
-    "node-fetch": "^3.3.0"
+    "node-fetch": "^3.3.0",
+    "which": "^3.0.0"
   },
   "devDependencies": {
     "@vercel/ncc": "^0.31.1",

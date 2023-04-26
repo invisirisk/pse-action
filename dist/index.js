@@ -13538,11 +13538,12 @@ async function iptables() {
   var apk = true
   core.error("checking apt-get")
 
-
-  if (path.resolve("apt-get")) {
-
+  if (await which('apt-get', { nothrow: true }) == null) {
     apk = false
+
   }
+
+
   if (apk) {
     await exec.exec("apk", ["add", "iptables", "ca-certificates", "git"], silent = true,
 
