@@ -25,7 +25,7 @@ async function run() {
         "Content-Type": "application/x-www-form-urlencoded",
       }
     );
-    const body = await res.readBody()
+    const body = await response.readBody()
     core.notice(body)
     const obj = JSON.parse(body)
     core.notice(obj)
