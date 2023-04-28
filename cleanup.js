@@ -33,7 +33,11 @@ async function run() {
     //core.notice(body)
     const obj = JSON.parse(body)
     obj.activities.forEach((act) => {
-      core.notice(act.name + " - " + act.action);
+      core.startGroup(act.name + " - " + act.action)
+      obj.activities.forEach((act) => {
+        core.notice(act.checks)
+      })
+      core.endGroup()
     });
    
     core.debug("cleanup - done");
