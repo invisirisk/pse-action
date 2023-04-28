@@ -33,6 +33,7 @@ jobs:
       - run: apk add make git
       - uses: actions/checkout@v3
       - run: npm install -g @vercel/ncc
+      - run: npm install
       - run: NODE_OPTIONS=--openssl-legacy-provider npm run prepare
       - uses: ./
         with:
