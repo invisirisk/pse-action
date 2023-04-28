@@ -16,6 +16,9 @@ Full policy control over what should be admitted to the build system. PSE uses [
 
 The policy control allows for alert or block of traffic.
 
+Here are examples of action runs:
+- [Basic NPM demo](https://github.com/invisirisk/pse-action/actions/runs/4835706529/jobs/8618252314)
+
 #### Example block report
 
 > ##### $\color{red}{\textsf{git - pull - github.com/TheTorProject/gettorbrowser}}$
