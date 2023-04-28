@@ -21,7 +21,7 @@ jobs:
            GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
            #OPENAI_AUTH_TOKEN: ${{ secrets.OPENAI_AUTH_TOKEN }}
            #PSE_DEBUG_FLAG: --alsologtostderr
-           #POLICY_LOG: t
+           POLICY_LOG: t
     container:
       image: node:19-alpine
       options: --cap-add=NET_ADMIN
