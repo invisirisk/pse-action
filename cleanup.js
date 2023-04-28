@@ -29,17 +29,7 @@ async function run() {
     if (res.message.statusCode != 200) {
       core.error("error talking to PSE. Status " + res.message.statusCode)
     }
-    const body = await res.readBody()
-    //core.notice(body)
-    const obj = JSON.parse(body)
-    obj.activities.forEach((act) => {
-      core.startGroup(act.name + " - " + act.action)
-      obj.activities.forEach((act) => {
-        core.notice(act.checks)
-      })
-      core.endGroup()
-    });
-   
+
     core.debug("cleanup - done");
   } catch (error) {
     core.info("end post failed with message " + error.message);

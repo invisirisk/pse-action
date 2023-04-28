@@ -14,14 +14,14 @@ jobs:
     services:
       # Label used to access the service container
       pse:
-        image: invisirisk/pse:v0.9.0
+        image: invisirisk/pse:latest
         env:
-           #POLICY_AUTH_TOKEN: ${{ secrets.POLICY_AUTH_TOKEN }}
-           #POLICY_URL: https://api.github.com/repos/invisirisk/policy/tarball/main
+           POLICY_AUTH_TOKEN: ${{ secrets.POLICY_AUTH_TOKEN }}
+           POLICY_URL: https://api.github.com/repos/invisirisk/policy/tarball/main
            GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-           #OPENAI_AUTH_TOKEN: ${{ secrets.OPENAI_AUTH_TOKEN }}
+           OPENAI_AUTH_TOKEN: ${{ secrets.OPENAI_AUTH_TOKEN }}
            #PSE_DEBUG_FLAG: --alsologtostderr
-           POLICY_LOG: t
+           #POLICY_LOG: t
     container:
       image: node:19-alpine
       options: --cap-add=NET_ADMIN
@@ -32,43 +32,15 @@ jobs:
     steps:
       - run: apk add make git
       - uses: actions/checkout@v3
-      - run: NODE_OPTIONS=--openssl-legacy-provider npm install
-      - run: npm install -g @vercel/ncc
-      - run: NODE_OPTIONS=--openssl-legacy-provider npm run prepare
+      - name: setup action
+        run: |
+            NODE_OPTIONS=--openssl-legacy-provider npm install
+            npm install -g @vercel/ncc
+            NODE_OPTIONS=--openssl-legacy-provider npm run prepare
       - uses: ./
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
       - run: cd demo/npm && make
         env:
            IR_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }} # The build uses private NPM registry
-  build-again:
-    services:
-      # Label used to access the service container
-      pse:
-        image: invisirisk/pse:v0.9.0
-        env:
-           #POLICY_AUTH_TOKEN: ${{ secrets.POLICY_AUTH_TOKEN }}
-           #POLICY_URL: https://api.github.com/repos/invisirisk/policy/tarball/main
-           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-           #OPENAI_AUTH_TOKEN: ${{ secrets.OPENAI_AUTH_TOKEN }}
-           #PSE_DEBUG_FLAG: --alsologtostderr
-           POLICY_LOG: t
-    container:
-      image: node:19-alpine
-      options: --cap-add=NET_ADMIN
-      
-    runs-on: ubuntu-latest
-    #runs-on: self-hosted
-    
-    steps:
-      - run: apk add make git
-      - uses: actions/checkout@v3
-      - run: NODE_OPTIONS=--openssl-legacy-provider npm install
-      - run: npm install -g @vercel/ncc
-      - run: NODE_OPTIONS=--openssl-legacy-provider npm run prepare
-      - uses: ./
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-      - run: cd demo/npm && make
-        env:
-           IR_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }} # The build uses private NPM registry
+  
