@@ -1,4 +1,4 @@
-name: NPM Build Demo
+name: NB2
 
 on:
   push:
