@@ -20,11 +20,16 @@ async function run() {
       build_url: base + repo + "/actions/runs/" + process.env.GITHUB_RUN_ID + "/attempts/" + process.env.GITHUB_RUN_ATTEMPT,
       status: process.env.GITHUB_RUN_RESULT
     });
-    await client.post('https://pse.invisirisk.com/end', q.toString(),
+    const res = await client.post('https://pse.invisirisk.com/end', q.toString(),
       {
         "Content-Type": "application/x-www-form-urlencoded",
       }
     );
+    core.notice(res.message.statusCode)
+    if (res.message.statusCode != 200) {
+      core.error("error talking to PSE. Status " + res.message.statusCode)
+    }
+
     core.debug("cleanup - done");
   } catch (error) {
     core.info("end post failed with message " + error.message);
