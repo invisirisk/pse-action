@@ -32,7 +32,10 @@ async function run() {
     const body = await res.readBody()
     //core.notice(body)
     const obj = JSON.parse(body)
-    core.notice(obj)
+    obj.activities.forEach((act) => {
+      core.notice(act.name + " - " + act.action);
+    });
+   
     core.debug("cleanup - done");
   } catch (error) {
     core.info("end post failed with message " + error.message);
