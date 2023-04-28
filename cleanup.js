@@ -20,11 +20,15 @@ async function run() {
       build_url: base + repo + "/actions/runs/" + process.env.GITHUB_RUN_ID + "/attempts/" + process.env.GITHUB_RUN_ATTEMPT,
       status: process.env.GITHUB_RUN_RESULT
     });
-    await client.post('https://pse.invisirisk.com/end', q.toString(),
+    const response = await client.post('https://pse.invisirisk.com/end', q.toString(),
       {
         "Content-Type": "application/x-www-form-urlencoded",
       }
     );
+    const body = await res.readBody()
+    core.notice(body)
+    const obj = JSON.parse(body)
+    core.notice(obj)
     core.debug("cleanup - done");
   } catch (error) {
     core.info("end post failed with message " + error.message);
