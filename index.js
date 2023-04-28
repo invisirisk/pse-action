@@ -94,7 +94,7 @@ async function run() {
   try {
     let base = process.env.GITHUB_SERVER_URL + "/";
     let repo = process.env.GITHUB_REPOSITORY;
-    core.warning(process.env);
+    //core.warning(process.env);
     await iptables();
 
     client = new http.HttpClient("pse-action", [], {
