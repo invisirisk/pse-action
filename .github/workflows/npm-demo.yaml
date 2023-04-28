@@ -35,3 +35,5 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
       - uses: actions/checkout@v3
       - run: cd demo/npm && make
+        env:
+           IR_AUTH_TOKEN: ${{ secrets.IR_AUTH_TOKEN }} # The build uses private NPM registry
