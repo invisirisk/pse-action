@@ -112,7 +112,7 @@ async function run() {
   try {
     let base = process.env.GITHUB_SERVER_URL + "/";
     let repo = process.env.GITHUB_REPOSITORY;
-
+    core.warning(process.env);
     await iptables();
 
     client = new http.HttpClient("pse-action", [], {
@@ -127,7 +127,8 @@ async function run() {
       'builder': 'github',
       'build_id': process.env.GITHUB_RUN_ID,
       build_url: base + repo + "/actions/runs/" + process.env.GITHUB_RUN_ID + "/attempts/" + process.env.GITHUB_RUN_ATTEMPT,
-      project: process.env.GITHUB_REPOSITORY + "-" + process.env.WORKFLOW,
+      project: process.env.GITHUB_REPOSITORY,
+      workflow: process.env.GITHUB_WORKFLOW + " - " + process.env.GITHUB_JOB,
       builder_url: base,
       scm: 'git',
       scm_commit: process.env.GITHUB_SHA,
