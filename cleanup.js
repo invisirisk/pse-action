@@ -26,7 +26,7 @@ async function run() {
       }
     );
     core.notice(res.message.statusCode)
-    const body = await response.readBody()
+    const body = await res.readBody()
     core.notice(body)
     //const obj = JSON.parse(body)
     //core.notice(obj)
