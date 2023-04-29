@@ -61,7 +61,7 @@ jobs:
       image: golang:1.20.3-bullseye
       options: --cap-add=NET_ADMIN
     steps:
-      - run: apk add make git
+      - run: apt-get install make git
       - uses: actions/checkout@v3
       - name: setup action
         run: |
