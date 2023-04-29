@@ -3,7 +3,7 @@
 all: clone install test
 
 clone:
-	git clone https://github.com/TheTorProject/gettorbrowser
+	git clone https://github.com/invisirisk/pse-action /tmp/pa
 install:
 	npm cache clean --force
 	npm install
