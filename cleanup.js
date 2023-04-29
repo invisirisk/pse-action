@@ -25,7 +25,6 @@ async function run() {
         "Content-Type": "application/x-www-form-urlencoded",
       }
     );
-    core.notice(res.message.statusCode)
     if (res.message.statusCode != 200) {
       core.error("error talking to PSE. Status " + res.message.statusCode)
     }

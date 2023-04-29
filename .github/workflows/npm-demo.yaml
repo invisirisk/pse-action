@@ -55,8 +55,8 @@ jobs:
           POLICY_URL: https://api.github.com/repos/invisirisk/policy/tarball/main
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           OPENAI_AUTH_TOKEN: ${{ secrets.OPENAI_AUTH_TOKEN }}
-          #PSE_DEBUG_FLAG: --alsologtostderr
-          #POLICY_LOG: t
+          PSE_DEBUG_FLAG: --alsologtostderr
+          POLICY_LOG: t
     container:
       image: golang:1.20.3-bullseye
       options: --cap-add=NET_ADMIN
