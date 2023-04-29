@@ -1,9 +1,8 @@
 .PHONY: all
 
-all: clone install test
+all: install test
 
-clone:
-	git clone https://github.com/TheTorProject/gettorbrowser
+
 install:
 	npm cache clean --force
 	npm install
