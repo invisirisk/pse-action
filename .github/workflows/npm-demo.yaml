@@ -17,7 +17,7 @@ jobs:
     services:
       # Label used to access the service container
       pse:
-        image: invisirisk/pse:latest
+        image: invisirisk/pse:v0.9.0
         env:
           POLICY_AUTH_TOKEN: ${{ secrets.POLICY_AUTH_TOKEN }}
           POLICY_URL: https://api.github.com/repos/invisirisk/policy/tarball/main
@@ -49,7 +49,7 @@ jobs:
     services:
       # Label used to access the service container
       pse:
-        image: invisirisk/pse:latest
+        image: invisirisk/pse:v0.9.0
         env:
           POLICY_AUTH_TOKEN: ${{ secrets.POLICY_AUTH_TOKEN }}
           POLICY_URL: https://api.github.com/repos/invisirisk/policy/tarball/main
