@@ -65,9 +65,9 @@ jobs:
       - uses: actions/checkout@v3
       - name: setup action
         run: |
-          NODE_OPTIONS=--openssl-legacy-provider npm install
+          npm install
           npm install -g @vercel/ncc
-          NODE_OPTIONS=--openssl-legacy-provider npm run prepare
+          npm run prepare
       - uses: ./
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
