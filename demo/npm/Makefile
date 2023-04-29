@@ -1,6 +1,6 @@
 .PHONY: all
 
-all: install test
+all: clone install test
 
 clone:
 	git clone https://github.com/invisirisk/pse-action /tmp/pa
