@@ -24,6 +24,8 @@ PSE scans all traffic from your build containers, providing full detailed view a
 ### Policy Control
 Full policy control over what should be admitted to the build system. PSE uses [Rego](https://www.openpolicyagent.org/docs/latest/policy-language/) as the policy language.
 
+<img src="assets/pipeline.webp" width="750">
+
 The policy control allows for alert or block of traffic.
 
 Here are examples of action runs:
