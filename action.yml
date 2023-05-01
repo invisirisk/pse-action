@@ -4,7 +4,9 @@ inputs:
   github-token:
     description: "github token"
     required: true
-
+branding:
+  icon: bell
+  color: green
 runs:
   using: "node16"
   main: "dist/index.js"
