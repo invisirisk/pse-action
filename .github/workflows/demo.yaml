@@ -60,6 +60,8 @@ jobs:
           OPENAI_AUTH_TOKEN: ${{ secrets.OPENAI_AUTH_TOKEN }}
           PSE_DEBUG_FLAG: --alsologtostderr
           POLICY_LOG: t
+          INVISIRISK_JWT_TOKEN: ${{secrets.INVISIRISK_JWT_TOKEN}}
+          INVISIRISK_PORTAL: https://app.a.invisirisk.com/
     container:
       image: golang:1.20.3-bullseye
       options: --cap-add=NET_ADMIN
@@ -91,6 +93,8 @@ jobs:
           OPENAI_AUTH_TOKEN: ${{ secrets.OPENAI_AUTH_TOKEN }}
           PSE_DEBUG_FLAG: --alsologtostderr
           POLICY_LOG: t
+          INVISIRISK_JWT_TOKEN: ${{secrets.INVISIRISK_JWT_TOKEN}}
+          INVISIRISK_PORTAL: https://app.a.invisirisk.com/
     container:
       image: golang:1.20.3-bullseye
       options: --cap-add=NET_ADMIN
