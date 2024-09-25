@@ -86,6 +86,8 @@ async function caSetup() {
   await exec.exec('git', ["config", "--global", "http.sslCAInfo", caFile]);
   core.exportVariable('NODE_EXTRA_CA_CERTS', caFile);
 
+  await exec.exec('pip', ["config", "--global", "set", "global.cert" , caFile]);
+
 }
 
 
