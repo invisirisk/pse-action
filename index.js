@@ -85,8 +85,7 @@ async function caSetup() {
 
   await exec.exec('git', ["config", "--global", "http.sslCAInfo", caFile]);
   core.exportVariable('NODE_EXTRA_CA_CERTS', caFile);
-
-  await exec.exec('pip', ["config", "--global", "set", "global.cert" , caFile]);
+  core.exportVariable('REQUESTS_CA_BUNDLE', caFile);
 
 }
 
@@ -106,9 +105,10 @@ async function run() {
     await caSetup();
 
  
-
+    const scan_id = core.getInput('SCAN_ID');
     let q = new URLSearchParams({
       'builder': 'github',
+      'id': scan_id,
       'build_id': process.env.GITHUB_RUN_ID,
       build_url: base + repo + "/actions/runs/" + process.env.GITHUB_RUN_ID + "/attempts/" + process.env.GITHUB_RUN_ATTEMPT,
       project: process.env.GITHUB_REPOSITORY,
