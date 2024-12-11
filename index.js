@@ -66,20 +66,41 @@ async function iptables() {
   )
 
 }
-
-async function caSetup() {
+async function fetchWithRetries(url, maxRetries = 5, delay = 3000, exponentialBackoffFactor = 1.5) {
   client = new http.HttpClient("pse-action", [], {
     ignoreSslError: true,
   });
 
-  const res = await client.get('https://pse.invisirisk.com/ca');
-  if (res.message.statusCode != 200) {
-    core.error("error getting ca certificate, received status " + res.message.statusCode)
-    throw "error getting ca  certificate"
-  }
-  const cert = await res.readBody()
+  for (let i = 0; i < maxRetries; i++) {
+    try {
+      const res = await client.get(url);
+      const statusCode = res.message.statusCode;
 
+      if (statusCode >= 200 && statusCode < 300) {
+        return res;
+      } 
+      throw new Error("Error retrieving resource from " + url + ", status code: " + statusCode);
+    
+    } catch (error) {
+      core.error(`Attempt #${i + 1}: Request failed: ${error.message}`);
+      if (i === maxRetries - 1) {
+        throw error;
+      }
+      core.info(`Retrying in ${delay / 1000} seconds...`);
+      await new Promise(resolve => setTimeout(resolve, delay));
+      delay *= exponentialBackoffFactor;
+
+    }
+  }
+}
+async function caSetup() {
+
+  const caURL = 'https://pse.invisirisk.com/ca';
+  const resp = await fetchWithRetries(caURL, 5, 3000, 1.5);
+  const cert = await resp.readBody();
   const caFile = "/etc/ssl/certs/pse.pem";
+
+
   fs.writeFileSync(caFile, cert);
   await exec.exec('update-ca-certificates');
 
