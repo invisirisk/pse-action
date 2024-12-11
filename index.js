@@ -78,52 +78,36 @@ async function fetchWithRetries(url, maxRetries = 5, delay = 3000, exponentialBa
 
       if (statusCode >= 200 && statusCode < 300) {
         return res;
-      } else {
-        if (i < maxRetries - 1) {
-          core.warning(
-            `Attempt #${i + 1} failed to retrieve ${url}. Status code: ${statusCode}. ` +
-            `Retrying in ${delay / 1000} seconds...`
-          );
-          await new Promise(resolve => setTimeout(resolve, delay));
-          delay *= exponentialBackoffFactor; // increase delay exponentially
-        } else {
-          core.error(
-            `Max retries reached. Error retrieving ${url} with status code: ${statusCode}.`
-          );
-          throw new Error(
-            `Error retrieving resource from ${url} after max retries, status code: ${statusCode}`
-          );
-        }
-      }
+      } 
+      throw new Error("Error retrieving resource from " + url + ", status code: " + statusCode);
+    
     } catch (error) {
-      core.error(`Request failed: ${error.message}`);
+      core.error(`Attempt #${i + 1}: Request failed: ${error.message}`);
       if (i === maxRetries - 1) {
         throw error;
       }
+      core.info(`Retrying in ${delay / 1000} seconds...`);
+      await new Promise(resolve => setTimeout(resolve, delay));
+      delay *= exponentialBackoffFactor;
+
     }
   }
 }
 async function caSetup() {
-  try {
-    const caURL='https://pse.invisirisk.com/ca';
-    const resp=await fetchWithRetries(caURL, 5, 3000, 1.5);
-    const cert = await resp.readBody();
-    const caFile = "/etc/ssl/certs/pse.pem";
+
+  const caURL = 'https://pse.invisirisk.com/ca';
+  const resp = await fetchWithRetries(caURL, 5, 3000, 1.5);
+  const cert = await resp.readBody();
+  const caFile = "/etc/ssl/certs/pse.pem";
 
 
-    fs.writeFileSync(caFile, cert);
-    await exec.exec('update-ca-certificates');
+  fs.writeFileSync(caFile, cert);
+  await exec.exec('update-ca-certificates');
 
-    await exec.exec('git', ["config", "--global", "http.sslCAInfo", caFile]);
-    core.exportVariable('NODE_EXTRA_CA_CERTS', caFile);
-    core.exportVariable('REQUESTS_CA_BUNDLE', caFile);
-  
-  } catch (error) {
-      // Handle or log the error appropriately
-      core.error(`caSetup failed: ${error.message}`);
-      throw error; // or handle it as needed
-  }
-  
+  await exec.exec('git', ["config", "--global", "http.sslCAInfo", caFile]);
+  core.exportVariable('NODE_EXTRA_CA_CERTS', caFile);
+  core.exportVariable('REQUESTS_CA_BUNDLE', caFile);
+
 }
 
 
