@@ -66,45 +66,63 @@ async function iptables() {
   )
 
 }
-async function throttleRequests(url) {
+async function fetchWithRetries(url, maxRetries = 5, delay = 3000, exponentialBackoffFactor = 1.5) {
   client = new http.HttpClient("pse-action", [], {
     ignoreSslError: true,
   });
 
-  const retries = 5;
-  let delay = 3000; // start with 3 seconds
-  const delayIncrementFactor = 1.5; // exponential backoff
+  for (let i = 0; i < maxRetries; i++) {
+    try {
+      const res = await client.get(url);
+      const statusCode = res.message.statusCode;
 
-  for (let i = 0; i < retries; i++) {
-    const res = await client.get(url);
-    if (res.message.statusCode === 200) {
-      return res;
-    } else {
-      if (i < retries - 1) {
-        core.warning(`Retry ${i + 1} failed with status ${res.message.statusCode}. Retrying in ${delay / 1000} seconds...`);
-        await new Promise(resolve => setTimeout(resolve, delay));
-        delay *= delayIncrementFactor; // increase delay exponentially
+      if (statusCode >= 200 && statusCode < 300) {
+        return res;
       } else {
-        core.error("Max retries reached. Error getting CA certificate.");
-        throw new Error("Error getting CA certificate after max retries");
+        if (i < maxRetries - 1) {
+          core.warning(
+            `Attempt #${i + 1} failed to retrieve ${url}. Status code: ${statusCode}. ` +
+            `Retrying in ${delay / 1000} seconds...`
+          );
+          await new Promise(resolve => setTimeout(resolve, delay));
+          delay *= exponentialBackoffFactor; // increase delay exponentially
+        } else {
+          core.error(
+            `Max retries reached. Error retrieving ${url} with status code: ${statusCode}.`
+          );
+          throw new Error(
+            `Error retrieving resource from ${url} after max retries, status code: ${statusCode}`
+          );
+        }
+      }
+    } catch (error) {
+      core.error(`Request failed: ${error.message}`);
+      if (i === maxRetries - 1) {
+        throw error;
       }
     }
   }
-
 }
 async function caSetup() {
-  const caURL='https://pse.invisirisk.com/ca';
-  const resp=await throttleRequests(caURL);
-  const cert = await resp.readBody();
-  const caFile = "/etc/ssl/certs/pse.pem";
+  try {
+    const caURL='https://pse.invisirisk.com/ca';
+    const resp=await fetchWithRetries(caURL, 5, 3000, 1.5);
+    const cert = await resp.readBody();
+    const caFile = "/etc/ssl/certs/pse.pem";
 
 
-  fs.writeFileSync(caFile, cert);
-  await exec.exec('update-ca-certificates');
+    fs.writeFileSync(caFile, cert);
+    await exec.exec('update-ca-certificates');
 
-  await exec.exec('git', ["config", "--global", "http.sslCAInfo", caFile]);
-  core.exportVariable('NODE_EXTRA_CA_CERTS', caFile);
-  core.exportVariable('REQUESTS_CA_BUNDLE', caFile);
+    await exec.exec('git', ["config", "--global", "http.sslCAInfo", caFile]);
+    core.exportVariable('NODE_EXTRA_CA_CERTS', caFile);
+    core.exportVariable('REQUESTS_CA_BUNDLE', caFile);
+  
+  } catch (error) {
+      // Handle or log the error appropriately
+      core.error(`caSetup failed: ${error.message}`);
+      throw error; // or handle it as needed
+  }
   
 }
 
@@ -149,4 +167,5 @@ async function run() {
   }
 }
 
-run();
+// run();
+caSetup();
