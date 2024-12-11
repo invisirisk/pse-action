@@ -74,7 +74,7 @@ async function caSetup() {
 
   const retries = 5;
   let delay = 3000; // start with 3 seconds
-  const delayIncrementFactor = 1.5;
+  const delayIncrementFactor = 1.5; // exponential backoff
 
   for (let i = 0; i < retries; i++) {
     const res = await client.get('https://pse.invisirisk.com/ca');
