@@ -72,21 +72,33 @@ async function caSetup() {
     ignoreSslError: true,
   });
 
-  const res = await client.get('https://pse.invisirisk.com/ca');
-  if (res.message.statusCode != 200) {
-    core.error("error getting ca certificate, received status " + res.message.statusCode)
-    throw "error getting ca  certificate"
+  const retries = 5;
+  let delay = 3000; // start with 3 seconds
+  const delayIncrementFactor = 1.5;
+
+  for (let i = 0; i < retries; i++) {
+    const res = await client.get('https://pse.invisirisk.com/ca');
+    if (res.message.statusCode === 200) {
+      const cert = await res.readBody();
+      const caFile = "/etc/ssl/certs/pse.pem";
+      fs.writeFileSync(caFile, cert);
+      await exec.exec('update-ca-certificates');
+
+      await exec.exec('git', ["config", "--global", "http.sslCAInfo", caFile]);
+      core.exportVariable('NODE_EXTRA_CA_CERTS', caFile);
+      core.exportVariable('REQUESTS_CA_BUNDLE', caFile);
+      return; // exit the function successfully
+    } else {
+      if (i < retries - 1) {
+        core.warning(`Retry ${i + 1} failed with status ${res.message.statusCode}. Retrying in ${delay / 1000} seconds...`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+        delay *= delayIncrementFactor; // increase delay exponentially
+      } else {
+        core.error("Max retries reached. Error getting CA certificate.");
+        throw new Error("Error getting CA certificate after max retries");
+      }
+    }
   }
-  const cert = await res.readBody()
-
-  const caFile = "/etc/ssl/certs/pse.pem";
-  fs.writeFileSync(caFile, cert);
-  await exec.exec('update-ca-certificates');
-
-  await exec.exec('git', ["config", "--global", "http.sslCAInfo", caFile]);
-  core.exportVariable('NODE_EXTRA_CA_CERTS', caFile);
-  core.exportVariable('REQUESTS_CA_BUNDLE', caFile);
-
 }
 
 
