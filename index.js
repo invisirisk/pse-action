@@ -167,5 +167,4 @@ async function run() {
   }
 }
 
-// run();
-caSetup();
+run();
