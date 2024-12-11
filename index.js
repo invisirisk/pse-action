@@ -66,8 +66,7 @@ async function iptables() {
   )
 
 }
-
-async function caSetup() {
+async function throttleRequests(url) {
   client = new http.HttpClient("pse-action", [], {
     ignoreSslError: true,
   });
@@ -77,17 +76,9 @@ async function caSetup() {
   const delayIncrementFactor = 1.5; // exponential backoff
 
   for (let i = 0; i < retries; i++) {
-    const res = await client.get('https://pse.invisirisk.com/ca');
+    const res = await client.get(url);
     if (res.message.statusCode === 200) {
-      const cert = await res.readBody();
-      const caFile = "/etc/ssl/certs/pse.pem";
-      fs.writeFileSync(caFile, cert);
-      await exec.exec('update-ca-certificates');
-
-      await exec.exec('git', ["config", "--global", "http.sslCAInfo", caFile]);
-      core.exportVariable('NODE_EXTRA_CA_CERTS', caFile);
-      core.exportVariable('REQUESTS_CA_BUNDLE', caFile);
-      return; // exit the function successfully
+      return res;
     } else {
       if (i < retries - 1) {
         core.warning(`Retry ${i + 1} failed with status ${res.message.statusCode}. Retrying in ${delay / 1000} seconds...`);
@@ -99,6 +90,22 @@ async function caSetup() {
       }
     }
   }
+
+}
+async function caSetup() {
+  const caURL='https://pse.invisirisk.com/ca';
+  const resp=await throttleRequests(caURL);
+  const cert = await resp.readBody();
+  const caFile = "/etc/ssl/certs/pse.pem";
+
+
+  fs.writeFileSync(caFile, cert);
+  await exec.exec('update-ca-certificates');
+
+  await exec.exec('git', ["config", "--global", "http.sslCAInfo", caFile]);
+  core.exportVariable('NODE_EXTRA_CA_CERTS', caFile);
+  core.exportVariable('REQUESTS_CA_BUNDLE', caFile);
+  
 }
 
 
