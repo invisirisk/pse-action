@@ -182,7 +182,7 @@ async function initiateSBOMScan(vbApiUrl, vbApiKey) {
     "Content-Type": "application/json",
   });
 
-  if (res.message.statusCode !== 200) {
+  if (res.message.statusCode !== 201) {
     throw new Error(`Failed to initiate SBOM scan: ${res.message.statusCode}`);
   }
 
@@ -207,7 +207,7 @@ async function fetchECRCredentials(vbApiUrl, vbApiKey) {
   const url = `${vbApiUrl}/utilityapi/v1/registry?api_key=${vbApiKey}`;
   const res = await client.get(url);
 
-  if (res.message.statusCode !== 200) {
+  if (res.message.statusCode !== 201) {
     throw new Error(`Failed to fetch ECR credentials: ${res.message.statusCode}`);
   }
 
