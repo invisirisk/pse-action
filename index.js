@@ -193,6 +193,23 @@ async function run() {
     const vbApiUrl = core.getInput('VB_API_URL');
     const vbApiKey = core.getInput('VB_API_KEY');
 
+   // Step 4: Initiate SBOM Scan
+   const scanId = await initiateSBOMScan(vbApiUrl, vbApiKey);
+   core.setOutput('scan_id', scanId);
+
+   // Step 5: Fetch ECR Credentials
+   const ecrCredentials = await fetchECRCredentials(vbApiUrl, vbApiKey);
+   const { username, password, region, registry_id } = ecrCredentials;
+
+   // Step 6: Log in to Amazon ECR
+   await loginToECR(username, password, registry_id, region);
+
+   // Step 7: Run VB Image
+   await runVBImage(vbApiUrl, vbApiKey, registry_id, region);
+
+   // Step 8: Set Container ID as Output
+   const containerId = (await exec.getExecOutput('docker ps -aqf name=^pse$')).stdout.trim();
+   core.exportVariable('CONTAINER_ID', containerId);
     // Step 1: Configure iptables
     await iptables();
 
@@ -226,23 +243,7 @@ async function run() {
       "Content-Type": "application/x-www-form-urlencoded",
     });
 
-    // Step 4: Initiate SBOM Scan
-    const scanId = await initiateSBOMScan(vbApiUrl, vbApiKey);
-    core.setOutput('scan_id', scanId);
-
-    // Step 5: Fetch ECR Credentials
-    const ecrCredentials = await fetchECRCredentials(vbApiUrl, vbApiKey);
-    const { username, password, region, registry_id } = ecrCredentials;
-
-    // Step 6: Log in to Amazon ECR
-    await loginToECR(username, password, registry_id, region);
-
-    // Step 7: Run VB Image
-    await runVBImage(vbApiUrl, vbApiKey, registry_id, region);
-
-    // Step 8: Set Container ID as Output
-    const containerId = (await exec.getExecOutput('docker ps -aqf name=^pse$')).stdout.trim();
-    core.exportVariable('CONTAINER_ID', containerId);
+   
 
   } catch (error) {
     core.setFailed(error.message);
