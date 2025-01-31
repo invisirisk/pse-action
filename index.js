@@ -224,9 +224,38 @@ async function fetchECRCredentials(vbApiUrl, vbApiKey) {
  */
 async function loginToECR(username, password, registryId, region) {
   core.info('Logging in to Amazon ECR...');
-  await exec.exec(`echo ${password} | docker login -u ${username} ${registryId}.dkr.ecr.${region}.amazonaws.com --password-stdin`);
-  // await exec.exec(`docker pull ${registryId}.dkr.ecr.${region}.amazonaws.com/invisirisk/pse-proxy:latest`);
-  core.info('Successfully logged in to Amazon ECR.');
+
+  let stdout = '';
+  let stderr = '';
+
+  try {
+    await exec.exec(`echo ${password} | docker login -u ${username} ${registryId}.dkr.ecr.${region}.amazonaws.com --password-stdin`, [], {
+      listeners: {
+        stdout: (data) => {
+          stdout += data.toString(); // Capture stdout
+        },
+        stderr: (data) => {
+          stderr += data.toString(); // Capture stderr
+        },
+      },
+    });
+
+    // Print the output
+    core.info('Docker login output:');
+    core.info(stdout);
+
+    if (stderr) {
+      core.error('Docker login errors:');
+      core.error(stderr);
+    }
+
+    core.info('Successfully logged in to Amazon ECR.');
+  } catch (error) {
+    core.error('Failed to log in to Amazon ECR:');
+    core.error(stdout); // Print captured stdout
+    core.error(stderr); // Print captured stderr
+    throw error; // Re-throw the error to fail the action
+  }
 }
 
 /**
@@ -235,7 +264,7 @@ async function loginToECR(username, password, registryId, region) {
  */
 async function runVBImage(vbApiUrl, vbApiKey, registryId, region) {
   core.info('Running VB Docker image...');
-  await exec.exec(`docker run --name pse -e INVISIRISK_JWT_TOKEN=${vbApiKey} -e GITHUB_TOKEN=${process.env.GITHUB_TOKEN} -e PSE_DEBUG_FLAG="--alsologtostderr" -e POLICY_LOG="t" -e INVISIRISK_PORTAL=${vbApiUrl} ${registryId}.dkr.ecr.${region}.amazonaws.com/invisirisk/pse-proxy:latest`);
+  await exec.exec(`docker run --name pse -e INVISIRISK_JWT_TOKEN=${vbApiKey} -e GITHUB_TOKEN=${process.env.GITHUB_TOKEN} -e PSE_DEBUG_FLAG="--alsologtostderr" -e POLICY_LOG="t" -e INVISIRISK_PORTAL=${vbApiUrl} ${registryId}.dkr.ecr.${region}.amazonaws.com/invisirisk/pse-proxy `);
   core.info('VB Docker image started successfully.');
 }
 
