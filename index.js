@@ -111,7 +111,6 @@ async function caSetup() {
  * Output: Installs iptables and configures NAT rules.
  */
 async function iptables() {
-  core.info('Configuring iptables...');
   var apk = false;
 
   if (await which('apt-get', { nothrow: true }) == null) {
@@ -119,7 +118,6 @@ async function iptables() {
   }
 
   if (apk) {
-    core.info('Installing iptables using apk...');
     await exec.exec("apk", ["add", "iptables", "ca-certificates", "git"], {
       silent: true,
       listeners: {
@@ -128,7 +126,6 @@ async function iptables() {
       },
     });
   } else {
-    core.info('Installing iptables using apt-get...');
     await exec.exec("apt-get", ["update"], {
       silent: true,
       listeners: {
@@ -145,14 +142,27 @@ async function iptables() {
     });
   }
 
-  core.info('Configuring iptables NAT rules...');
   await exec.exec("iptables", ["-t", "nat", "-N", "pse"], { silent: true });
   await exec.exec("iptables", ["-t", "nat", "-A", "OUTPUT", "-j", "pse"], { silent: true });
 
-  const lookup = util.promisify(dns.lookup);
-  const dresp = await lookup('pse');
+  // Get the IP address of the `pse` container
+  let containerIp = '';
+  try {
+    const inspectOutput = await exec.getExecOutput('docker inspect -f "{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}" pse');
+    containerIp = inspectOutput.stdout.trim();
+    core.info(`IP address of pse container: ${containerIp}`);
+  } catch (error) {
+    core.error(`Failed to get IP address of pse container: ${error.message}`);
+    throw error;
+  }
+
+  if (!containerIp) {
+    throw new Error('Could not retrieve IP address of pse container.');
+  }
+
+  // Use the container's IP address in the iptables command
   await exec.exec("iptables", [
-    "-t", "nat", "-A", "pse", "-p", "tcp", "-m", "tcp", "--dport", "443", "-j", "DNAT", "--to-destination", dresp.address + ":12345"
+    "-t", "nat", "-A", "pse", "-p", "tcp", "-m", "tcp", "--dport", "443", "-j", "DNAT", "--to-destination", `${containerIp}:12345`
   ], {
     silent: true,
     listeners: {
@@ -160,6 +170,7 @@ async function iptables() {
       stderr: (data) => {},
     },
   });
+
   core.info('iptables configuration completed.');
 }
 
