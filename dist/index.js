@@ -4623,7 +4623,7 @@ async function loginToECR(username, password, registryId, region) {
   let stderr = '';
 
   try {
-    await exec.exec(`echo ${password} | docker login -u ${username} ${registryId}.dkr.ecr.${region}.amazonaws.com --password-stdin`, [], {
+    await exec.exec(`docker login -u ${username} ${registryId}.dkr.ecr.${region}.amazonaws.com --password ${password}`, [], {
       listeners: {
         stdout: (data) => {
           stdout += data.toString(); // Capture stdout
