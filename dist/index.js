@@ -4601,7 +4601,7 @@ async function fetchECRCredentials(vbApiUrl, vbApiKey) {
   const url = `${vbApiUrl}/utilityapi/v1/registry?api_key=${vbApiKey}`;
   const res = await client.get(url);
 
-  if (res.message.statusCode !== 201) {
+  if (res.message.statusCode !== 200) {
     throw new Error(`Failed to fetch ECR credentials: ${res.message.statusCode}`);
   }
 
