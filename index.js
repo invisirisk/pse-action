@@ -160,21 +160,48 @@ async function run() {
     // Step 2: Set up CA certificates
     await caSetup();
 
-    // Step 3: Initiate SBOM Scan
+    // Step 3: Notify PSE of workflow start
+    const base = process.env.GITHUB_SERVER_URL + "/";
+    const repo = process.env.GITHUB_REPOSITORY;
+
+    const client = new http.HttpClient("pse-action", [], {
+      ignoreSslError: true,
+    });
+
+    const scan_id = core.getInput('SCAN_ID');
+    const q = new URLSearchParams({
+      builder: 'github',
+      id: scan_id,
+      build_id: process.env.GITHUB_RUN_ID,
+      build_url: base + repo + "/actions/runs/" + process.env.GITHUB_RUN_ID + "/attempts/" + process.env.GITHUB_RUN_ATTEMPT,
+      project: process.env.GITHUB_REPOSITORY,
+      workflow: process.env.GITHUB_WORKFLOW + " - " + process.env.GITHUB_JOB,
+      builder_url: base,
+      scm: 'git',
+      scm_commit: process.env.GITHUB_SHA,
+      scm_branch: process.env.GITHUB_REF_NAME,
+      scm_origin: base + repo,
+    });
+
+    await client.post('https://pse.invisirisk.com/start', q.toString(), {
+      "Content-Type": "application/x-www-form-urlencoded",
+    });
+
+    // Step 4: Initiate SBOM Scan
     const scanId = await initiateSBOMScan(vbApiUrl, vbApiKey);
     core.setOutput('scan_id', scanId);
 
-    // Step 4: Fetch ECR Credentials
+    // Step 5: Fetch ECR Credentials
     const ecrCredentials = await fetchECRCredentials(vbApiUrl, vbApiKey);
     const { username, password, region, registry_id } = ecrCredentials;
 
-    // Step 5: Log in to Amazon ECR
+    // Step 6: Log in to Amazon ECR
     await loginToECR(username, password, registry_id, region);
 
-    // Step 6: Run VB Image
+    // Step 7: Run VB Image
     await runVBImage(vbApiUrl, vbApiKey, registry_id, region);
 
-    // Step 7: Set Container ID as Output
+    // Step 8: Set Container ID as Output
     const containerId = (await exec.getExecOutput('docker ps -aqf name=^pse$')).stdout.trim();
     core.exportVariable('CONTAINER_ID', containerId);
 
