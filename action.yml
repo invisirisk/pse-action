@@ -16,5 +16,5 @@ branding:
   color: green
 runs:
   using: "node16"
-  main: "dist/index.js"
-  post: "cleanup/index.js"
+  main: "index.js"
+  post: "cleanup.js"
