@@ -4400,43 +4400,54 @@ const dns = __nccwpck_require__(2250);
 const util = __nccwpck_require__(9023);
 const which = __nccwpck_require__(3904);
 
-
-// Utility function to check and setup Docker
+/**
+ * Utility function to check and setup Docker.
+ * Output: Ensures Docker is installed and running.
+ * Throws an error if Docker setup fails.
+ */
 async function setupDocker() {
   try {
-    // Check if Docker is available
+    core.info('Checking if Docker is installed...');
     await which('docker');
+    core.info('Docker is installed.');
     
     // Check if Docker daemon is running
     try {
+      core.info('Checking if Docker daemon is running...');
       await exec.exec('docker info', [], {
         silent: true
       });
+      core.info('Docker daemon is running.');
     } catch (error) {
       core.info('Docker daemon not running. Starting Docker service...');
       
       // Try to start Docker service
       try {
         await exec.exec('sudo service docker start');
-        // Wait a moment for Docker to fully start
+        core.info('Waiting for Docker to start...');
         await new Promise(resolve => setTimeout(resolve, 5000));
         
         // Verify Docker is now running
         await exec.exec('docker info', [], {
           silent: true
         });
+        core.info('Docker daemon started successfully.');
       } catch (startError) {
         throw new Error(`Failed to start Docker service: ${startError.message}`);
       }
     }
     
-    core.info('Docker is available and running');
+    core.info('Docker is available and running.');
   } catch (error) {
     throw new Error(`Docker setup failed: ${error.message}`);
   }
 }
 
-// Utility function to fetch with retries
+/**
+ * Utility function to fetch with retries.
+ * Output: Returns the HTTP response if successful.
+ * Throws an error if all retries fail.
+ */
 async function fetchWithRetries(url, maxRetries = 5, delay = 3000, exponentialBackoffFactor = 1.5) {
   const client = new http.HttpClient("pse-action", [], {
     ignoreSslError: true,
@@ -4444,10 +4455,12 @@ async function fetchWithRetries(url, maxRetries = 5, delay = 3000, exponentialBa
 
   for (let i = 0; i < maxRetries; i++) {
     try {
+      core.info(`Attempt #${i + 1}: Fetching ${url}...`);
       const res = await client.get(url);
       const statusCode = res.message.statusCode;
 
       if (statusCode >= 200 && statusCode < 300) {
+        core.info(`Successfully fetched ${url}. Status code: ${statusCode}`);
         return res;
       }
       throw new Error(`Error retrieving resource from ${url}, status code: ${statusCode}`);
@@ -4463,23 +4476,36 @@ async function fetchWithRetries(url, maxRetries = 5, delay = 3000, exponentialBa
   }
 }
 
-// Function to set up CA certificates
+/**
+ * Function to set up CA certificates.
+ * Output: Downloads and configures CA certificates.
+ * Exports environment variables for CA certificates.
+ */
 async function caSetup() {
+  core.info('Setting up CA certificates...');
   const caURL = 'https://pse.invisirisk.com/ca';
   const resp = await fetchWithRetries(caURL);
   const cert = await resp.readBody();
   const caFile = "/etc/ssl/certs/pse.pem";
 
   fs.writeFileSync(caFile, cert);
+  core.info('CA certificate downloaded and saved.');
+
   await exec.exec('update-ca-certificates');
+  core.info('CA certificates updated.');
 
   await exec.exec('git', ["config", "--global", "http.sslCAInfo", caFile]);
   core.exportVariable('NODE_EXTRA_CA_CERTS', caFile);
   core.exportVariable('REQUESTS_CA_BUNDLE', caFile);
+  core.info('CA certificates configured for Git and environment variables.');
 }
 
-// Function to configure iptables
+/**
+ * Function to configure iptables.
+ * Output: Installs iptables and configures NAT rules.
+ */
 async function iptables() {
+  core.info('Configuring iptables...');
   var apk = false;
 
   if (await which('apt-get', { nothrow: true }) == null) {
@@ -4487,6 +4513,7 @@ async function iptables() {
   }
 
   if (apk) {
+    core.info('Installing iptables using apk...');
     await exec.exec("apk", ["add", "iptables", "ca-certificates", "git"], {
       silent: true,
       listeners: {
@@ -4495,6 +4522,7 @@ async function iptables() {
       },
     });
   } else {
+    core.info('Installing iptables using apt-get...');
     await exec.exec("apt-get", ["update"], {
       silent: true,
       listeners: {
@@ -4511,6 +4539,7 @@ async function iptables() {
     });
   }
 
+  core.info('Configuring iptables NAT rules...');
   await exec.exec("iptables", ["-t", "nat", "-N", "pse"], { silent: true });
   await exec.exec("iptables", ["-t", "nat", "-A", "OUTPUT", "-j", "pse"], { silent: true });
 
@@ -4525,12 +4554,19 @@ async function iptables() {
       stderr: (data) => {},
     },
   });
+  core.info('iptables configuration completed.');
 }
 
-// Function to initiate SBOM scan
+/**
+ * Function to initiate SBOM scan.
+ * Output: Returns the scan ID if successful.
+ * Throws an error if the scan initiation fails.
+ */
 async function initiateSBOMScan(vbApiUrl, vbApiKey) {
+  core.info('Initiating SBOM scan...');
   const client = new http.HttpClient("pse-action", [], {
     ignoreSslError: true,
+    allowRedirectDowngrade: true,
   });
 
   const url = `${vbApiUrl}/utilityapi/v1/scan`;
@@ -4546,13 +4582,20 @@ async function initiateSBOMScan(vbApiUrl, vbApiKey) {
 
   const responseBody = await res.readBody();
   const responseData = JSON.parse(responseBody);
+  core.info(`SBOM scan initiated successfully. Scan ID: ${responseData.data.scan_id}`);
   return responseData.data.scan_id;
 }
 
-// Function to fetch ECR credentials
+/**
+ * Function to fetch ECR credentials.
+ * Output: Returns decoded ECR credentials.
+ * Throws an error if fetching credentials fails.
+ */
 async function fetchECRCredentials(vbApiUrl, vbApiKey) {
+  core.info('Fetching ECR credentials...');
   const client = new http.HttpClient("pse-action", [], {
     ignoreSslError: true,
+    allowRedirectDowngrade: true,
   });
 
   const url = `${vbApiUrl}/utilityapi/v1/registry?api_key=${vbApiKey}`;
@@ -4565,45 +4608,65 @@ async function fetchECRCredentials(vbApiUrl, vbApiKey) {
   const responseBody = await res.readBody();
   const responseData = JSON.parse(responseBody);
   const decodedToken = Buffer.from(responseData.data, 'base64').toString('utf-8');
+  core.info('ECR credentials fetched successfully.');
   return JSON.parse(decodedToken);
 }
 
-// Function to log in to Amazon ECR
+/**
+ * Function to log in to Amazon ECR.
+ * Output: Logs in to Amazon ECR using provided credentials.
+ */
 async function loginToECR(username, password, registryId, region) {
+  core.info('Logging in to Amazon ECR...');
   await exec.exec(`echo ${password} | docker login -u ${username} ${registryId}.dkr.ecr.${region}.amazonaws.com --password-stdin`);
+  core.info('Successfully logged in to Amazon ECR.');
 }
 
-// Function to run the VB image
+/**
+ * Function to run the VB image.
+ * Output: Runs the VB Docker image with the specified configuration.
+ */
 async function runVBImage(vbApiUrl, vbApiKey, registryId, region) {
+  core.info('Running VB Docker image...');
   await exec.exec(`docker run --name pse -e INVISIRISK_JWT_TOKEN=${vbApiKey} -e GITHUB_TOKEN=${process.env.GITHUB_TOKEN} -e PSE_DEBUG_FLAG="--alsologtostderr" -e POLICY_LOG="t" -e INVISIRISK_PORTAL=${vbApiUrl} ${registryId}.dkr.ecr.${region}.amazonaws.com/pse-proxy`);
+  core.info('VB Docker image started successfully.');
 }
 
-// Main function
+/**
+ * Main function.
+ * Output: Executes the entire workflow, including Docker setup, SBOM scan, ECR login, and running the VB image.
+ * Throws an error if any step fails.
+ */
 async function run() {
   try {
+    core.info('Starting Pipeline Security Engine action...');
+
     // Step 0: Setup Docker
     await setupDocker();
     
     const vbApiUrl = core.getInput('VB_API_URL');
     const vbApiKey = core.getInput('VB_API_KEY');
+    core.info(`Using VB_API_URL: ${vbApiUrl}`);
 
-   // Step 4: Initiate SBOM Scan
-   const scanId = await initiateSBOMScan(vbApiUrl, vbApiKey);
-   core.setOutput('scan_id', scanId);
+    // Step 4: Initiate SBOM Scan
+    const scanId = await initiateSBOMScan(vbApiUrl, vbApiKey);
+    core.setOutput('scan_id', scanId);
 
-   // Step 5: Fetch ECR Credentials
-   const ecrCredentials = await fetchECRCredentials(vbApiUrl, vbApiKey);
-   const { username, password, region, registry_id } = ecrCredentials;
+    // Step 5: Fetch ECR Credentials
+    const ecrCredentials = await fetchECRCredentials(vbApiUrl, vbApiKey);
+    const { username, password, region, registry_id } = ecrCredentials;
 
-   // Step 6: Log in to Amazon ECR
-   await loginToECR(username, password, registry_id, region);
+    // Step 6: Log in to Amazon ECR
+    await loginToECR(username, password, registry_id, region);
 
-   // Step 7: Run VB Image
-   await runVBImage(vbApiUrl, vbApiKey, registry_id, region);
+    // Step 7: Run VB Image
+    await runVBImage(vbApiUrl, vbApiKey, registry_id, region);
 
-   // Step 8: Set Container ID as Output
-   const containerId = (await exec.getExecOutput('docker ps -aqf name=^pse$')).stdout.trim();
-   core.exportVariable('CONTAINER_ID', containerId);
+    // Step 8: Set Container ID as Output
+    const containerId = (await exec.getExecOutput('docker ps -aqf name=^pse$')).stdout.trim();
+    core.exportVariable('CONTAINER_ID', containerId);
+    core.info(`Container ID: ${containerId}`);
+
     // Step 1: Configure iptables
     await iptables();
 
@@ -4613,6 +4676,7 @@ async function run() {
     // Step 3: Notify PSE of workflow start
     const base = process.env.GITHUB_SERVER_URL + "/";
     const repo = process.env.GITHUB_REPOSITORY;
+    core.info(`Notifying PSE of workflow start for repository: ${repo}`);
 
     const client = new http.HttpClient("pse-action", [], {
       ignoreSslError: true,
@@ -4636,11 +4700,13 @@ async function run() {
     await client.post('https://pse.invisirisk.com/start', q.toString(), {
       "Content-Type": "application/x-www-form-urlencoded",
     });
+    core.info('PSE notified of workflow start.');
 
-   
+    
 
+    core.info('Pipeline Security Engine action completed successfully.');
   } catch (error) {
-    core.setFailed(error.message);
+    core.setFailed(`Action failed: ${error.message}`);
   }
 }
 
