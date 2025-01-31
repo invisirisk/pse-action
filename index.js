@@ -225,7 +225,7 @@ async function fetchECRCredentials(vbApiUrl, vbApiKey) {
 async function loginToECR(username, password, registryId, region) {
   core.info('Logging in to Amazon ECR...');
   await exec.exec(`echo ${password} | docker login -u ${username} ${registryId}.dkr.ecr.${region}.amazonaws.com --password-stdin`);
-  await exec.exec(`docker pull ${registryId}.dkr.ecr.${region}.amazonaws.com/invisirisk/pse-proxy:latest`);
+  // await exec.exec(`docker pull ${registryId}.dkr.ecr.${region}.amazonaws.com/invisirisk/pse-proxy:latest`);
   core.info('Successfully logged in to Amazon ECR.');
 }
 
