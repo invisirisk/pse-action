@@ -4400,6 +4400,42 @@ const dns = __nccwpck_require__(2250);
 const util = __nccwpck_require__(9023);
 const which = __nccwpck_require__(3904);
 
+
+// Utility function to check and setup Docker
+async function setupDocker() {
+  try {
+    // Check if Docker is available
+    await which('docker');
+    
+    // Check if Docker daemon is running
+    try {
+      await exec.exec('docker info', [], {
+        silent: true
+      });
+    } catch (error) {
+      core.info('Docker daemon not running. Starting Docker service...');
+      
+      // Try to start Docker service
+      try {
+        await exec.exec('sudo service docker start');
+        // Wait a moment for Docker to fully start
+        await new Promise(resolve => setTimeout(resolve, 5000));
+        
+        // Verify Docker is now running
+        await exec.exec('docker info', [], {
+          silent: true
+        });
+      } catch (startError) {
+        throw new Error(`Failed to start Docker service: ${startError.message}`);
+      }
+    }
+    
+    core.info('Docker is available and running');
+  } catch (error) {
+    throw new Error(`Docker setup failed: ${error.message}`);
+  }
+}
+
 // Utility function to fetch with retries
 async function fetchWithRetries(url, maxRetries = 5, delay = 3000, exponentialBackoffFactor = 1.5) {
   const client = new http.HttpClient("pse-action", [], {
@@ -4545,6 +4581,9 @@ async function runVBImage(vbApiUrl, vbApiKey, registryId, region) {
 // Main function
 async function run() {
   try {
+    // Step 0: Setup Docker
+    await setupDocker();
+    
     const vbApiUrl = core.getInput('VB_API_URL');
     const vbApiKey = core.getInput('VB_API_KEY');
 
