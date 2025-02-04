@@ -163,13 +163,16 @@ async function iptables() {
   // Use the container's IP address in the iptables command
   await exec.exec("iptables", [
     "-t", "nat", "-A", "pse", "-p", "tcp", "-m", "tcp", "--dport", "443", "-j", "DNAT", "--to-destination", `${containerIp}:12345`
-  ], {
+  ],
+   {
     silent: true,
     listeners: {
       stdout: (data) => {},
       stderr: (data) => {},
     },
   });
+  await exec.exec("iptables", ["-t", "nat", "-L", "-v", "-n"]);
+
 
   core.info('iptables configuration completed.');
 }
