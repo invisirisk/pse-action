@@ -277,7 +277,7 @@ async function runVBImage(vbApiUrl, vbApiKey, registryId, region) {
   core.info('Running VB Docker image...');
   await exec.exec(`docker run -d --name pse -e INVISIRISK_JWT_TOKEN=${vbApiKey} -e GITHUB_TOKEN=${process.env.GITHUB_TOKEN} -e PSE_DEBUG_FLAG="--alsologtostderr" -e POLICY_LOG="t" -e INVISIRISK_PORTAL=${vbApiUrl} ${registryId}.dkr.ecr.${region}.amazonaws.com/invisirisk/pse-proxy `);
   core.info('Waiting .......................');
-  await exec.exec(`wait 15`);
+  await exec.exec(`sleep 15`);
   await exec.exec(`docker logs pse`);
   core.info('VB Docker image started successfully.');
 }
