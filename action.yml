@@ -11,6 +11,11 @@ inputs:
     description: "VB API Key"
     required: true
 
+outputs:
+  scan_id:
+    description: "The ID of the initiated SBOM scan"
+    value: ${{ steps.pse.outputs.scan_id }}
+
 branding:
   icon: bell
   color: green
@@ -18,19 +23,127 @@ branding:
 runs:
   using: "composite"
   steps:
-    # Step 1: Run pse-start.sh
     - name: Run PSE Start Script
+      id: pse
       shell: sh
       run: |
+        # Install required packages
         apk update
-        apk add --no-cache docker
-        docker --version
-        ls
-        chmod +x pse-start.sh
-        ls
-        pwd
-        apk add libc6-compat
-        ./pse-start.sh "${{ inputs.VB_API_URL }}" "${{ inputs.VB_API_KEY }}" "${{ github.run_id }}"
+        apk add --no-cache docker curl jq bc iptables ca-certificates git
+
+        # Fetch with retries function (sh compatible)
+        fetch_with_retries() {
+          url=$1
+          retries=5
+          delay=3
+          i=0
+          
+          while [ $i -lt $retries ]; do
+            if response=$(curl -s -f "$url"); then
+              echo "$response"
+              return 0
+            fi
+            echo "Attempt $(( i + 1 )) failed, retrying in $delay seconds..."
+            sleep $delay
+            i=$(( i + 1 ))
+            delay=$(( delay * 2 ))
+          done
+          return 1
+        }
+
+        # ECR credentials fetch
+        fetch_ecr_credentials() {
+          url="$1/utilityapi/v1/registry?api_key=$2"
+          response=$(curl -s -f "$url")
+          if [ $? -ne 0 ]; then
+            echo "Failed to fetch ECR credentials"
+            return 1
+          fi
+          echo "$response" | jq -r '.data' | base64 -d
+        }
+
+        # Login to ECR
+        login_to_ecr() {
+          username=$1
+          password=$2
+          registry_id=$3
+          region=$4
+          echo "$password" | docker login -u "$username" "$registry_id.dkr.ecr.$region.amazonaws.com" --password-stdin
+        }
+
+        # Run VB image
+        run_vb_image() {
+          vb_api_url=$1
+          vb_api_key=$2
+          registry_id=$3
+          region=$4
+          
+          docker run --name pse \
+            -e INVISIRISK_JWT_TOKEN="$vb_api_key" \
+            -e GITHUB_TOKEN="$GITHUB_TOKEN" \
+            -e PSE_DEBUG_FLAG="--alsologtostderr" \
+            -e POLICY_LOG="t" \
+            -e INVISIRISK_PORTAL="$vb_api_url" \
+            "$registry_id.dkr.ecr.$region.amazonaws.com/pse-proxy"
+        }
+
+        # Main execution
+        echo "Initiating SBOM scan..."
+        scan_url="${{ inputs.VB_API_URL }}/utilityapi/v1/scan"
+        scan_response=$(curl -s -f -X POST "$scan_url" \
+          -H "Content-Type: application/json" \
+          -d "{\"api_key\":\"${{ inputs.VB_API_KEY }}\"}")
+        
+        if [ $? -ne 0 ]; then
+          echo "Failed to initiate SBOM scan"
+          exit 1
+        fi
+        
+        scan_id=$(echo "$scan_response" | jq -r '.data.scan_id')
+        echo "scan_id=$scan_id" >> $GITHUB_OUTPUT
+        
+        echo "Fetching ECR credentials..."
+        creds=$(fetch_ecr_credentials "${{ inputs.VB_API_URL }}" "${{ inputs.VB_API_KEY }}")
+        
+        username=$(echo "$creds" | jq -r '.username')
+        password=$(echo "$creds" | jq -r '.password')
+        region=$(echo "$creds" | jq -r '.region')
+        registry_id=$(echo "$creds" | jq -r '.registry_id')
+        
+        echo "Logging into ECR..."
+        login_to_ecr "$username" "$password" "$registry_id" "$region"
+        
+        echo "Running VB image..."
+        run_vb_image "${{ inputs.VB_API_URL }}" "${{ inputs.VB_API_KEY }}" "$registry_id" "$region"
+        
+        container_id=$(docker ps -aqf "name=^pse$")
+        echo "CONTAINER_ID=$container_id" >> $GITHUB_ENV
+        
+        echo "Setting up networking..."
+        iptables -t nat -N pse || true
+        iptables -t nat -A OUTPUT -j pse || true
+        
+        dns_resp=$(getent hosts pse | awk '{ print $1 }')
+        iptables -t nat -A pse -p tcp -m tcp --dport 443 -j DNAT --to-destination "$dns_resp:12345" || true
+        
+        echo "Setting up CA certificates..."
+        ca_url="https://pse.invisirisk.com/ca"
+        ca_file="/etc/ssl/certs/pse.pem"
+        cert=$(fetch_with_retries "$ca_url")
+        echo "$cert" > "$ca_file"
+        update-ca-certificates
+        
+        git config --global http.sslCAInfo "$ca_file"
+        export NODE_EXTRA_CA_CERTS="$ca_file"
+        export REQUESTS_CA_BUNDLE="$ca_file"
+        
+        echo "Notifying PSE of workflow start..."
+        base="${{ github.server_url }}/"
+        repo="${{ github.repository }}"
+        
+        curl -s -f -X POST "https://pse.invisirisk.com/start" \
+          -H "Content-Type: application/x-www-form-urlencoded" \
+          -d "builder=github&id=$scan_id&build_id=${{ github.run_id }}&build_url=$base$repo/actions/runs/${{ github.run_id }}/attempts/${{ github.run_attempt }}&project=${{ github.repository }}&workflow=${{ github.workflow }} - ${{ github.job }}&builder_url=$base&scm=git&scm_commit=${{ github.sha }}&scm_branch=${{ github.ref_name }}&scm_origin=$base$repo"
       env:
         GITHUB_TOKEN: ${{ inputs.github-token }}
         GITHUB_SERVER_URL: ${{ github.server_url }}
@@ -41,19 +154,3 @@ runs:
         GITHUB_SHA: ${{ github.sha }}
         GITHUB_WORKFLOW: ${{ github.workflow }}
         GITHUB_JOB: ${{ github.job }}
-
-  # post:
-  #   using: "composite"
-  #   steps:
-  #     # Step 2: Run cleanup.sh
-  #     - name: Run Cleanup Script
-  #       shell: bash
-  #       run: |
-  #         chmod +x cleanup.sh
-  #         ./cleanup.sh
-  #       env:
-  #         GITHUB_SERVER_URL: ${{ github.server_url }}
-  #         GITHUB_REPOSITORY: ${{ github.repository }}
-  #         GITHUB_RUN_ID: ${{ github.run_id }}
-  #         GITHUB_RUN_ATTEMPT: ${{ github.run_attempt }}
-  #         GITHUB_RUN_RESULT: ${{ job.status }}
