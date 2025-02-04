@@ -83,30 +83,6 @@ async function fetchWithRetries(url, maxRetries = 5, delay = 3000, exponentialBa
 }
 
 /**
- * Function to set up CA certificates.
- * Output: Downloads and configures CA certificates.
- * Exports environment variables for CA certificates.
- */
-async function caSetup() {
-  core.info('Setting up CA certificates...');
-  const caURL = 'https://pse.invisirisk.com/ca';
-  const resp = await fetchWithRetries(caURL, 5, 3000, 1.5);;
-  const cert = await resp.readBody();
-  const caFile = "/etc/ssl/certs/pse.pem";
-
-  fs.writeFileSync(caFile, cert);
-  core.info('CA certificate downloaded and saved.');
-
-  await exec.exec('update-ca-certificates');
-  core.info('CA certificates updated.');
-
-  await exec.exec('git', ["config", "--global", "http.sslCAInfo", caFile]);
-  core.exportVariable('NODE_EXTRA_CA_CERTS', caFile);
-  core.exportVariable('REQUESTS_CA_BUNDLE', caFile);
-  core.info('CA certificates configured for Git and environment variables.');
-}
-
-/**
  * Function to configure iptables.
  * Output: Installs iptables and configures NAT rules.
  */
@@ -176,6 +152,33 @@ async function iptables() {
 
   core.info('iptables configuration completed.');
 }
+
+
+/**
+ * Function to set up CA certificates.
+ * Output: Downloads and configures CA certificates.
+ * Exports environment variables for CA certificates.
+ */
+async function caSetup() {
+  core.info('Setting up CA certificates...');
+  const caURL = 'https://pse.invisirisk.com/ca';
+  const resp = await fetchWithRetries(caURL, 5, 3000, 1.5);;
+  const cert = await resp.readBody();
+  const caFile = "/etc/ssl/certs/pse.pem";
+
+  fs.writeFileSync(caFile, cert);
+  core.info('CA certificate downloaded and saved.');
+
+  await exec.exec('update-ca-certificates');
+  core.info('CA certificates updated.');
+
+  await exec.exec('git', ["config", "--global", "http.sslCAInfo", caFile]);
+  core.exportVariable('NODE_EXTRA_CA_CERTS', caFile);
+  core.exportVariable('REQUESTS_CA_BUNDLE', caFile);
+  core.info('CA certificates configured for Git and environment variables.');
+}
+
+
 
 /**
  * Function to initiate SBOM scan.
@@ -322,11 +325,6 @@ async function run() {
 
     // Step 1: Configure iptables
     await iptables();
-
-    client = new http.HttpClient("pse-action", [], {
-      ignoreSslError: true,
-    });
-
     // Step 2: Set up CA certificates
     await caSetup();
 
