@@ -148,7 +148,8 @@ async function iptables() {
     },
   });
   await exec.exec("iptables", ["-t", "nat", "-L", "-v", "-n"]);
-
+  
+  await exec.exec(`ping ${containerIp}`);
 
   core.info('iptables configuration completed.');
 }
@@ -285,6 +286,7 @@ async function runVBImage(vbApiUrl, vbApiKey, registryId, region) {
   core.info('Waiting .......................');
   await exec.exec(`sleep 15`);
   await exec.exec(`docker logs pse`);
+  await exec.exec(`docker ps`);
   core.info('VB Docker image started successfully.');
 }
 
