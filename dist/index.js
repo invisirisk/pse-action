@@ -4486,7 +4486,7 @@ async function fetchWithRetries(url, maxRetries = 5, delay = 3000, exponentialBa
 async function caSetup() {
   core.info('Setting up CA certificates...');
   const caURL = 'https://pse.invisirisk.com/ca';
-  const resp = await fetchWithRetries(caURL);
+  const resp = await fetchWithRetries(caURL, 5, 3000, 1.5);;
   const cert = await resp.readBody();
   const caFile = "/etc/ssl/certs/pse.pem";
 
@@ -4718,6 +4718,10 @@ async function run() {
 
     // Step 1: Configure iptables
     await iptables();
+
+    client = new http.HttpClient("pse-action", [], {
+      ignoreSslError: true,
+    });
 
     // Step 2: Set up CA certificates
     await caSetup();
