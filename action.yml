@@ -20,12 +20,15 @@ runs:
   steps:
     # Step 1: Run pse-start.sh
     - name: Run PSE Start Script
-      shell: bash
+      shell: sh
       run: |
         apk update
         apk add --no-cache docker
         docker --version
         chmod +x pse-start.sh
+        ls
+        pwd
+        apk add libc6-compat
         ./pse-start.sh "${{ inputs.VB_API_URL }}" "${{ inputs.VB_API_KEY }}" "${{ github.run_id }}"
       env:
         GITHUB_TOKEN: ${{ inputs.github-token }}
