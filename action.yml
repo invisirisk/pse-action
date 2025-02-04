@@ -25,6 +25,7 @@ runs:
         apk update
         apk add --no-cache docker
         docker --version
+        ls
         chmod +x pse-start.sh
         ls
         pwd
