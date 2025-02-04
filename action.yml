@@ -2,19 +2,54 @@ name: "Pipeline Security Engine"
 description: "Visibility and control over all the network activity from your pipeline."
 inputs:
   github-token:
-    description: "github token"
+    description: "GitHub token"
     required: true
   VB_API_URL:
-    description: 'VB API URL'
+    description: "VB API URL"
     required: true
   VB_API_KEY:
-    description: 'VB API Key'
+    description: "VB API Key"
     required: true
-    
+
 branding:
   icon: bell
   color: green
+
 runs:
-  using: "node16"
-  main: "dist/index.js"
-  post: "cleanup/index.js"
+  using: "composite"
+  steps:
+    # Step 1: Run pse-start.sh
+    - name: Run PSE Start Script
+      shell: bash
+      run: |
+        apk update
+        apk add --no-cache docker
+        docker --version
+        chmod +x pse-start.sh
+        ./pse-start.sh "${{ inputs.VB_API_URL }}" "${{ inputs.VB_API_KEY }}" "${{ github.run_id }}"
+      env:
+        GITHUB_TOKEN: ${{ inputs.github-token }}
+        GITHUB_SERVER_URL: ${{ github.server_url }}
+        GITHUB_REPOSITORY: ${{ github.repository }}
+        GITHUB_RUN_ID: ${{ github.run_id }}
+        GITHUB_RUN_ATTEMPT: ${{ github.run_attempt }}
+        GITHUB_REF_NAME: ${{ github.ref_name }}
+        GITHUB_SHA: ${{ github.sha }}
+        GITHUB_WORKFLOW: ${{ github.workflow }}
+        GITHUB_JOB: ${{ github.job }}
+
+  post:
+    using: "composite"
+    steps:
+      # Step 2: Run cleanup.sh
+      - name: Run Cleanup Script
+        shell: bash
+        run: |
+          chmod +x cleanup.sh
+          ./cleanup.sh
+        env:
+          GITHUB_SERVER_URL: ${{ github.server_url }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_RUN_ID: ${{ github.run_id }}
+          GITHUB_RUN_ATTEMPT: ${{ github.run_attempt }}
+          GITHUB_RUN_RESULT: ${{ job.status }}
