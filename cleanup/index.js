@@ -4158,6 +4158,7 @@ async function run() {
 
     // Step 4: Stop and remove the Docker container (now runs last)
     try {
+      await exec.exec('sleep 60');
       await exec.exec('docker stop pse');
       await exec.exec('docker rm pse');
       core.info("Docker container stopped and removed successfully.");
