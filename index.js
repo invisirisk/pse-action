@@ -280,7 +280,7 @@ async function loginToECR(username, password, registryId, region) {
  */
 const { execSync } = require('child_process');
 
-async function runVBImage(vbApiUrl, vbApiKey, githubToken, registryId, region) {
+async function runVBImage(vbApiUrl, vbApiKey, registryId, region) {
   core.info('Finding network starting with github_network_...');
 
   let networkName = 'bridge'; // Default fallback
@@ -306,6 +306,7 @@ async function runVBImage(vbApiUrl, vbApiKey, githubToken, registryId, region) {
 
   // Run the container with the detected network
   core.info(`Running VB Docker image on network ${networkName}...`);
+  const githubToken = core.getInput('github-token');
   await exec.exec(
     `docker run --network ${networkName} -d --name pse -p 12345:12345 ` +
     `-e INVISIRISK_JWT_TOKEN=${vbApiKey} ` +
@@ -339,7 +340,6 @@ async function run() {
     
     const vbApiUrl = core.getInput('VB_API_URL');
     const vbApiKey = core.getInput('VB_API_KEY');
-    const githubToken = core.getInput('github-token');
     core.info(`Using VB_API_URL: ${vbApiUrl}`);
 
     // Step 4: Initiate SBOM Scan
