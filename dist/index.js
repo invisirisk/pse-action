@@ -4673,33 +4673,25 @@ async function loginToECR(username, password, registryId, region) {
  * Function to run the VB image.
  * Output: Runs the VB Docker image with the specified configuration.
  */
+const { execSync } = __nccwpck_require__(2081);
+
 async function runVBImage(vbApiUrl, vbApiKey, registryId, region) {
   core.info('Finding network starting with github_network_...');
-  
-  let networkName = 'bridge'; // default fallback
+
+  let networkName = 'bridge'; // Default fallback
   try {
-    let networks = '';
-    await exec.exec('docker network ls', [], {
-      silent: true,
-      listeners: {
-        stdout: (data) => {
-          networks = data.toString();
-        }
-      }
-    });
-    
-    // Split into lines and find network starting with github_network_
-    const networkLines = networks.split('\n');
-    const githubNetworkLine = networkLines
-      .find(line => line.includes('github_network_'));
-    
-    if (githubNetworkLine) {
-      // Split by whitespace and get the second column (NAME)
-      const parts = githubNetworkLine.trim().split(/\s+/);
-      if (parts.length >= 2) {
-        networkName = parts[1];
-        core.info(`Found network: ${networkName}`);
-      }
+    // Execute the command to get the network list
+    const networks = execSync('docker network ls', { encoding: 'utf8' });
+
+    // Find the network name that starts with "github_network_"
+    const foundNetwork = networks
+      .split('\n')
+      .map(line => line.trim().split(/\s+/)[1]) // Extract the second column (network name)
+      .find(name => name && name.startsWith('github_network_'));
+
+    if (foundNetwork) {
+      networkName = foundNetwork;
+      core.info(`Found network: ${networkName}`);
     } else {
       core.warning('No network starting with github_network_ found, using bridge network');
     }
@@ -4718,7 +4710,6 @@ async function runVBImage(vbApiUrl, vbApiKey, registryId, region) {
     `-e INVISIRISK_PORTAL=${vbApiUrl} ` +
     `${registryId}.dkr.ecr.${region}.amazonaws.com/invisirisk/pse-proxy`
   );
-  
   core.info('Waiting .......................');
   await exec.exec(`docker logs pse`);
   await exec.exec(`docker ps`);
