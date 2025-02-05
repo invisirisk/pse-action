@@ -4676,7 +4676,7 @@ async function loginToECR(username, password, registryId, region) {
  */
 const { execSync } = __nccwpck_require__(2081);
 
-async function runVBImage(vbApiUrl, vbApiKey, registryId, region) {
+async function runVBImage(vbApiUrl, vbApiKey, githubToken, registryId, region) {
   core.info('Finding network starting with github_network_...');
 
   let networkName = 'bridge'; // Default fallback
@@ -4705,7 +4705,7 @@ async function runVBImage(vbApiUrl, vbApiKey, registryId, region) {
   await exec.exec(
     `docker run --network ${networkName} -d --name pse -p 12345:12345 ` +
     `-e INVISIRISK_JWT_TOKEN=${vbApiKey} ` +
-    `-e GITHUB_TOKEN=${process.env.GITHUB_TOKEN} ` +
+    `-e GITHUB_TOKEN=${githubToken} ` +
     `-e PSE_DEBUG_FLAG="--alsologtostderr" ` +
     `-e POLICY_LOG="t" ` +
     `-e INVISIRISK_PORTAL=${vbApiUrl} ` +
@@ -4735,6 +4735,7 @@ async function run() {
     
     const vbApiUrl = core.getInput('VB_API_URL');
     const vbApiKey = core.getInput('VB_API_KEY');
+    const githubToken = core.getInput('github-token');
     core.info(`Using VB_API_URL: ${vbApiUrl}`);
 
     // Step 4: Initiate SBOM Scan
