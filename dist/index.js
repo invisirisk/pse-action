@@ -4569,7 +4569,6 @@ async function iptables() {
       stderr: (data) => {},
     },
   });
-  await exec.exec("iptables", ["-t", "nat", "-L", "-v", "-n"]);
   core.info('iptables configuration completed.');
 }
 
@@ -4738,13 +4737,6 @@ async function runVBImage(vbApiUrl, vbApiKey, registryId, region) {
     `-e INVISIRISK_PORTAL=${vbApiUrl} ` +
     `${registryId}.dkr.ecr.${region}.amazonaws.com/invisirisk/pse-proxy`
   );
-  core.info('Waiting .......................');
-  // await exec.exec(`docker logs pse`);
-  // await exec.exec(`docker ps`);
-  // await exec.exec(`docker network ls`);
-  // await exec.exec(`docker network inspect bridge`);
-  // await exec.exec(`docker network inspect host`);
-  // await exec.exec(`docker inspect pse`);
   core.info('VB Docker image started successfully.');
 }
 
