@@ -122,11 +122,13 @@ async function iptables() {
   await exec.exec("iptables", ["-t", "nat", "-A", "OUTPUT", "-j", "pse"], { silent: true });
 
   // Get the IP address of the `pse` container
-  let containerIp = '';
+  let containerIp = '123456789';
   try {
-    const inspectOutput = await exec.getExecOutput('docker inspect -f "{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}" pse');
-    containerIp = inspectOutput.stdout.trim();
-    core.info(`IP address of pse container: ${containerIp}`);
+    // const inspectOutput = await exec.getExecOutput('docker inspect -f "{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}" pse');
+    // containerIp = inspectOutput.stdout.trim();
+    // core.info(`IP address of pse container: ${containerIp}`);
+    const lookup = util.promisify(dns.lookup);
+    const dresp = await lookup('pse');
   } catch (error) {
     core.error(`Failed to get IP address of pse container: ${error.message}`);
     throw error;
@@ -137,9 +139,11 @@ async function iptables() {
   }
 
   // Use the container's IP address in the iptables command
-  await exec.exec("iptables", [
-    "-t", "nat", "-A", "pse", "-p", "tcp", "-m", "tcp", "--dport", "443", "-j", "DNAT", "--to-destination", `${containerIp}:12345`
-  ],
+  // await exec.exec("iptables", [
+  //   "-t", "nat", "-A", "pse", "-p", "tcp", "-m", "tcp", "--dport", "443", "-j", "DNAT", "--to-destination", `${containerIp}:12345`
+  // ],
+  await exec.exec("iptables",
+    ["-t", "nat", "-A", "pse", "-p", "tcp", "-m", "tcp", "--dport", "443", "-j", "DNAT", "--to-destination", dresp.address + ":12345"],
    {
     silent: true,
     listeners: {
@@ -282,7 +286,7 @@ async function loginToECR(username, password, registryId, region) {
  */
 async function runVBImage(vbApiUrl, vbApiKey, registryId, region) {
   core.info('Running VB Docker image...');
-  await exec.exec(`docker run --network bridge -d --name pse -p 12345:12345 -e INVISIRISK_JWT_TOKEN=${vbApiKey} -e GITHUB_TOKEN=${process.env.GITHUB_TOKEN} -e PSE_DEBUG_FLAG="--alsologtostderr" -e POLICY_LOG="t" -e INVISIRISK_PORTAL=${vbApiUrl} ${registryId}.dkr.ecr.${region}.amazonaws.com/invisirisk/pse-proxy`);
+  await exec.exec(`docker run --network host -d --name pse -p 12345:12345 -e INVISIRISK_JWT_TOKEN=${vbApiKey} -e GITHUB_TOKEN=${process.env.GITHUB_TOKEN} -e PSE_DEBUG_FLAG="--alsologtostderr" -e POLICY_LOG="t" -e INVISIRISK_PORTAL=${vbApiUrl} ${registryId}.dkr.ecr.${region}.amazonaws.com/invisirisk/pse-proxy`);
   core.info('Waiting .......................');
   await exec.exec(`sleep 15`);
   await exec.exec(`docker logs pse`);
