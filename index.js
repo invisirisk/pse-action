@@ -122,13 +122,11 @@ async function iptables() {
   await exec.exec("iptables", ["-t", "nat", "-A", "OUTPUT", "-j", "pse"], { silent: true });
 
   // Get the IP address of the `pse` container
-  let containerIp = '123456789';
+  let containerIp = '';
   try {
-    // const inspectOutput = await exec.getExecOutput('docker inspect -f "{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}" pse');
-    // containerIp = inspectOutput.stdout.trim();
-    // core.info(`IP address of pse container: ${containerIp}`);
-    const lookup = util.promisify(dns.lookup);
-    const dresp = await lookup('pse');
+    const inspectOutput = await exec.getExecOutput('docker inspect -f "{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}" pse');
+    containerIp = inspectOutput.stdout.trim();
+    core.info(`IP address of pse container: ${containerIp}`);
   } catch (error) {
     core.error(`Failed to get IP address of pse container: ${error.message}`);
     throw error;
@@ -139,11 +137,9 @@ async function iptables() {
   }
 
   // Use the container's IP address in the iptables command
-  // await exec.exec("iptables", [
-  //   "-t", "nat", "-A", "pse", "-p", "tcp", "-m", "tcp", "--dport", "443", "-j", "DNAT", "--to-destination", `${containerIp}:12345`
-  // ],
-  await exec.exec("iptables",
-    ["-t", "nat", "-A", "pse", "-p", "tcp", "-m", "tcp", "--dport", "443", "-j", "DNAT", "--to-destination", dresp.address + ":12345"],
+  await exec.exec("iptables", [
+    "-t", "nat", "-A", "pse", "-p", "tcp", "-m", "tcp", "--dport", "443", "-j", "DNAT", "--to-destination", `${containerIp}:12345`
+  ],
    {
     silent: true,
     listeners: {
@@ -285,8 +281,46 @@ async function loginToECR(username, password, registryId, region) {
  * Output: Runs the VB Docker image with the specified configuration.
  */
 async function runVBImage(vbApiUrl, vbApiKey, registryId, region) {
+  core.info('Finding github network...');
+  
+  // Find the github network
+  let networkName = 'bridge'; // default fallback
+  try {
+    let networks = '';
+    await exec.exec('docker network ls', [], {
+      silent: true,
+      listeners: {
+        stdout: (data) => {
+          networks = data.toString();
+        }
+      }
+    });
+    
+    // Find network starting with github_network_
+    const githubNetwork = networks.split('\n')
+      .find(line => line.includes('github_network_'));
+    
+    if (githubNetwork) {
+      networkName = githubNetwork.split(/\s+/)[1]; // Get network name from second column
+      core.info(`Found GitHub network: ${networkName}`);
+    } else {
+      core.warning('No GitHub network found, using bridge network');
+    }
+  } catch (error) {
+    core.warning(`Failed to get network list: ${error.message}`);
+  }
+
+  // Run the container with the detected network
   core.info('Running VB Docker image...');
-  await exec.exec(`docker run --network host -d --name pse -p 12345:12345 -e INVISIRISK_JWT_TOKEN=${vbApiKey} -e GITHUB_TOKEN=${process.env.GITHUB_TOKEN} -e PSE_DEBUG_FLAG="--alsologtostderr" -e POLICY_LOG="t" -e INVISIRISK_PORTAL=${vbApiUrl} ${registryId}.dkr.ecr.${region}.amazonaws.com/invisirisk/pse-proxy`);
+  await exec.exec(
+    `docker run --network ${networkName} -d --name pse -p 12345:12345 ` +
+    `-e INVISIRISK_JWT_TOKEN=${vbApiKey} ` +
+    `-e GITHUB_TOKEN=${process.env.GITHUB_TOKEN} ` +
+    `-e PSE_DEBUG_FLAG="--alsologtostderr" ` +
+    `-e POLICY_LOG="t" ` +
+    `-e INVISIRISK_PORTAL=${vbApiUrl} ` +
+    `${registryId}.dkr.ecr.${region}.amazonaws.com/invisirisk/pse-proxy`
+  );
   core.info('Waiting .......................');
   await exec.exec(`sleep 15`);
   await exec.exec(`docker logs pse`);
