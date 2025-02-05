@@ -287,6 +287,8 @@ async function runVBImage(vbApiUrl, vbApiKey, registryId, region) {
   await exec.exec(`sleep 15`);
   await exec.exec(`docker logs pse`);
   await exec.exec(`docker ps`);
+  await exec.exec(`docker network ls`);
+  await exec.exec(`curl -v http://172.17.0.2:12345`)
   core.info('VB Docker image started successfully.');
 }
 
