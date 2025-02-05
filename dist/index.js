@@ -4571,7 +4571,7 @@ async function caSetup() {
   core.exportVariable('REQUESTS_CA_BUNDLE', caFile);
   core.info('CA certificates configured for Git and environment variables.');
 }
-
+let scan_Id;
 
 
 /**
@@ -4600,6 +4600,7 @@ async function initiateSBOMScan(vbApiUrl, vbApiKey) {
   const responseBody = await res.readBody();
   const responseData = JSON.parse(responseBody);
   core.info(`SBOM scan initiated successfully. Scan ID: ${responseData.data.scan_id}`);
+  scan_Id= responseData.data.scan_id;
   return responseData.data.scan_id;
 }
 
@@ -4720,7 +4721,7 @@ async function runVBImage(vbApiUrl, vbApiKey, registryId, region) {
   core.info('VB Docker image started successfully.');
 }
 
-/**
+/**WW
  * Main function.
  * Output: Executes the entire workflow, including Docker setup, SBOM scan, ECR login, and running the VB image.
  * Throws an error if any step fails.
@@ -4772,7 +4773,7 @@ async function run() {
     const scan_id = core.getInput('SCAN_ID');
     const q = new URLSearchParams({
       builder: 'github',
-      id: scan_id,
+      id: scan_Id,
       build_id: process.env.GITHUB_RUN_ID,
       build_url: base + repo + "/actions/runs/" + process.env.GITHUB_RUN_ID + "/attempts/" + process.env.GITHUB_RUN_ATTEMPT,
       project: process.env.GITHUB_REPOSITORY,
