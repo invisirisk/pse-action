@@ -148,9 +148,6 @@ async function iptables() {
     },
   });
   await exec.exec("iptables", ["-t", "nat", "-L", "-v", "-n"]);
-  
-  await exec.exec(`ping ${containerIp}`);
-
   core.info('iptables configuration completed.');
 }
 
@@ -281,9 +278,8 @@ async function loginToECR(username, password, registryId, region) {
  * Output: Runs the VB Docker image with the specified configuration.
  */
 async function runVBImage(vbApiUrl, vbApiKey, registryId, region) {
-  core.info('Finding github network...');
+  core.info('Finding network starting with github_network_...');
   
-  // Find the github network
   let networkName = 'bridge'; // default fallback
   try {
     let networks = '';
@@ -296,22 +292,27 @@ async function runVBImage(vbApiUrl, vbApiKey, registryId, region) {
       }
     });
     
-    // Find network starting with github_network_
-    const githubNetwork = networks.split('\n')
+    // Split into lines and find network starting with github_network_
+    const networkLines = networks.split('\n');
+    const githubNetworkLine = networkLines
       .find(line => line.includes('github_network_'));
     
-    if (githubNetwork) {
-      networkName = githubNetwork.split(/\s+/)[1]; // Get network name from second column
-      core.info(`Found GitHub network: ${networkName}`);
+    if (githubNetworkLine) {
+      // Split by whitespace and get the second column (NAME)
+      const parts = githubNetworkLine.trim().split(/\s+/);
+      if (parts.length >= 2) {
+        networkName = parts[1];
+        core.info(`Found network: ${networkName}`);
+      }
     } else {
-      core.warning('No GitHub network found, using bridge network');
+      core.warning('No network starting with github_network_ found, using bridge network');
     }
   } catch (error) {
     core.warning(`Failed to get network list: ${error.message}`);
   }
 
   // Run the container with the detected network
-  core.info('Running VB Docker image...');
+  core.info(`Running VB Docker image on network ${networkName}...`);
   await exec.exec(
     `docker run --network ${networkName} -d --name pse -p 12345:12345 ` +
     `-e INVISIRISK_JWT_TOKEN=${vbApiKey} ` +
@@ -321,8 +322,8 @@ async function runVBImage(vbApiUrl, vbApiKey, registryId, region) {
     `-e INVISIRISK_PORTAL=${vbApiUrl} ` +
     `${registryId}.dkr.ecr.${region}.amazonaws.com/invisirisk/pse-proxy`
   );
+  
   core.info('Waiting .......................');
-  await exec.exec(`sleep 15`);
   await exec.exec(`docker logs pse`);
   await exec.exec(`docker ps`);
   await exec.exec(`docker network ls`);
