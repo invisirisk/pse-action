@@ -20,9 +20,7 @@ async function setupDocker() {
     // Check if Docker daemon is running
     try {
       core.info('Checking if Docker daemon is running...');
-      await exec.exec('docker info', [], {
-        silent: true
-      });
+      await exec.exec('docker info', [], { silent: true });
       core.info('Docker daemon is running.');
     } catch (error) {
       core.info('Docker daemon not running. Starting Docker service...');
@@ -34,18 +32,46 @@ async function setupDocker() {
         await new Promise(resolve => setTimeout(resolve, 5000));
         
         // Verify Docker is now running
-        await exec.exec('docker info', [], {
-          silent: true
-        });
+        await exec.exec('docker info', [], { silent: true });
         core.info('Docker daemon started successfully.');
       } catch (startError) {
         throw new Error(`Failed to start Docker service: ${startError.message}`);
       }
     }
-    
-    core.info('Docker is available and running.');
-  } catch (error) {
-    throw new Error(`Docker setup failed: ${error.message}`);
+
+  } catch (err) {
+    core.error('Docker not found. Installing Docker...');
+
+    // Read /etc/os-release to determine the OS
+    try {
+      const osReleaseData = fs.readFileSync('/etc/os-release', 'utf8');
+      if (osReleaseData.includes('Alpine')) {
+        // Docker installation for Alpine Linux
+        core.info('Installing Docker on Alpine...');
+        try {
+          await exec.exec('apk update');
+          await exec.exec('apk add docker');
+          core.info('Docker installed and started on Alpine.');
+        } catch (installError) {
+          throw new Error(`Failed to install Docker on Alpine: ${installError.message}`);
+        }
+      } else if (osReleaseData.includes('Ubuntu')) {
+        // Docker installation for Ubuntu
+        core.info('Installing Docker on Ubuntu...');
+        try {
+          await exec.exec('sudo apt-get update');
+          await exec.exec('sudo apt-get install -y docker.io');
+          await exec.exec('sudo systemctl enable --now docker');
+          core.info('Docker installed and started on Ubuntu.');
+        } catch (installError) {
+          throw new Error(`Failed to install Docker on Ubuntu: ${installError.message}`);
+        }
+      } else {
+        throw new Error('Unsupported OS. Unable to install Docker.');
+      }
+    } catch (err) {
+      throw new Error('Failed to detect OS or install Docker: ' + err.message);
+    }
   }
 }
 
