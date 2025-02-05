@@ -282,12 +282,13 @@ async function loginToECR(username, password, registryId, region) {
  */
 async function runVBImage(vbApiUrl, vbApiKey, registryId, region) {
   core.info('Running VB Docker image...');
-  await exec.exec(`docker run -d --name pse -p 12345:12345 -e INVISIRISK_JWT_TOKEN=${vbApiKey} -e GITHUB_TOKEN=${process.env.GITHUB_TOKEN} -e PSE_DEBUG_FLAG="--alsologtostderr" -e POLICY_LOG="t" -e INVISIRISK_PORTAL=${vbApiUrl} ${registryId}.dkr.ecr.${region}.amazonaws.com/invisirisk/pse-proxy `);
+  await exec.exec(`docker run --network host -d --name pse -p 12345:12345 -e INVISIRISK_JWT_TOKEN=${vbApiKey} -e GITHUB_TOKEN=${process.env.GITHUB_TOKEN} -e PSE_DEBUG_FLAG="--alsologtostderr" -e POLICY_LOG="t" -e INVISIRISK_PORTAL=${vbApiUrl} ${registryId}.dkr.ecr.${region}.amazonaws.com/invisirisk/pse-proxy`);
   core.info('Waiting .......................');
   await exec.exec(`sleep 15`);
   await exec.exec(`docker logs pse`);
   await exec.exec(`docker ps`);
   await exec.exec(`docker network ls`);
+  await exec.exec(`apk add curl`);
   await exec.exec(`curl -v http://172.17.0.2:12345`)
   core.info('VB Docker image started successfully.');
 }
