@@ -4451,19 +4451,19 @@ async function setupDocker() {
         } catch (installError) {
           throw new Error(`Failed to install Docker on Alpine: ${installError.message}`);
         }
-      } else if (osReleaseData.includes('Ubuntu')) {
+      } else if (osReleaseData.includes('Ubuntu') || osReleaseData.includes('Debian')) {
         // Docker installation for Ubuntu
         core.info('Installing Docker on Ubuntu...');
         try {
-          await exec.exec('sudo apt-get update');
-          await exec.exec('sudo apt-get install -y docker.io');
-          await exec.exec('sudo systemctl enable --now docker');
-          core.info('Docker installed and started on Ubuntu.');
+          await exec.exec('apt-get update');
+          await exec.exec('apt-get install -y docker.io');
+          await exec.exec('service docker start');
+          core.info('Docker installed and started on Debian/Ubuntu.');
         } catch (installError) {
-          throw new Error(`Failed to install Docker on Ubuntu: ${installError.message}`);
+          throw new Error(`Failed to install Docker on Debian?Ubuntu: ${installError.message}`);
         }
       } else {
-        throw new Error('Unsupported OS. Unable to install Docker.');
+        throw new Error('Unable to install Docker.');
       }
     } catch (err) {
       throw new Error('Failed to detect OS or install Docker: ' + err.message);
