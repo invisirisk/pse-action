@@ -61,7 +61,6 @@ async function setupDocker() {
         try {
           await exec.exec('apt-get update');
           await exec.exec('apt-get install -y docker.io');
-          await exec.exec('service docker start');
           core.info('Docker installed and started on Debian/Ubuntu.');
         } catch (installError) {
           throw new Error(`Failed to install Docker on Debian?Ubuntu: ${installError.message}`);
