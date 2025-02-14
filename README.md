@@ -38,7 +38,7 @@ InvisiRisk provides unparalleled protection for your software supply chain by en
 - IR Build Application Firewall inspects traffic between build components to enforce policy in real time
 - Partner Portal with customer data access, and step-by-step coaching from IR Team Members
 - Network layer to ensure approved repositories, auth methods, and stop redirects of URLs, IPs, or Domains
-- 
+  
 
 ## 
 
