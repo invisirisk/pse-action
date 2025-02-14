@@ -13,6 +13,32 @@ Recent pipeline compromises like 3CX, Kaseya, CircleCI, SolarWinds, CodeCov, and
 
 Pipeline Security Engine  provides detailed analysis and control of all the network transactions done by software builds. PSE deployments can be used to protect against such threats.
 
+## About InvisiRisk
+InvisiRisk provides unparalleled protection for your software supply chain by enforcing real-time security policies, inspecting bi-directional traffic, and adapting to new threats, ensuring zero-trust. Our Build Application Firewall provides continuous security for your build environment, without complex agents or limited scanners with a seamless, rapid setup for GitHub Actions and other CI/CDs.
+
+- Agnostic, purpose-built security layer for build systems and Application Security Posture Managers
+- TruSBOM™ with 100% accurate open-source manifest creation including accurate version information (DNA test for your source code’s open-source inventory).
+- IR SBOM Enhance to find hidden open-source components in 3rd party application SBOMS
+- IR Scorecard leverages rich content to prioritize health of your business, applications, and projects
+- Software Supply Chain security beyond DAST/SAST/ASPM scanners for true pipeline ENFORCEMENT, to stop SolarWinds-type, MIME type, Typosquatting, and other modern security breaches
+- Automate compliance with Security Packs and custom policies for any attestation type (NIST/CISA/Etc.)
+- Implements zero trust model in build pipeline
+- IR Build Application Firewall inspects traffic between build components to enforce policy in real time
+- Partner Portal with customer data access, and step-by-step coaching from IR Team Members
+- Network layer to ensure approved repositories, auth methods, and stop redirects of URLs, IPs, or Domains## About the Organization
+InvisiRisk provides unparalleled protection for your software supply chain by enforcing real-time security policies, inspecting bi-directional traffic, and adapting to new threats, ensuring zero-trust. Our Build Application Firewall provides continuous security for your build environment, without complex agents or limited scanners with a seamless, rapid setup for GitHub Actions and other CI/CDs.
+
+- Agnostic, purpose-built security layer for build systems and Application Security Posture Managers
+- TruSBOM™ with 100% accurate open-source manifest creation including accurate version information (DNA test for your source code’s open-source inventory).
+- IR SBOM Enhance to find hidden open-source components in 3rd party application SBOMS
+- IR Scorecard leverages rich content to prioritize health of your business, applications, and projects
+- Software Supply Chain security beyond DAST/SAST/ASPM scanners for true pipeline ENFORCEMENT, to stop SolarWinds-type, MIME type, Typosquatting, and other modern security breaches
+- Automate compliance with Security Packs and custom policies for any attestation type (NIST/CISA/Etc.)
+- Implements zero trust model in build pipeline
+- IR Build Application Firewall inspects traffic between build components to enforce policy in real time
+- Partner Portal with customer data access, and step-by-step coaching from IR Team Members
+- Network layer to ensure approved repositories, auth methods, and stop redirects of URLs, IPs, or Domains
+
 
 ## Design
 The PSE action sets up iptables rules to redirect all port 443 traffic to service container named PSE. The PSE container runs an SSL inspection proxy analyzing traffic flowing between your build and rest of the world. The PSE Action sets up CA certificate from the proxy service as a trusted certificate in your build container providing seamless service.
@@ -28,45 +54,18 @@ Full policy control over what should be admitted to the build system. PSE uses [
 
 The policy control allows for alert or block of traffic.
 
-Here are examples of action runs:
-- [Basic NPM Demo](https://github.com/invisirisk/pse-action/actions/runs/4840230332/jobs/8625753277)
-- [Secret Leak Demo](https://github.com/invisirisk/pse-action/actions/runs/4840230332/jobs/8625756297)
-- [Block by Policy Demo](https://github.com/invisirisk/pse-action/actions/runs/4840230332/jobs/8625751936)
-
-#### Example block report
-
-> ##### :no_entry_sign: git - pull - github.com/TheTorProject/gettorbrowser
-> ##### OpenAI Summary
-> The activity of trying to pull code from the GitHub repository for gettorbrowser was blocked due to policy. There is no related risk from the build system.
->
-> ##### Details
-> Blocked: Blocked by policy
-
-
 ### Secret Scan
 PSE scans all outgoing traffic for secrets. These requests can be blocked or can raise alert based on configuration.
-
-#### Example Report
-> ##### :warning: web - post - risky.com/
->
-> ##### Details
-> - URL: https://risky.com/post-target
-> - GitHub-App-Token: secret value ghs_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXg,
-> - Download-Type: mime: text/html; charset=utf-8
-> - Download-Checksum: checksum 5dc1213c14995bdf78755c41174b0060
 
 ## Input
 Service Container Environments
  - GITHUB_TOKEN: Required. Github token with permission to write checks
- - OPENAI_AUTH_TOKEN: Optional. If provided, call out to OpenAI to summarize activities.
  - POLICY_URL: URL from where to fetch policy
  - POLICY_AUTH_TOKEN: Bearer token used to authenticate with policy provider
  - POLICY_LOG: if set enable policy log
  
-
-
 Action Input
- - github-token: Required. Github token
+ - github-token: Required Github token
 
 ## Usage
 To use this action, add the following step to your workflow:
@@ -91,7 +90,6 @@ jobs:
         image: invisirisk/pse
         env:
            GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # should have permissions to write checks
-           OPENAI_AUTH_TOKEN: ${{ secrets.OPENAI_AUTH_TOKEN }} # if set, use OpenAI chat to summarize
            
            POLICY_URL: https://api.github.com/repos/invisirisk/policy/tarball/main #if set the URL to pull policy bundle from
            POLICY_AUTH_TOKEN: ${{ secrets.POLICY_AUTH_TOKEN }} # bearer auth token used when pull down policy
@@ -150,43 +148,9 @@ Policy return should include the following details:
 - result: allow, deny, alert/warn, alert/error, alert/crit
 - details: if result is alert, message associated with the alert
 
-#### Example alert report
-
-> ##### :warning: git - pull - github.com/TheTorProject/gettorbrowser
-> ###### OpenAI Summary
-> The activity involved accessing the Github repository for the Tor Browser and pulling content. The related risk could be the potential for the introduction of malicious code into the build system.
-> ###### Details
-> - Alert: accessing repo github.com/TheTorProject/gettorbrowser with action pull
-> - Download-Type: mime: text/plain; charset=utf-8
-> - Download-Checksum: checksum cddb06e275ca09d516bc759f77ac5efe 
-#### Example block report
-
-> ###### :no_entry_sign: git - pull - github.com/TheTorProject/gettorbrowser
-> ###### OpenAI Summary
-> The activity of trying to pull code from the GitHub repository for gettorbrowser was blocked due to policy. There is no related risk from the build system.
->
-> ###### Details
-> Blocked: Blocked by policy
-
-
-
 ## Output
-The output is set as checks associated with the build. These checks can be summarized using OpenAI ChatBot.
-Here is an [example Output Report](https://github.com/invisirisk/pse-action/actions/runs/4840230332/jobs/8625753277)
+The output is set as checks associated with the build.
 
-
-### Roadmap
-- [X] Basic proxy for Alpine Container
-- [X] Provide output as Github Check
-- [X] Check of secrets in all POSTs
-- [X] go module
-- [X] npm module
-- [X] git operations
-- [X] web operations
-- [ ] MVN operations
-- [ ] PyPI support
-- [X] Ubuntu, Debian Container
-- [X] Policy Interface
 ## Restrictions
 - Only works with Alpine, Debian, and Ubuntu container builds.
 - Build container must allow root access to run iptables.
@@ -195,3 +159,9 @@ Here is an [example Output Report](https://github.com/invisirisk/pse-action/acti
 ### Licensing
 The project is licensed under [Apache License v2](https://www.apache.org/licenses/LICENSE-2.0).
 
+
+## 
+
+Visit https://www.invisirisk.com/ for more info. 
+
+For support, please email support@invisirisk.com
