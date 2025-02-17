@@ -1,19 +1,5 @@
-# Pipeline Security Engine
+# Governance, Risk and Compliance for the Software Supply Chain
 
-In recent years, there have been several high-profile security breaches that have exploited vulnerabilities in build pipelines. These breaches have exposed sensitive data, such as:
-
-- Data exfiltration
-- Code injection
-- Denial of service (DoS) attacks
-- Supply chain attacks
-- Intellectual Property
-
-
-Recent pipeline compromises like 3CX, Kaseya, CircleCI, SolarWinds, CodeCov, and others have highlighted the need for securing the build pipeline.
-
-Pipeline Security Engine  provides detailed analysis and control of all the network transactions done by software builds. PSE deployments can be used to protect against such threats.
-
-## About InvisiRisk
 InvisiRisk provides unparalleled protection for your software supply chain by enforcing real-time security policies, inspecting bi-directional traffic, and adapting to new threats, ensuring zero-trust. Our Build Application Firewall provides continuous security for your build environment, without complex agents or limited scanners with a seamless, rapid setup for GitHub Actions and other CI/CDs.
 
 - Agnostic, purpose-built security layer for build systems and Application Security Posture Managers
@@ -25,7 +11,7 @@ InvisiRisk provides unparalleled protection for your software supply chain by en
 - Implements zero trust model in build pipeline
 - IR Build Application Firewall inspects traffic between build components to enforce policy in real time
 - Partner Portal with customer data access, and step-by-step coaching from IR Team Members
-- Network layer to ensure approved repositories, auth methods, and stop redirects of URLs, IPs, or Domains## About the Organization
+- Network layer to ensure approved repositories, auth methods, and stop redirects of URLs, IPs, or Domains
 
 
 ## 
