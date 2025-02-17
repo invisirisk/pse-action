@@ -1,5 +1,5 @@
-name: "Pipeline Security Engine"
-description: "Visibility and control over all the network activity from your pipeline."
+name: "Build Application Firewall"
+description: "Governance, Risk and Compliance for the Software Supply Chain."
 inputs:
   github-token:
     description: "github token"
