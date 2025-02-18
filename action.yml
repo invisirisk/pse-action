@@ -4,6 +4,13 @@ inputs:
   github-token:
     description: "github token"
     required: true
+  VB_API_URL:
+    description: 'VB API URL'
+    required: true
+  VB_API_KEY:
+    description: 'VB API Key'
+    required: true
+    
 branding:
   icon: bell
   color: green
