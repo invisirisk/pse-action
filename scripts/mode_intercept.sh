@@ -498,7 +498,7 @@ main() {
   log "Starting PSE GitHub Action intercept mode"
   
   validate_environment
-  #setup_iptables
+  setup_iptables
   setup_http_proxy
   setup_certificates
   start_capture
