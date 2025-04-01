@@ -354,7 +354,7 @@ setup_iptables() {
   # Add iptables rules
   run_with_privilege iptables -t nat -N pse
   run_with_privilege iptables -t nat -A OUTPUT -j pse
-  run_with_privilege iptables -t nat -A pse -p tcp --dport 443 -j REDIRECT --to-ports "$proxy_port"
+  run_with_privilege iptables -t nat -A pse -p tcp --dport 443 -j DNAT --to-destination "$PROXY_IP:$proxy_port"
   #run_with_privilege iptables -t nat -A POSTROUTING -j MASQUERADE
   
   log "iptables rules set up successfully"
