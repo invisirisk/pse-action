@@ -164,13 +164,13 @@ main() {
   case "$MODE" in
     prepare|setup|binary_setup|intercept)
       if [[ -f "$SCRIPTS_DIR/mode_${MODE}.sh" ]]; then
-        if [[ "$script" == "intercept" ]]; then
+        if [[ "$MODE" == "intercept" ]]; then
           # Set the additional argument as an environment variable
           export SET_HTTP_ENV="false"  # Replace with your desired argument
-          . "$SCRIPTS_DIR/mode_${script}.sh"
+          . "$SCRIPTS_DIR/mode_${MODE}.sh"
           unset SET_HTTP_ENV  # Clean up after sourcing
         else
-          . "$SCRIPTS_DIR/mode_${script}.sh"
+          . "$SCRIPTS_DIR/mode_${MODE}.sh"
         fi
       else
         log "ERROR: mode_${MODE}.sh script not found in $SCRIPTS_DIR"
