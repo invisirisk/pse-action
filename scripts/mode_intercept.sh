@@ -496,7 +496,7 @@ setup_certificates() {
 install_dependencies() {
   log "Installing dependencies"
   run_with_privilege apt-get update
-  run_with_privilege apt-get install -y curl git
+  run_with_privilege apt-get install -y curl git procps
   log "Dependencies installed successfully"
 }
 
