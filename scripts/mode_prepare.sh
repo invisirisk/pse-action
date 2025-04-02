@@ -234,13 +234,7 @@ set_outputs() {
   echo "ecr_region=$ECR_REGION" >> "$GITHUB_OUTPUT"
   echo "ecr_registry_id=$ECR_REGISTRY_ID" >> "$GITHUB_OUTPUT"
   echo "scan_id=$SCAN_ID" >> "$GITHUB_OUTPUT"
-  
-  # Also set outputs using the older syntax for backward compatibility
-  echo "::set-output name=ecr_username::$ECR_USERNAME"
-  echo "::set-output name=ecr_token::$ECR_TOKEN"
-  echo "::set-output name=ecr_region::$ECR_REGION"
-  echo "::set-output name=ecr_registry_id::$ECR_REGISTRY_ID"
-  echo "::set-output name=scan_id::$SCAN_ID"
+
   
   # Save to GitHub environment variables for use in subsequent jobs
   echo "ECR_USERNAME=$ECR_USERNAME" >> $GITHUB_ENV
@@ -253,14 +247,6 @@ set_outputs() {
   echo "PSE_API_URL=$API_URL" >> $GITHUB_ENV
   echo "PSE_APP_TOKEN=$APP_TOKEN" >> $GITHUB_ENV
   echo "PSE_PORTAL_URL=$PORTAL_URL" >> $GITHUB_ENV
-  
-  # Log the outputs for debugging (with some redaction for sensitive values)
-  log "Output values set:"
-  log "ecr_username: ${ECR_USERNAME:0:3}***"
-  log "ecr_token: ***"
-  log "ecr_region: $ECR_REGION"
-  log "ecr_registry_id: $ECR_REGISTRY_ID"
-  log "scan_id: $SCAN_ID"
   
   # Debug: Print the contents of GITHUB_OUTPUT file
   log "Contents of GITHUB_OUTPUT file:"
