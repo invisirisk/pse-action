@@ -499,7 +499,9 @@ main() {
   
   validate_environment
   setup_iptables
-  setup_http_proxy
+  if [[ "$SET_HTTP_ENV" != "false" ]]; then
+    setup_http_proxy
+  fi
   setup_certificates
   start_capture
   
