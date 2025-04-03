@@ -76,7 +76,7 @@ runs:
     - id: pse-setup
       shell: bash
       run: |
-        trap 'echo "Running cleanup..."; $GITHUB_ACTION_PATH/cleanup.sh; echo "Cleanup complete"' EXIT
+        trap 'echo "Running cleanup..."; $GITHUB_ACTION_PATH/cleanup.sh; echo "Cleanup complete"' SIGTERM
         if [ "${{ inputs.cleanup }}" = "true" ]; then
           echo "Running PSE cleanup..."
           $GITHUB_ACTION_PATH/cleanup.sh
