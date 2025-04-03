@@ -257,10 +257,34 @@ set_outputs() {
   fi
 }
 
+install_dependencies() {
+  log "Installing dependencies"
+
+  # Detect the package manager
+  if command -v apt-get >/dev/null 2>&1; then
+    # Debian/Ubuntu (apt-get)
+    log "Detected apt-get package manager"
+    run_with_privilege apt-get update
+    run_with_privilege apt-get install -y curl git procps
+  elif command -v apk >/dev/null 2>&1; then
+    # Alpine (apk)
+    log "Detected apk package manager"
+    run_with_privilege apk update
+    run_with_privilege apk add --no-cache curl git procps
+  else
+    log "Error: No supported package manager (apt-get or apk) found"
+    exit 1
+  fi
+
+  log "Dependencies installed successfully"
+}
+
+
 # Main function
 main() {
   log "Starting PSE GitHub Action prepare mode"
-  
+
+  install_dependencies
   validate_env_vars
   get_ecr_credentials
   prepare_scan_id

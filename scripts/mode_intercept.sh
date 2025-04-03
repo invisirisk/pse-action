@@ -493,19 +493,12 @@ setup_certificates() {
   log "Certificates configured successfully"
 }
 
-install_dependencies() {
-  log "Installing dependencies"
-  run_with_privilege apt-get update
-  run_with_privilege apt-get install -y curl git procps
-  log "Dependencies installed successfully"
-}
 
 # Main function
 main() {
   log "Starting PSE GitHub Action intercept mode"
   
   validate_environment
-  install_dependencies
   setup_iptables
   if [[ "$SET_HTTP_ENV" != "false" ]]; then
     setup_http_proxy
