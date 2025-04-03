@@ -96,3 +96,19 @@ runs:
         PROXY_IP: ${{ inputs.proxy_ip }}
         PROXY_HOSTNAME: ${{ inputs.proxy_hostname }}
         DEBUG_FORCE: ${{ inputs.mode }}
+    - id: setup-cleanup
+      shell: bash
+      run: |
+        cleanup_script="$GITHUB_ACTION_PATH/cleanup.sh"
+        # Start a background process that waits for SIGTERM
+        nohup bash -c '
+          trap '"'"'
+            echo "Running cleanup..."
+            "$cleanup_script"
+            # Ensure the cleanup script has time to complete
+            (sleep 30; kill -9 $$) &
+            wait
+          '"'"' SIGTERM
+
+          while true; do sleep 1; done
+        ' &
