@@ -499,7 +499,9 @@ main() {
   log "Starting PSE GitHub Action intercept mode"
   
   validate_environment
-  setup_iptables
+  if [[ "$SET_IP_TABLES" != "false" ]]; then
+    setup_iptables
+  fi
   if [[ "$SET_HTTP_ENV" != "false" ]]; then
     setup_http_proxy
   fi

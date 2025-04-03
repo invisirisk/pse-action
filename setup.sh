@@ -190,7 +190,14 @@ main() {
     docker-intercept)
       for script in prepare binary_setup intercept; do
         if [[ -f "$SCRIPTS_DIR/mode_${script}.sh" ]]; then
+          if [[ "$MODE" == "intercept" ]]; then
+          # Set the additional argument as an environment variable
+          export SET_IP_TABLES="false"  # Replace with your desired argument
           . "$SCRIPTS_DIR/mode_${script}.sh"
+          unset SET_IP_TABLES  # Clean up after sourcing
+        else
+          . "$SCRIPTS_DIR/mode_${script}.sh"
+        fi
         else
           log "ERROR: mode_${script}.sh script not found in $SCRIPTS_DIR"
           exit 1
