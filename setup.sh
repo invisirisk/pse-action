@@ -140,16 +140,6 @@ validate_mode_requirements() {
   log "Mode-specific requirements validation successful"
 }
 
-unset_env_variables() {
-  local required_vars=("ECR_USERNAME" "ECR_TOKEN" "ECR_REGION" "ECR_REGISTRY_ID")
-
-  for var in "${required_vars[@]}"; do
-    unset "$var"
-  done
-
-  log "Environment unset successful"
-}
-
 # Main function
 main() {
   log "Starting PSE GitHub Action in $MODE mode"
@@ -263,7 +253,6 @@ main() {
   esac
   
   log "PSE GitHub Action completed successfully in $MODE mode"
-  unset_env_variables
 }
 
 # Execute main function
