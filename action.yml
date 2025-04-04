@@ -76,7 +76,6 @@ runs:
     - id: pse-setup
       shell: bash
       run: |
-        trap 'echo "Running cleanup..."; $GITHUB_ACTION_PATH/cleanup.sh; echo "Cleanup complete"' SIGTERM
         if [ "${{ inputs.cleanup }}" = "true" ]; then
           echo "Running PSE cleanup..."
           $GITHUB_ACTION_PATH/cleanup.sh
@@ -96,19 +95,3 @@ runs:
         PROXY_IP: ${{ inputs.proxy_ip }}
         PROXY_HOSTNAME: ${{ inputs.proxy_hostname }}
         DEBUG_FORCE: ${{ inputs.mode }}
-    - id: setup-cleanup
-      shell: bash
-      run: |
-        cleanup_script="$GITHUB_ACTION_PATH/cleanup.sh"
-        # Start a background process that waits for SIGTERM
-        nohup bash -c '
-          trap '"'"'
-            echo "Running cleanup..."
-            "$cleanup_script"
-            # Ensure the cleanup script has time to complete
-            (sleep 30; kill -9 $$) &
-            wait
-          '"'"' SIGTERM
-
-          while true; do sleep 1; done
-        ' &

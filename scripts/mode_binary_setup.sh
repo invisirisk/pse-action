@@ -388,16 +388,6 @@ EOF
   log "Cleanup script registered"
 }
 
-unset_env_variables() {
-  local required_vars=("ECR_USERNAME" "ECR_TOKEN" "ECR_REGION" "ECR_REGISTRY_ID")
-
-  for var in "${required_vars[@]}"; do
-    unset "$var"
-  done
-
-  log "Environment unset successful"
-}
-
 # Main function
 main() {
   log "Starting PSE GitHub Action binary setup mode"
@@ -407,8 +397,7 @@ main() {
   pull_and_start_pse_container
   #signal_build_start
   register_cleanup
-  unset_env_variables
-  
+
   log "Binary setup mode completed successfully"
   log "PSE container is running at IP: $PROXY_IP"
   log "This IP address has been saved to GitHub environment as PSE_PROXY_IP"
