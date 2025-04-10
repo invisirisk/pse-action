@@ -129,8 +129,6 @@ get_ecr_credentials() {
   
   log "API response received"
 
-  log "API response: $RESPONSE"
-  
   # Check if response contains an error
   if echo "$RESPONSE" | grep -q "error"; then
     local ERROR_MSG
@@ -188,7 +186,7 @@ prepare_scan_id() {
   
   # Make API request to create scan
   local RESPONSE
-  RESPONSE=$(curl -L -v -X POST "$API_ENDPOINT" \
+  RESPONSE=$(curl -L -X POST "$API_ENDPOINT" \
     -H "Content-Type: application/json" \
     -d "{\"api_key\":\"$APP_TOKEN\"}")
   
