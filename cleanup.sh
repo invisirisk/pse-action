@@ -179,7 +179,7 @@ signal_build_end() {
   # Build parameters
   params="id=$(url_encode "$SCAN_ID")"
   params="${params}&build_url=$(url_encode "$build_url")"
-  params="${params}&status=$(url_encode "${GITHUB_RUN_RESULT:-unknown}")"
+  params="${params}&status=$(url_encode "${INPUT_JOB_STATUS:-unknown}")"
   
   log "Sending end signal to PSE with parameters: $params"
   

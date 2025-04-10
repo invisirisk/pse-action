@@ -48,7 +48,10 @@ inputs:
     description: 'Scan ID from the prepare step. Required for setup and intercept modes unless test_mode is true.'
     required: false
     default: ''
-
+  job_status:
+    description: 'Job status to be passed to the PSE container for job tracking'
+    required: false
+    default: 'unknown'
 # Define outputs for the action
 outputs:
   scan_id:
