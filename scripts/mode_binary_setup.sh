@@ -353,14 +353,16 @@ pull_and_start_pse_container() {
   fi
   
   # Also save the PSE proxy IP as an output parameter
-  echo "proxy_ip=$PSE_IP" >> $GITHUB_OUTPUT
+  # echo "proxy_ip=$PSE_IP" >> $GITHUB_OUTPUT
+  
+  export proxy_ip="$PSE_IP"
   echo "::set-output name=proxy_ip::$PSE_IP"
   
   # Double check that the proxy IP has been properly set as output
   log "Set proxy_ip output parameter to: $PSE_IP"
   
   log "PSE container started with IP: $PSE_IP"
-  log "Proxy IP has been saved to GitHub environment as PSE_PROXY_IP"
+  log "Proxy IP has been exported as: $proxy_ip"
 }
 
 # Function to signal build start
