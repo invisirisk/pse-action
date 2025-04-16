@@ -452,9 +452,10 @@ setup_certificates() {
 
   
   # Add to GITHUB_ENV to persist these variables
+  if [ -n "$GITHUB_ENV" ]; then
   echo "NODE_EXTRA_CA_CERTS=$CA_CERT_PATH" >> $GITHUB_ENV
   echo "REQUESTS_CA_BUNDLE=$CA_CERT_PATH" >> $GITHUB_ENV
-  
+  fi
 
   # Add handling for docker
   if command -v docker >/dev/null 2>&1; then
