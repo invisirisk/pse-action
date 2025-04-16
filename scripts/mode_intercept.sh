@@ -431,8 +431,10 @@ setup_certificates() {
   fi
   
   # Update CA certificates non-interactively
+  set +e 
   log "Updating CA certificates..."
   run_with_privilege update-ca-certificates
+  set -e  
   
   # Set the correct path for the installed certificate
   CA_CERT_PATH="/etc/ssl/certs/pse.crt"
