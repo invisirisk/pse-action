@@ -259,10 +259,9 @@ pull_and_start_pse_container() {
     (cd "$PSE_BIN_DIR" && sudo -E ./pse serve --policy ./policy.json --config ./cfg.yaml --leaks /tmp/leaks.toml --global-session true > "$PSE_LOG_FILE" 2>&1 &)
   fi
   
-
+  echo "--------------------------------------------------------DELETE THIS LINE--------------------------------------------------------"
   echo "Give the PSE binary a moment to start up"
-  cat $PSE_LOG_FILE
-  sleep 60
+  sleep 5
   cat $PSE_LOG_FILE
 
   # check if the log file is being written to
