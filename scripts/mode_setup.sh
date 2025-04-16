@@ -39,7 +39,7 @@ run_with_privilege() {
 
 # Validate required environment variables
 validate_env_vars() {
-  local required_vars=("ECR_USERNAME" "ECR_TOKEN" "ECR_REGION" "ECR_REGISTRY_ID" "SCAN_ID" "GITHUB_TOKEN")
+  local required_vars=("ECR_USERNAME" "ECR_TOKEN" "ECR_REGION" "ECR_REGISTRY_ID" "SCAN_ID")
   
   for var in "${required_vars[@]}"; do
     if [ -z "${!var}" ]; then
@@ -168,19 +168,20 @@ pull_and_start_pse_container() {
   
   export PSE_IP
   export PROXY_IP="$PSE_IP"
+  export PSE_API_URL="$API_URL"
+  export PSE_APP_TOKEN="$APP_TOKEN"
+  export PSE_PORTAL_URL="$PORTAL_URL"
   
-  # Save the API values to environment for later use
-  echo "PSE_API_URL=$API_URL" >> $GITHUB_ENV
-  echo "PSE_APP_TOKEN=$APP_TOKEN" >> $GITHUB_ENV
-  echo "PSE_PORTAL_URL=$PORTAL_URL" >> $GITHUB_ENV
-  echo "PSE_PROXY_IP=$PSE_IP" >> $GITHUB_ENV
-  
-  # Also save the PSE proxy IP as an output parameter
-  echo "proxy_ip=$PSE_IP" >> $GITHUB_OUTPUT
-  echo "::set-output name=proxy_ip::$PSE_IP"
-  
-  # Double check that the proxy IP has been properly set as output
-  log "Set proxy_ip output parameter to: $PSE_IP"
+  # Only set GitHub environment variables if running in GitHub Actions
+  if [ -n "$GITHUB_ENV" ] && [ -n "$GITHUB_OUTPUT" ]; then
+    echo "PSE_API_URL=$API_URL" >> $GITHUB_ENV
+    echo "PSE_APP_TOKEN=$APP_TOKEN" >> $GITHUB_ENV
+    echo "PSE_PORTAL_URL=$PORTAL_URL" >> $GITHUB_ENV
+    echo "PSE_PROXY_IP=$PSE_IP" >> $GITHUB_ENV
+    echo "proxy_ip=$PSE_IP" >> $GITHUB_OUTPUT
+    echo "::set-output name=proxy_ip::$PSE_IP"
+    log "GitHub environment variables set"
+  fi
   
   log "PSE container started with IP: $PSE_IP"
   log "Proxy IP has been saved to GitHub environment as PSE_PROXY_IP"
@@ -256,16 +257,25 @@ EOF
 unset_env_variables() {
   local required_vars=("ECR_USERNAME" "ECR_TOKEN" "ECR_REGION" "ECR_REGISTRY_ID")
 
+  # Only unset GitHub environment if running in GitHub Actions
+  if [ -n "$GITHUB_ENV" ]; then
+    for var in "${required_vars[@]}"; do
+      echo "$var=" >> "$GITHUB_ENV"
+    done
+    log "GitHub environment variables unset"
+  fi
+
+  # Unset local environment variables
   for var in "${required_vars[@]}"; do
-    echo "$var=" >> "$GITHUB_ENV"
+    unset "$var"
   done
 
-  log "Environment unset successful"
+  log "Environment variables unset successfully"
 }
 
 # Main function
 main() {
-  log "Starting PSE GitHub Action setup mode"
+  log "Starting PSE etup mode"
   
   validate_env_vars
   setup_dependencies

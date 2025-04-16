@@ -1,0 +1,18 @@
+category: Security
+description: Sets up PSE Security Proxy for secure package downloads
+repository: https://bitbucket.org/invisirisk/pse-pipe
+maintainer:
+  name: InvisiRisk
+  website: https://invisirisk.com/
+  email: support@invisirisk.com
+vendor:
+  name: InvisiRisk
+  website: https://invisirisk.com/
+  email: support@invisirisk.com
+variables:
+  - name: API_URL
+    description: URL of the InvisiRisk API (required for prepare and setup modes)
+  - name: APP_TOKEN
+    description: Authentication token for the InvisiRisk API (required for prepare and setup modes)
+  - name: mode
+    description: Mode to run PSE in

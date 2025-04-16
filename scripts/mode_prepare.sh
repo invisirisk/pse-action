@@ -224,35 +224,43 @@ prepare_scan_id() {
 
 # Function to set outputs for GitHub Actions
 set_outputs() {
-  log "Setting outputs for GitHub Actions"
+  log "Setting environment variables"
   
-  # Use newer GitHub Actions output syntax (via GITHUB_OUTPUT environment file)
-  echo "ecr_username=$ECR_USERNAME" >> "$GITHUB_OUTPUT"
-  echo "ecr_token=$ECR_TOKEN" >> "$GITHUB_OUTPUT"
-  echo "ecr_region=$ECR_REGION" >> "$GITHUB_OUTPUT"
-  echo "ecr_registry_id=$ECR_REGISTRY_ID" >> "$GITHUB_OUTPUT"
-  echo "scan_id=$SCAN_ID" >> "$GITHUB_OUTPUT"
-
+  # Export variables to current session
+  export ECR_USERNAME
+  export ECR_TOKEN
+  export ECR_REGION
+  export ECR_REGISTRY_ID
+  export SCAN_ID
   
-  # Save to GitHub environment variables for use in subsequent jobs
-  echo "ECR_USERNAME=$ECR_USERNAME" >> $GITHUB_ENV
-  echo "ECR_TOKEN=$ECR_TOKEN" >> $GITHUB_ENV
-  echo "ECR_REGION=$ECR_REGION" >> $GITHUB_ENV
-  echo "ECR_REGISTRY_ID=$ECR_REGISTRY_ID" >> $GITHUB_ENV
-  echo "SCAN_ID=$SCAN_ID" >> $GITHUB_ENV
+  # Export API values for later use
+  export PSE_API_URL="$API_URL"
+  export PSE_APP_TOKEN="$APP_TOKEN"
+  export PSE_PORTAL_URL="$PORTAL_URL"
   
-  # Save API values to environment for later use
-  echo "PSE_API_URL=$API_URL" >> $GITHUB_ENV
-  echo "PSE_APP_TOKEN=$APP_TOKEN" >> $GITHUB_ENV
-  echo "PSE_PORTAL_URL=$PORTAL_URL" >> $GITHUB_ENV
-  
-  # Debug: Print the contents of GITHUB_OUTPUT file
-  log "Contents of GITHUB_OUTPUT file:"
-  if [ -f "$GITHUB_OUTPUT" ]; then
-    log "$(cat $GITHUB_OUTPUT)"
-  else
-    log "GITHUB_OUTPUT file does not exist or is not accessible"
+  # If running in GitHub Actions, also set GitHub-specific outputs
+  if [ -n "$GITHUB_ENV" ] && [ -n "$GITHUB_OUTPUT" ]; then
+    log "GitHub Actions environment detected, setting GitHub outputs"
+    
+    # Set GitHub outputs
+    echo "ecr_username=$ECR_USERNAME" >> "$GITHUB_OUTPUT"
+    echo "ecr_token=$ECR_TOKEN" >> "$GITHUB_OUTPUT"
+    echo "ecr_region=$ECR_REGION" >> "$GITHUB_OUTPUT"
+    echo "ecr_registry_id=$ECR_REGISTRY_ID" >> "$GITHUB_OUTPUT"
+    echo "scan_id=$SCAN_ID" >> "$GITHUB_OUTPUT"
+    
+    # Set GitHub environment variables
+    echo "ECR_USERNAME=$ECR_USERNAME" >> "$GITHUB_ENV"
+    echo "ECR_TOKEN=$ECR_TOKEN" >> "$GITHUB_ENV"
+    echo "ECR_REGION=$ECR_REGION" >> "$GITHUB_ENV"
+    echo "ECR_REGISTRY_ID=$ECR_REGISTRY_ID" >> "$GITHUB_ENV"
+    echo "SCAN_ID=$SCAN_ID" >> "$GITHUB_ENV"
+    echo "PSE_API_URL=$API_URL" >> "$GITHUB_ENV"
+    echo "PSE_APP_TOKEN=$APP_TOKEN" >> "$GITHUB_ENV"
+    echo "PSE_PORTAL_URL=$PORTAL_URL" >> "$GITHUB_ENV"
   fi
+  
+  log "Environment variables set successfully"
 }
 
 install_dependencies() {

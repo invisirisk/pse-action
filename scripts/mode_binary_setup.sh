@@ -39,7 +39,7 @@ run_with_privilege() {
 
 # Validate required environment variables
 validate_env_vars() {
-  local required_vars=("ECR_USERNAME" "ECR_TOKEN" "ECR_REGION" "ECR_REGISTRY_ID" "SCAN_ID" "GITHUB_TOKEN")
+  local required_vars=("ECR_USERNAME" "ECR_TOKEN" "ECR_REGION" "ECR_REGISTRY_ID" "SCAN_ID")
   
   for var in "${required_vars[@]}"; do
     if [ -z "${!var}" ]; then
@@ -208,12 +208,16 @@ pull_and_start_pse_container() {
   
   log "Successfully extracted PSE binary and other files to $PSE_BIN_DIR/pse"
   
-  # Save the binary path to environment for later use
-  echo "PSE_BINARY_PATH=$PSE_BIN_DIR/pse" >> $GITHUB_ENV
+  # Export binary path
+  export PSE_BINARY_PATH="$PSE_BIN_DIR/pse"
   
+  # Set GitHub environment if running in GitHub Actions
+  if [ -n "$GITHUB_ENV" ]; then
+    echo "PSE_BINARY_PATH=$PSE_BIN_DIR/pse" >> $GITHUB_ENV
+  fi
   
   # set proxy_ip to the ip of this machine
-  PSE_IP=$(run_with_privilege hostname -I | awk '{print $1}')
+  PSE_IP=$(run_with_privilege hostname -i | awk '{print $1}')
   
   export PSE_IP
   export PROXY_IP="$PSE_IP"
@@ -229,16 +233,20 @@ pull_and_start_pse_container() {
 
   # Define log file path
   PSE_LOG_FILE="/tmp/pse_binary.log"
-  echo "PSE_LOG_FILE=$PSE_LOG_FILE" >> $GITHUB_ENV
+  export PSE_LOG_FILE
+  
+  if [ -n "$GITHUB_ENV" ]; then
+    echo "PSE_LOG_FILE=$PSE_LOG_FILE" >> $GITHUB_ENV
+  fi
   log "PSE_LOG_FILE set to $PSE_LOG_FILE"
 
  
 
   # Add this to your mode_binary_setup.sh script before starting the PSE binary
-  log "Temporarily disabling IPv6"
-  run_with_privilege sysctl -w net.ipv6.conf.all.disable_ipv6=1
-  run_with_privilege sysctl -w net.ipv6.conf.default.disable_ipv6=1
-  run_with_privilege sysctl -w net.ipv6.conf.lo.disable_ipv6=1
+  # log "Temporarily disabling IPv6"
+  # run_with_privilege sysctl -w net.ipv6.conf.all.disable_ipv6=1
+  # run_with_privilege sysctl -w net.ipv6.conf.default.disable_ipv6=1
+  # run_with_privilege sysctl -w net.ipv6.conf.lo.disable_ipv6=1
 
   # We need to run pse in background
   if [ "$(id -u)" = "0" ]; then
@@ -287,7 +295,11 @@ pull_and_start_pse_container() {
   fi
 
   log "PSE binary started with PID: $PSE_PID"
-  echo "PSE_PID=$PSE_PID" >> $GITHUB_ENV
+  export PSE_PID
+  
+  if [ -n "$GITHUB_ENV" ]; then
+    echo "PSE_PID=$PSE_PID" >> $GITHUB_ENV
+  fi
 
   # Verify the process is running
   if ! run_with_privilege ps -p "$PSE_PID" > /dev/null 2>&1; then
@@ -305,10 +317,21 @@ pull_and_start_pse_container() {
   echo "<==="
 
   # Save the API values to environment for later use
-  echo "PSE_API_URL=$API_URL" >> $GITHUB_ENV
-  echo "PSE_APP_TOKEN=$APP_TOKEN" >> $GITHUB_ENV
-  echo "PSE_PORTAL_URL=$PORTAL_URL" >> $GITHUB_ENV
-  echo "PSE_PROXY_IP=$PSE_IP" >> $GITHUB_ENV
+  # Export API values and proxy IP
+  export PSE_API_URL="$API_URL"
+  export PSE_APP_TOKEN="$APP_TOKEN"
+  export PSE_PORTAL_URL="$PORTAL_URL"
+  export PSE_PROXY_IP="$PSE_IP"
+  
+  # Set GitHub environment if running in GitHub Actions
+  if [ -n "$GITHUB_ENV" ] && [ -n "$GITHUB_OUTPUT" ]; then
+    echo "PSE_API_URL=$API_URL" >> $GITHUB_ENV
+    echo "PSE_APP_TOKEN=$APP_TOKEN" >> $GITHUB_ENV
+    echo "PSE_PORTAL_URL=$PORTAL_URL" >> $GITHUB_ENV
+    echo "PSE_PROXY_IP=$PSE_IP" >> $GITHUB_ENV
+    echo "proxy_ip=$PSE_IP" >> $GITHUB_OUTPUT
+    echo "::set-output name=proxy_ip::$PSE_IP"
+  fi
   
   # Also save the PSE proxy IP as an output parameter
   echo "proxy_ip=$PSE_IP" >> $GITHUB_OUTPUT
@@ -391,8 +414,12 @@ EOF
 unset_env_variables() {
   local required_vars=("ECR_USERNAME" "ECR_TOKEN" "ECR_REGION" "ECR_REGISTRY_ID")
 
+  # Unset both local and GitHub environment variables
   for var in "${required_vars[@]}"; do
-    echo "$var=" >> "$GITHUB_ENV"
+    unset "$var"
+    if [ -n "$GITHUB_ENV" ]; then
+      echo "$var=" >> "$GITHUB_ENV"
+    fi
   done
 
   log "Environment unset successful"
