@@ -401,13 +401,24 @@ setup_certificates() {
   
   while [ $ATTEMPT -le $MAX_RETRIES ]; do
     log "Fetching CA certificate, attempt $ATTEMPT of $MAX_RETRIES"
-    if curl -L -k -s -o /tmp/pse.crt https://pse.invisirisk.com/ca; then
-      # Copy to the proper location for Ubuntu/Debian
-      run_with_privilege cp /tmp/pse.crt /usr/local/share/ca-certificates/extra/pse.crt
-      log "CA certificate successfully retrieved and copied to /usr/local/share/ca-certificates/extra/"
-      break
+    CURL_OUTPUT=$(curl -L -k -s -o /tmp/pse.crt https://pse.invisirisk.com/ca 2>&1)
+    CURL_EXIT_CODE=$?
+    
+    if [ $CURL_EXIT_CODE -eq 0 ] && [ -f "/tmp/pse.crt" ]; then
+      log "Certificate download successful"
+      # Verify the certificate file is not empty
+      if [ -s "/tmp/pse.crt" ]; then
+        # Copy to the proper location for Ubuntu/Debian
+        run_with_privilege cp /tmp/pse.crt /usr/local/share/ca-certificates/extra/pse.crt
+        log "CA certificate successfully retrieved and copied to /usr/local/share/ca-certificates/extra/"
+        break
+      else
+        log "WARNING: Downloaded certificate file is empty"
+      fi
     else
-      log "Failed to retrieve CA certificate, retrying in $RETRY_DELAY seconds..."
+      log "Failed to retrieve CA certificate (Exit code: $CURL_EXIT_CODE)"
+      log "Curl output: $CURL_OUTPUT"
+      log "Retrying in $RETRY_DELAY seconds..."
       sleep $RETRY_DELAY
       RETRY_DELAY=$((RETRY_DELAY * 2))
       ATTEMPT=$((ATTEMPT + 1))
