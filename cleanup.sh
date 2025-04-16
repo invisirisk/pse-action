@@ -190,6 +190,7 @@ signal_build_end() {
   
   while [ $ATTEMPT -le $MAX_RETRIES ]; do
     log "Sending end signal, attempt $ATTEMPT of $MAX_RETRIES"
+  
     
     RESPONSE=$(curl -X POST "${BASE_URL}/end" \
       -H 'Content-Type: application/x-www-form-urlencoded' \
@@ -200,7 +201,7 @@ signal_build_end() {
       --retry 3 --retry-delay 2 --max-time 10 \
       -s -w "\n%{http_code}" 2>&1)
 
-    echo "Response: $RESPONSE"
+    log "Response: $RESPONSE"
     
     HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
     RESPONSE_BODY=$(echo "$RESPONSE" | sed '$d')
