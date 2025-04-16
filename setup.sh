@@ -13,7 +13,7 @@ if [ "$DEBUG" = "true" ] || [ "$DEBUG_FORCE" = "true" ]; then
 fi
 
 # Set default mode if not provided
-MODE=${MODE:-docker-intercept}
+MODE=${MODE:-all}
 
 # Log with timestamp
 log() {
