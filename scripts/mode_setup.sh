@@ -68,7 +68,7 @@ setup_dependencies() {
     # Install Docker based on the available package manager
     if command -v apt-get >/dev/null 2>&1; then
       run_with_privilege apt-get update
-      run_with_privilege apt-get install -y docker.io net-tools
+      run_with_privilege apt-get install -y docker.io
     elif command -v yum >/dev/null 2>&1; then
       run_with_privilege yum install -y docker
     else
