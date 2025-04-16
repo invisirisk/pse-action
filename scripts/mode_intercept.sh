@@ -432,8 +432,11 @@ setup_certificates() {
   
   # Update CA certificates non-interactively
   set +e 
+  echo "-------------------------------update ca starting----------------------------------"
   log "Updating CA certificates..."
-  run_with_privilege update-ca-certificates
+  run_with_privilege update-ca-certificates --verbose
+  UPDATE_CA_EXIT_CODE=$?
+  log "update-ca-certificates exit code: $UPDATE_CA_EXIT_CODE"
   echo "-------------------------------update ca completed----------------------------------"  
   
   # Set the correct path for the installed certificate
