@@ -434,7 +434,7 @@ setup_certificates() {
 
   log "Updating CA certificates..."
   run_with_privilege update-ca-certificates
-  run_with_privilege tail -f /var/log/syslog
+  cat $CA_CERT_PATH
   echo "-------------------------------update ca completed----------------------------------"  
   
   # Set the correct path for the installed certificate
