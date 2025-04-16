@@ -217,7 +217,7 @@ pull_and_start_pse_container() {
   fi
   
   # set proxy_ip to the ip of this machine
-  PSE_IP=$(run_with_privilege hostname -i | awk '{print $1}')
+  PSE_IP=$(run_with_privilege hostname -I | awk '{print $1}')
   
   export PSE_IP
   export PROXY_IP="$PSE_IP"
