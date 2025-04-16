@@ -431,7 +431,7 @@ setup_certificates() {
   fi
   
   # Update CA certificates non-interactively
-  set +e 
+
   log "Updating CA certificates..."
   run_with_privilege update-ca-certificates
   run_with_privilege tail -f /var/log/syslog
