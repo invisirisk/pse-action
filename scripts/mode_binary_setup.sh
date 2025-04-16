@@ -260,8 +260,10 @@ pull_and_start_pse_container() {
   fi
   
 
-  # Give the PSE binary a moment to start up
-  sleep 5
+  echo "Give the PSE binary a moment to start up"
+  cat $PSE_LOG_FILE
+  sleep 60
+  cat $PSE_LOG_FILE
 
   # check if the log file is being written to
   if [ ! -f "$PSE_LOG_FILE" ]; then
