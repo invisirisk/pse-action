@@ -431,13 +431,18 @@ setup_certificates() {
   fi
   
   # Update CA certificates non-interactively
-  set +e 
-  echo "-------------------------------update ca starting----------------------------------"
   log "Updating CA certificates..."
-  run_with_privilege update-ca-certificates --verbose
-  UPDATE_CA_EXIT_CODE=$?
-  log "update-ca-certificates exit code: $UPDATE_CA_EXIT_CODE"
-  echo "-------------------------------update ca completed----------------------------------"  
+  UPDATE_OUTPUT=$(run_with_privilege update-ca-certificates 2>&1) || true
+  log "CA certificates update output: $UPDATE_OUTPUT"
+  
+  # Check if certificates were actually updated despite warnings
+  if ! echo "$UPDATE_OUTPUT" | grep -q "added.*done"; then
+    log "ERROR: Certificate update failed"
+    log "Update output: $UPDATE_OUTPUT"
+    exit 1
+  fi
+  
+  log "CA certificates update completed successfully"
   
   # Set the correct path for the installed certificate
   CA_CERT_PATH="/etc/ssl/certs/pse.crt"
