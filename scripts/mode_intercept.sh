@@ -469,7 +469,7 @@ setup_certificates() {
     if [ -n "$GITHUB_ENV" ]; then
     echo "DOCKER_CERT_PATH=/etc/docker/certs.d/pse.crt" >> $GITHUB_ENV
     fi 
-    
+
     if command -v systemctl >/dev/null 2>&1; then
       echo "Restarting docker with systemctl"
       #run_with_privilege systemctl restart docker
@@ -512,6 +512,7 @@ main() {
     setup_http_proxy
   fi
   setup_certificates
+  echo "-----------------------------certificate completed------------------------------------"
   start_capture
   
   log "Intercept mode completed successfully"
