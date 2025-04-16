@@ -271,12 +271,12 @@ install_dependencies() {
     # Debian/Ubuntu (apt-get)
     log "Detected apt-get package manager"
     run_with_privilege apt-get update
-    run_with_privilege apt-get install -y curl git procps jq
+    run_with_privilege apt-get install -y curl git procps net-tools
   elif command -v apk >/dev/null 2>&1; then
     # Alpine (apk)
     log "Detected apk package manager"
     run_with_privilege apk update
-    run_with_privilege apk add --no-cache curl git procps jq
+    run_with_privilege apk add --no-cache curl git procps jq net-tools
   else
     log "Error: No supported package manager (apt-get or apk) found"
     exit 1
