@@ -366,20 +366,23 @@ setup_iptables() {
 setup_http_proxy() {
   log "Setting up HTTP proxy environment variables"
   
-  export http_proxy=http://127.0.0.1:3128
-  export HTTP_PROXY=http://127.0.0.1:3128
-  export https_proxy=http://127.0.0.1:3128
-  export HTTPS_PROXY=http://127.0.0.1:3128
+  # Set proxy variables for current session
+  export http_proxy="http://127.0.0.1:3128"
+  export HTTP_PROXY="http://127.0.0.1:3128"
+  export https_proxy="http://127.0.0.1:3128"
+  export HTTPS_PROXY="http://127.0.0.1:3128"
   export no_proxy="app.invisirisk.com,localhost,127.0.0.1"
   export NO_PROXY="app.invisirisk.com,localhost,127.0.0.1"
   
-  # Add to GitHub environment variables for subsequent steps
-  echo "http_proxy=http://127.0.0.1:3128" >> $GITHUB_ENV
-  echo "HTTP_PROXY=http://127.0.0.1:3128" >> $GITHUB_ENV
-  echo "https_proxy=http://127.0.0.1:3128" >> $GITHUB_ENV
-  echo "HTTPS_PROXY=http://127.0.0.1:3128" >> $GITHUB_ENV
-  echo "no_proxy=app.invisirisk.com,localhost,127.0.0.1" >> $GITHUB_ENV
-  echo "NO_PROXY=app.invisirisk.com,localhost,127.0.0.1" >> $GITHUB_ENV
+  # Set GitHub environment variables only if running in GitHub Actions
+  if [ -n "$GITHUB_ENV" ]; then
+    echo "http_proxy=http://127.0.0.1:3128" >> $GITHUB_ENV
+    echo "HTTP_PROXY=http://127.0.0.1:3128" >> $GITHUB_ENV
+    echo "https_proxy=http://127.0.0.1:3128" >> $GITHUB_ENV
+    echo "HTTPS_PROXY=http://127.0.0.1:3128" >> $GITHUB_ENV
+    echo "no_proxy=app.invisirisk.com,localhost,127.0.0.1" >> $GITHUB_ENV
+    echo "NO_PROXY=app.invisirisk.com,localhost,127.0.0.1" >> $GITHUB_ENV
+  fi
   
   log "HTTP proxy environment variables set successfully"
 }
