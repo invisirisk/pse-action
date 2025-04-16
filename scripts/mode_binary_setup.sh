@@ -312,8 +312,26 @@ pull_and_start_pse_container() {
   fi
   
 
-  # Let's run netstat to check if port 12345 is open
+  # Check if port 12345 is open
   echo "Checking if port 12345 is open ===>"
+  
+  # Check if netstat is available, if not install it
+  if ! command -v netstat >/dev/null 2>&1; then
+    log "netstat not found, installing net-tools package..."
+    if command -v apt-get >/dev/null 2>&1; then
+      run_with_privilege apt-get update
+      run_with_privilege apt-get install -y net-tools
+    elif command -v yum >/dev/null 2>&1; then
+      run_with_privilege yum install -y net-tools
+    elif command -v apk >/dev/null 2>&1; then
+      run_with_privilege apk add --no-cache net-tools
+    else
+      log "WARNING: Could not install netstat. Skipping port check."
+      echo "<==="
+      return 0
+    fi
+  fi
+  
   run_with_privilege netstat -tuln 
   echo "<==="
 
