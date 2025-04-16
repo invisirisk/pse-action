@@ -191,12 +191,12 @@ signal_build_end() {
   while [ $ATTEMPT -le $MAX_RETRIES ]; do
     log "Sending end signal, attempt $ATTEMPT of $MAX_RETRIES"
   
-    
+    set +e 
     RESPONSE=$(curl -X POST "${BASE_URL}/end" \
       -H 'Content-Type: application/x-www-form-urlencoded' \
       -H 'User-Agent: pse-action' \
       -d "$params" \
-      -k --tlsv1.2 --insecure \
+      -k \
       --connect-timeout 5 \
       --retry 3 --retry-delay 2 --max-time 10 \
       -s -w "\n%{http_code}" 2>&1)
