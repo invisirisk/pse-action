@@ -558,7 +558,7 @@ main() {
   echo "-----------------------------certificate completed------------------------------------"
   start_capture
   echo "******************************source profile*******************************************"
-  source /etc/profile.d/pse-proxy.sh
+  . /etc/profile.d/pse-proxy.sh
   echo "********************************source complete******************************************"
   
   log "Intercept mode completed successfully"
