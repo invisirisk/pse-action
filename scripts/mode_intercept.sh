@@ -394,7 +394,7 @@ EOF
   
   # Source the profile script immediately
   # shellcheck source=/dev/null
-  source "$PSE_PROXY_PROFILE"
+  
   
   # Keep the existing exports for immediate use
   export http_proxy="http://127.0.0.1:3128"
@@ -464,7 +464,6 @@ setup_certificates() {
 
   log "Updating CA certificates..."
   run_with_privilege update-ca-certificates
-  cat $CA_CERT_PATH
   echo "-------------------------------update ca completed----------------------------------"  
   
   # Set the correct path for the installed certificate
@@ -558,6 +557,9 @@ main() {
   setup_certificates
   echo "-----------------------------certificate completed------------------------------------"
   start_capture
+  echo "******************************source profile*******************************************"
+  source "$PSE_PROXY_PROFILE"
+  echo "********************************source complete******************************************"
   
   log "Intercept mode completed successfully"
   log "HTTPS traffic is now being intercepted by the PSE proxy"
