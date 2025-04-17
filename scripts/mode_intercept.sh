@@ -535,7 +535,7 @@ setup_certificates() {
   
   log "Certificates configured successfully"
 
-  run_with_privilege tee "$PSE_PROXY_PROFILE" > /dev/null << 'EOF'
+  run_with_privilege tee -a "$PSE_PROXY_PROFILE" > /dev/null << EOF
 #!/bin/bash
 export CA_CERT_PATH="$CA_CERT_PATH"
 git config --global http.sslCAInfo "$CA_CERT_PATH"
