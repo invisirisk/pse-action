@@ -336,7 +336,36 @@ pull_and_start_pse_container() {
   echo "<==="
 
   # Save the API values to environment for later use
-  # Export API values and proxy IP
+  # Create a profile script for persistent environment variables
+  PSE_PROFILE="/etc/profile.d/pse-env.sh"
+  
+  log "Creating persistent environment variables in $PSE_PROFILE"
+  
+  # Create the profile script with sudo
+  run_with_privilege tee "$PSE_PROFILE" > /dev/null << EOF
+#!/bin/bash
+export PSE_API_URL="$API_URL"
+export PSE_APP_TOKEN="$APP_TOKEN"
+export PSE_PORTAL_URL="$PORTAL_URL"
+export PSE_PROXY_IP="$PSE_IP"
+export PROXY_IP="$PSE_IP"
+export PSE_BINARY_PATH="$PSE_BIN_DIR/pse"
+export PSE_LOG_FILE="$PSE_LOG_FILE"
+export PSE_PID="$PSE_PID"
+export INVISIRISK_JWT_TOKEN="$APP_TOKEN"
+export INVISIRISK_PORTAL="$PORTAL_URL"
+export PSE_DEBUG_FLAG="--alsologtostderr"
+export POLICY_LOG="t"
+EOF
+
+  # Make the profile script executable
+  run_with_privilege chmod +x "$PSE_PROFILE"
+  
+  # Source the profile script immediately
+  # shellcheck source=/dev/null
+  source "$PSE_PROFILE"
+  
+  # Keep the existing exports for immediate use
   export PSE_API_URL="$API_URL"
   export PSE_APP_TOKEN="$APP_TOKEN"
   export PSE_PORTAL_URL="$PORTAL_URL"
