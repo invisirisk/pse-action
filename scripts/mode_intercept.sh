@@ -372,7 +372,7 @@ setup_http_proxy() {
   log "Creating persistent proxy environment variables in $PSE_PROXY_PROFILE"
   
   # Create the profile script with sudo
-  run_with_privilege tee "$PSE_PROXY_PROFILE" > /dev/null << 'EOF'
+  run_with_privilege tee -a "$PSE_PROXY_PROFILE" > /dev/null << 'EOF'
 #!/bin/bash
 export http_proxy="http://127.0.0.1:3128"
 export HTTP_PROXY="http://127.0.0.1:3128"
