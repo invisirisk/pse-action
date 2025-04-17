@@ -381,12 +381,6 @@ export HTTPS_PROXY="http://127.0.0.1:3128"
 export no_proxy="app.invisirisk.com,localhost,127.0.0.1"
 export NO_PROXY="app.invisirisk.com,localhost,127.0.0.1"
 export PSE_CERT_PROFILE="/etc/profile.d/pse-cert.sh"
-export CA_CERT_PATH="/etc/ssl/certs/pse.crt"
-git config --global http.sslCAInfo "$CA_CERT_PATH"
-export NODE_EXTRA_CA_CERTS="$CA_CERT_PATH"
-export REQUESTS_CA_BUNDLE="$CA_CERT_PATH"
-export DOCKER_CERT_PATH=/etc/docker/certs.d/pse.crt
-
 EOF
 
   # Make the profile script executable
@@ -540,6 +534,15 @@ setup_certificates() {
   fi
   
   log "Certificates configured successfully"
+
+  run_with_privilege tee "$PSE_PROXY_PROFILE" > /dev/null << 'EOF'
+#!/bin/bash
+export CA_CERT_PATH="$CA_CERT_PATH"
+git config --global http.sslCAInfo "$CA_CERT_PATH"
+export NODE_EXTRA_CA_CERTS="$CA_CERT_PATH"
+export REQUESTS_CA_BUNDLE="$CA_CERT_PATH"
+export DOCKER_CERT_PATH=/etc/docker/certs.d/pse.crt
+EOF
 }
 
 
