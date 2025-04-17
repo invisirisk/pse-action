@@ -366,7 +366,37 @@ setup_iptables() {
 setup_http_proxy() {
   log "Setting up HTTP proxy environment variables"
   
-  # Set proxy variables for current session
+  # Create a profile script for persistent proxy environment variables
+  PSE_PROXY_PROFILE="/etc/profile.d/pse-proxy.sh"
+  
+  log "Creating persistent proxy environment variables in $PSE_PROXY_PROFILE"
+  
+  # Create the profile script with sudo
+  run_with_privilege tee "$PSE_PROXY_PROFILE" > /dev/null << 'EOF'
+#!/bin/bash
+export http_proxy="http://127.0.0.1:3128"
+export HTTP_PROXY="http://127.0.0.1:3128"
+export https_proxy="http://127.0.0.1:3128"
+export HTTPS_PROXY="http://127.0.0.1:3128"
+export no_proxy="app.invisirisk.com,localhost,127.0.0.1"
+export NO_PROXY="app.invisirisk.com,localhost,127.0.0.1"
+export PSE_CERT_PROFILE="/etc/profile.d/pse-cert.sh"
+export CA_CERT_PATH="/etc/ssl/certs/pse.crt"
+git config --global http.sslCAInfo "$CA_CERT_PATH"
+export NODE_EXTRA_CA_CERTS="$CA_CERT_PATH"
+export REQUESTS_CA_BUNDLE="$CA_CERT_PATH"
+export DOCKER_CERT_PATH=/etc/docker/certs.d/pse.crt
+
+EOF
+
+  # Make the profile script executable
+  run_with_privilege chmod +x "$PSE_PROXY_PROFILE"
+  
+  # Source the profile script immediately
+  # shellcheck source=/dev/null
+  source "$PSE_PROXY_PROFILE"
+  
+  # Keep the existing exports for immediate use
   export http_proxy="http://127.0.0.1:3128"
   export HTTP_PROXY="http://127.0.0.1:3128"
   export https_proxy="http://127.0.0.1:3128"
@@ -374,7 +404,7 @@ setup_http_proxy() {
   export no_proxy="app.invisirisk.com,localhost,127.0.0.1"
   export NO_PROXY="app.invisirisk.com,localhost,127.0.0.1"
   
-  # Set GitHub environment variables only if running in GitHub Actions
+  # Keep GitHub Actions compatibility
   if [ -n "$GITHUB_ENV" ]; then
     echo "http_proxy=http://127.0.0.1:3128" >> $GITHUB_ENV
     echo "HTTP_PROXY=http://127.0.0.1:3128" >> $GITHUB_ENV
