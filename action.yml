@@ -1,13 +1,100 @@
-name: "Build Application Firewall"
-description: "Governance, Risk and Compliance for the Software Supply Chain."
-inputs:
-  github-token:
-    description: "github token"
-    required: true
+name: 'PSE Security Proxy'
+description: 'Sets up PSE Security Proxy for secure package downloads'
+author: 'InvisiRisk'
 branding:
-  icon: bell
-  color: green
+  icon: 'shield'
+  color: 'blue'
+
+inputs:
+  api_url:
+    description: 'URL of the InvisiRisk API (required for prepare and setup modes)'
+    required: false
+  app_token:
+    description: 'Authentication token for the InvisiRisk API (required for prepare and setup modes)'
+    required: false
+  portal_url:
+    description: 'URL of the InvisiRisk Portal (defaults to api_url if not provided)'
+    required: false
+    default: ''
+  github_token:
+    description: 'GitHub token to be passed to the PSE container for GitHub authentication'
+    required: false
+    default: ${{ github.token }}
+  debug:
+    description: 'Enable debug mode for verbose logging'
+    required: false
+    default: 'false'
+  test_mode:
+    description: 'Enable test mode to bypass API calls and container setup for testing'
+    required: false
+    default: 'false'
+  cleanup:
+    description: 'Set to true to run cleanup instead of setup. This should be used at the end of your workflow.'
+    required: false
+    default: 'false'
+  mode:
+    description: 'The operation mode: "prepare" only gets scan ID and ECR credentials, "setup" pulls and runs the proxy container, "binary-setup" pulls and runs the proxy container with binary mode, "intercept" configures iptables and certificates. Default is "all" which performs all operations in sequence (prepare, setup, intercept).'
+    required: false
+    default: 'all'
+  proxy_ip:
+    description: 'IP address of the PSE proxy container when using "intercept" mode. Required for intercept mode unless proxy_hostname is provided.'
+    required: false
+    default: ''
+  proxy_hostname:
+    description: 'Hostname of the PSE proxy container when using "intercept" mode with service containers. Use this instead of proxy_ip.'
+    required: false
+    default: ''
+  scan_id:
+    description: 'Scan ID from the prepare step. Required for setup and intercept modes unless test_mode is true.'
+    required: false
+    default: ''
+  job_status:
+    description: 'Job status to be passed to the PSE container for job tracking'
+    required: false
+    default: 'unknown'
+# Define outputs for the action
+outputs:
+  scan_id:
+    description: 'The scan ID generated or used by the action'
+    value: ${{ steps.pse-setup.outputs.scan_id }}
+  ecr_username:
+    description: 'ECR username for accessing the PSE container'
+    value: ${{ steps.pse-setup.outputs.ecr_username }}
+  ecr_token:
+    description: 'ECR token for accessing the PSE container'
+    value: ${{ steps.pse-setup.outputs.ecr_token }}
+  ecr_region:
+    description: 'ECR region for accessing the PSE container'
+    value: ${{ steps.pse-setup.outputs.ecr_region }}
+  ecr_registry_id:
+    description: 'ECR registry ID for accessing the PSE container'
+    value: ${{ steps.pse-setup.outputs.ecr_registry_id }}
+  proxy_ip:
+    description: 'IP address of the PSE proxy container'
+    value: ${{ steps.pse-setup.outputs.proxy_ip }}
+
 runs:
-  using: "node16"
-  main: "dist/index.js"
-  post: "cleanup/index.js"
+  using: "composite"
+  steps:
+    - id: pse-setup
+      shell: bash
+      run: |
+        if [ "${{ inputs.cleanup }}" = "true" ]; then
+          echo "Running PSE cleanup..."
+          $GITHUB_ACTION_PATH/cleanup.sh
+        else
+          echo "Running PSE setup in ${{ inputs.mode }} mode..."
+          $GITHUB_ACTION_PATH/setup.sh
+        fi
+      env:
+        API_URL: ${{ inputs.cleanup == 'true' && env.PSE_API_URL || inputs.api_url }}
+        APP_TOKEN: ${{ inputs.cleanup == 'true' && env.PSE_APP_TOKEN || inputs.app_token }}
+        PORTAL_URL: ${{ inputs.cleanup == 'true' && env.PSE_PORTAL_URL || inputs.portal_url || inputs.api_url }}
+        SCAN_ID: ${{ inputs.scan_id }}
+        DEBUG: ${{ inputs.debug }}
+        TEST_MODE: ${{ inputs.test_mode }}
+        GITHUB_TOKEN: ${{ inputs.github_token || github.token }}
+        MODE: ${{ inputs.mode }}
+        PROXY_IP: ${{ inputs.proxy_ip }}
+        PROXY_HOSTNAME: ${{ inputs.proxy_hostname }}
+        DEBUG_FORCE: ${{ inputs.mode }}
