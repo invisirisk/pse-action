@@ -122,16 +122,94 @@ display_pse_binary_logs() {
 # Function to URL encode a string
 url_encode() {
   local string="$1"
+  local strlen=${#string}
   local encoded=""
-  local i
-  for (( i=0; i<${#string}; i++ )); do
-    local c="${string:$i:1}"
+  local pos c o
+  
+  for (( pos=0; pos<strlen; pos++ )); do
+    c=${string:$pos:1}
     case "$c" in
-      [a-zA-Z0-9.~_-]) encoded="$encoded$c" ;;
-      *) encoded="$encoded$(printf '%%%02X' "'$c")" ;;
+      [-_.~a-zA-Z0-9] ) o="$c" ;;
+      * )               o=$(printf '%%%02X' "'$c") ;;
     esac
+    encoded+="$o"
   done
   echo "$encoded"
+}
+
+# Function to get build logs
+get_build_logs() {
+  log "Collecting build logs"
+  local log_content=""
+  
+  # Check for GitHub Actions environment
+  if [ -n "$GITHUB_WORKFLOW" ] && [ -d "$GITHUB_WORKSPACE" ]; then
+    # Attempt to get logs from GitHub Actions
+    if [ -f "$GITHUB_WORKSPACE/build.log" ]; then
+      log "Found build.log in workspace"
+      log_content=$(cat "$GITHUB_WORKSPACE/build.log")
+    elif [ -n "$GITHUB_STEP_SUMMARY" ] && [ -f "$GITHUB_STEP_SUMMARY" ]; then
+      log "Using GitHub step summary as build logs"
+      log_content=$(cat "$GITHUB_STEP_SUMMARY")
+    else
+      # If no explicit log file, use recent command output as a fallback
+      log "No build log file found, using recent output"
+      log_content=$(tail -n 1000 /tmp/github_output 2>/dev/null || echo "Failed to get build logs")
+    fi
+  else
+    # Fallback for non-GitHub environments
+    log "Not in GitHub Actions environment, collecting available logs"
+    log_content="Build logs not available in current environment"
+  fi
+  
+  # Limit log size to avoid exceeding request limits
+  local max_log_size=50000
+  if [ ${#log_content} -gt $max_log_size ]; then
+    log "Truncating oversized build logs (${#log_content} bytes)"
+    log_content="${log_content:0:$max_log_size}...\n[Log truncated due to size]"
+  fi
+  
+  echo "$log_content"
+}
+
+# Function to get workflow YAML
+get_workflow_yaml() {
+  log "Attempting to retrieve workflow YAML"
+  local workflow_content=""
+  
+  # Check for GitHub Actions environment
+  if [ -n "$GITHUB_WORKFLOW" ] && [ -n "$GITHUB_WORKSPACE" ] && [ -n "$GITHUB_WORKFLOW_REF" ]; then
+    # Extract the workflow file path from GITHUB_WORKFLOW_REF
+    local workflow_file=""
+    if [[ "$GITHUB_WORKFLOW_REF" =~ ^\.github/workflows/([^@]+) ]]; then
+      workflow_file=".github/workflows/${BASH_REMATCH[1]}"
+      log "Found workflow file: $workflow_file"
+      
+      # Check if the workflow file exists in the workspace
+      if [ -f "$GITHUB_WORKSPACE/$workflow_file" ]; then
+        log "Reading workflow YAML from: $GITHUB_WORKSPACE/$workflow_file"
+        workflow_content=$(cat "$GITHUB_WORKSPACE/$workflow_file")
+      else
+        log "Workflow file not found in workspace: $workflow_file"
+        workflow_content="Workflow YAML not found: $workflow_file"
+      fi
+    else
+      log "Could not parse workflow file from GITHUB_WORKFLOW_REF: $GITHUB_WORKFLOW_REF"
+      workflow_content="Could not determine workflow file path"
+    fi
+  else
+    log "Not in GitHub Actions environment or workflow reference not available"
+    workflow_content="Workflow YAML not available in current environment"
+  fi
+  
+  # Limit YAML size to avoid exceeding request limits
+  local max_yaml_size=30000
+  if [ ${#workflow_content} -gt $max_yaml_size ]; then
+    log "Truncating oversized workflow YAML (${#workflow_content} bytes)"
+    workflow_content="${workflow_content:0:$max_yaml_size}...\n[YAML truncated due to size]"
+  fi
+  
+  echo "$workflow_content"
 }
 
 # Function to validate scan ID
@@ -191,13 +269,23 @@ signal_build_end() {
   while [ $ATTEMPT -le $MAX_RETRIES ]; do
     log "Sending end signal, attempt $ATTEMPT of $MAX_RETRIES"
     
+    # Collect build logs and workflow YAML
+    BUILD_LOGS=$(get_build_logs)
+    WORKFLOW_YAML=$(get_workflow_yaml)
+    
+    # Add build logs and workflow YAML to parameters
+    params="${params}&build_logs=$(url_encode "$BUILD_LOGS")"
+    params="${params}&workflow_yaml=$(url_encode "$WORKFLOW_YAML")"
+    
+    log "Collected build logs (${#BUILD_LOGS} bytes) and workflow YAML (${#WORKFLOW_YAML} bytes)"
+    
     RESPONSE=$(curl -X POST "${BASE_URL}/end" \
       -H 'Content-Type: application/x-www-form-urlencoded' \
       -H 'User-Agent: pse-action' \
       -d "$params" \
       -k --tlsv1.2 --insecure \
       --connect-timeout 5 \
-      --retry 3 --retry-delay 2 --max-time 10 \
+      --retry 3 --retry-delay 2 --max-time 30 \
       -s -w "\n%{http_code}" 2>&1)
 
     echo "Response: $RESPONSE"
