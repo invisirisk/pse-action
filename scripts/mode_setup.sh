@@ -244,7 +244,7 @@ EOF
 
   # Make the cleanup script executable
   chmod +x "$CLEANUP_SCRIPT"
-
+  chmod +x "$GITHUB_ACTION_PATH/get_jobs_status.sh"
   # Register the cleanup script with GitHub
   #echo "::add-path::$GITHUB_WORKSPACE"
   #echo "::set-env name=GITHUB_PATH::$GITHUB_PATH:$GITHUB_WORKSPACE"
