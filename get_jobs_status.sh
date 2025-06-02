@@ -14,11 +14,6 @@ github_response=$(curl -sSL \
   -H "Authorization: Bearer $GITHUB_TOKEN" \
   -H "X-GitHub-Api-Version: ${GITHUB_API_VERSION}" \
   "https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}/jobs")
-# github_response=$(curl -L \
-#   -H "Accept: application/vnd.github+json" \
-#   -H "Authorization: Bearer XXX" \
-#   -H "X-GitHub-Api-Version: 2022-11-28" \
-#   https://api.github.com/repos/ir-bhuwan-panta/simple-todo-api/actions/runs/15293996219/jobs)
 # Basic check if fetching GitHub response failed or returned empty
 # Note: curl -sSL without --fail won't exit non-zero on HTTP errors (e.g., 401, 404).
 # The response body might contain JSON error details from GitHub.
