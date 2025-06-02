@@ -1,0 +1,100 @@
+#!/bin/bash
+
+# Exit on error
+set -e
+
+# Optional: GitHub API version
+GITHUB_API_VERSION="${GITHUB_API_VERSION:-2022-11-28}"
+
+# Call GitHub API
+# Call GitHub API and capture response
+echo "Fetching GitHub job statuses..." >&2
+github_response=$(curl -sSL \
+  -H "Accept: application/vnd.github+json" \
+  -H "Authorization: Bearer $GITHUB_TOKEN" \
+  -H "X-GitHub-Api-Version: ${GITHUB_API_VERSION}" \
+  "https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}/jobs")
+# github_response=$(curl -L \
+#   -H "Accept: application/vnd.github+json" \
+#   -H "Authorization: Bearer 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" \
+#   -H "X-GitHub-Api-Version: 2022-11-28" \
+#   https://api.github.com/repos/ir-bhuwan-panta/simple-todo-api/actions/runs/15293996219/jobs)
+# Basic check if fetching GitHub response failed or returned empty
+# Note: curl -sSL without --fail won't exit non-zero on HTTP errors (e.g., 401, 404).
+# The response body might contain JSON error details from GitHub.
+if [ -z "$github_response" ]; then
+  echo "Warning: GitHub API response was empty. This might indicate an issue." >&2
+fi
+
+# Output the GitHub response (maintaining a similar behavior to the original script's implicit output)
+echo "GitHub API Response:"
+echo "${github_response}"
+echo # Add a newline for better separation
+
+# --- Send to Custom API ---
+echo "Preparing to send GitHub response to custom API..." >&2
+
+# Use environment variables or provide default values.
+# IMPORTANT: Replace placeholder defaults below with your actual default values.
+# If a variable should have no default and must be set via environment, ensure its placeholder default is empty (e.g., YOUR_DEFAULT_API_ENDPOINT_HERE becomes just "").
+API_KEY="${API_KEY:-abcdef}"
+SCAN_ID="${SCAN_ID}"
+API_URL="${API_URL:-http://127.0.0.1:8001}"
+
+# Validate that the variables are now set (either from environment or a non-empty default)
+if [ -z "$API_KEY" ]; then
+  echo "Error: API_KEY is not set and no default value is configured in the script (or the default was empty)." >&2
+  exit 1
+fi
+if [ -z "$SCAN_ID" ]; then
+  echo "Error: SCAN_ID is not set and no default value is configured in the script (or the default was empty)." >&2
+  exit 1
+fi
+if [ -z "$API_URL" ]; then
+  echo "Error: API_URL is not set and no default value is configured in the script (or the default was empty)." >&2
+  exit 1
+fi
+
+# Construct custom API URL
+# todo: add endpoint to url
+custom_api_url="${API_URL}/update-job-status?api_key=${API_KEY}&scan_id=${SCAN_ID}"
+
+echo "Sending GitHub job status to custom API endpoint: ${API_URL}/..." >&2
+
+# Prepare for temporary file usage and ensure cleanup
+response_body_file=""                                         # Initialize variable
+trap 'rm -f "$response_body_file"' EXIT SIGHUP SIGINT SIGTERM # Setup cleanup for temp file
+
+response_body_file=$(mktemp)
+# Check if mktemp failed (it usually exits non-zero, and set -e would catch it)
+if [ -z "$response_body_file" ] || ! [ -f "$response_body_file" ]; then
+  echo "Error: Failed to create temporary file for API response." >&2
+  exit 1
+fi
+
+# Perform the POST request to the custom API
+# Capture http_status and write response body to the temp file
+http_status_custom_api=$(
+  curl -sSL -w "%{http_code}" \
+    -X POST \
+    -H "Content-Type: application/json" \
+    -d "${github_response}" \
+    "${custom_api_url}"
+)
+
+# Read the body from the temp file
+response_body_custom_api=$(cat "${response_body_file}")
+# Temp file will be cleaned up by the trap on EXIT
+
+echo # Add a newline
+echo "Custom API Response Status: $http_status_custom_api"
+echo "Custom API Response Body:"
+echo "${response_body_custom_api}"
+
+# Check if the custom API call was successful
+if ! [[ "$http_status_custom_api" =~ ^2[0-9]{2}$ ]]; then
+  echo "Error: Custom API call to ${API_URL}/... failed with status $http_status_custom_api." >&2
+  exit 1
+fi
+
+echo "Successfully sent job status to custom API."

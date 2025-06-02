@@ -32,6 +32,10 @@ inputs:
     description: 'Set to true to run cleanup instead of setup. This should be used at the end of your workflow.'
     required: false
     default: 'false'
+  get_jobs:
+    description: 'Set to true to run get jobs instead of setup. This should be used at the end of your workflow.'
+    required: false
+    default: 'false'
   mode:
     description: 'The operation mode: "prepare" only gets scan ID and ECR credentials, "setup" pulls and runs the proxy container, "binary-setup" pulls and runs the proxy container with binary mode, "intercept" configures iptables and certificates. Default is "all" which performs all operations in sequence (prepare, setup, intercept).'
     required: false
@@ -82,6 +86,9 @@ runs:
         if [ "${{ inputs.cleanup }}" = "true" ]; then
           echo "Running PSE cleanup..."
           $GITHUB_ACTION_PATH/cleanup.sh
+        elif [ "${{ inputs.get_jobs }}" = "true" ]; then
+          echo "Gathering Job Steps..."
+          $GITHUB_ACTION_PATH/get-job-status.sh
         else
           echo "Running PSE setup in ${{ inputs.mode }} mode..."
           $GITHUB_ACTION_PATH/setup.sh
@@ -98,3 +105,5 @@ runs:
         PROXY_IP: ${{ inputs.proxy_ip }}
         PROXY_HOSTNAME: ${{ inputs.proxy_hostname }}
         DEBUG_FORCE: ${{ inputs.mode }}
+        GITHUB_REPOSITORY: ${{ github.repository }}
+        GITHUB_RUN_ID: ${{ github.run_id }}
