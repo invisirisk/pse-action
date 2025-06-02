@@ -88,7 +88,7 @@ runs:
           $GITHUB_ACTION_PATH/cleanup.sh
         elif [ "${{ inputs.get_jobs }}" = "true" ]; then
           echo "Gathering Job Steps..."
-          $GITHUB_ACTION_PATH/get-job-status.sh
+          $GITHUB_ACTION_PATH/get_jobs_status.sh
         else
           echo "Running PSE setup in ${{ inputs.mode }} mode..."
           $GITHUB_ACTION_PATH/setup.sh
