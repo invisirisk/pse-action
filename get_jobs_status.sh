@@ -33,7 +33,7 @@ echo "Preparing to send GitHub response to custom API..." >&2
 # Use environment variables or provide default values.
 # IMPORTANT: Replace placeholder defaults below with your actual default values.
 # If a variable should have no default and must be set via environment, ensure its placeholder default is empty (e.g., YOUR_DEFAULT_API_ENDPOINT_HERE becomes just "").
-API_KEY="${API_KEY}"
+API_KEY="${APP_TOKEN}"
 SCAN_ID="${SCAN_ID}"
 API_URL="${API_URL:-https://app.invisirisk.com}"
 
