@@ -49,7 +49,7 @@ fi
 
 # Construct custom API URL
 
-custom_api_url="${API_URL}/ingestionapi/v1/update-job-status?api_key=${APP_TOKEN}&scan_id=${SCAN_ID}"
+custom_api_url="${PSE_API_URL}/ingestionapi/v1/update-job-status?api_key=${PSE_APP_TOKEN}&scan_id=${SCAN_ID}"
 
 echo "Sending GitHub job status to custom API endpoint: ${API_URL}/..." >&2
 
