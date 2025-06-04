@@ -31,7 +31,7 @@ echo "Preparing to send GitHub response to custom API..." >&2
 
 # Validate required environment variables
 if [ -z "$PSE_API_URL" ]; then
-  echo "Error: PSE_API_URL is not set. Please set this environment variable." >&2
+  echo "Error: PSE_API_URL is not set. Please set this environment variable..." >&2
   exit 1
 fi
 
