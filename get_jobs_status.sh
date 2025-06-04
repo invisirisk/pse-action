@@ -29,8 +29,23 @@ echo "${github_response}"
 # --- Send to Custom API ---
 echo "Preparing to send GitHub response to custom API..." >&2
 
-# Construct custom API URL
+# Validate required environment variables
+if [ -z "$PSE_API_URL" ]; then
+  echo "Error: PSE_API_URL is not set. Please set this environment variable." >&2
+  exit 1
+fi
 
+if [ -z "$PSE_APP_TOKEN" ]; then
+  echo "Error: PSE_APP_TOKEN is not set. Please set this environment variable." >&2
+  exit 1
+fi
+
+if [ -z "$SCAN_ID" ]; then
+  echo "Error: SCAN_ID is not set. Please set this environment variable." >&2
+  exit 1
+fi
+
+# Construct custom API URL
 custom_api_url="${PSE_API_URL}/ingestionapi/v1/update-job-status?api_key=${PSE_APP_TOKEN}&scan_id=${SCAN_ID}"
 
 echo "Sending GitHub job status to custom API endpoint: ${custom_api_url}" >&2
