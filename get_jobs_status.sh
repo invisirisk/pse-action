@@ -31,10 +31,7 @@ echo "Preparing to send GitHub response to custom API..." >&2
 
 # Use environment variables or provide default values.
 # IMPORTANT: Replace placeholder defaults below with your actual default values.
-# If a variable should have no default and must be set via environment, ensure its placeholder default is empty (e.g., YOUR_DEFAULT_API_ENDPOINT_HERE becomes just "").
-API_KEY="${APP_TOKEN}"
-SCAN_ID="${SCAN_ID}"
-API_URL="${API_URL}"
+# If a variable should have no default and must be set via environment, ensure its placeholder default is empty.
 
 # Validate that the variables are now set (either from environment or a non-empty default)
 if [ -z "$API_KEY" ]; then
@@ -52,7 +49,7 @@ fi
 
 # Construct custom API URL
 
-custom_api_url="${API_URL}/ingestionapi/v1/update-job-status?api_key=${API_KEY}&scan_id=${SCAN_ID}"
+custom_api_url="${API_URL}/ingestionapi/v1/update-job-status?api_key=${APP_TOKEN}&scan_id=${SCAN_ID}"
 
 echo "Sending GitHub job status to custom API endpoint: ${API_URL}/..." >&2
 
