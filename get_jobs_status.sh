@@ -14,6 +14,7 @@ github_response=$(curl -sSL \
   -H "Authorization: Bearer $GITHUB_TOKEN" \
   -H "X-GitHub-Api-Version: ${GITHUB_API_VERSION}" \
   "https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}/jobs")
+
 # Basic check if fetching GitHub response failed or returned empty
 # Note: curl -sSL without --fail won't exit non-zero on HTTP errors (e.g., 401, 404).
 # The response body might contain JSON error details from GitHub.
@@ -32,9 +33,9 @@ echo "Preparing to send GitHub response to custom API..." >&2
 # Use environment variables or provide default values.
 # IMPORTANT: Replace placeholder defaults below with your actual default values.
 # If a variable should have no default and must be set via environment, ensure its placeholder default is empty (e.g., YOUR_DEFAULT_API_ENDPOINT_HERE becomes just "").
-API_KEY="${API_KEY:-abcdef}"
+API_KEY="${API_KEY}"
 SCAN_ID="${SCAN_ID}"
-API_URL="${API_URL:-http://127.0.0.1:8001}"
+API_URL="${API_URL:-https://app.invisirisk.com}"
 
 # Validate that the variables are now set (either from environment or a non-empty default)
 if [ -z "$API_KEY" ]; then
@@ -51,8 +52,8 @@ if [ -z "$API_URL" ]; then
 fi
 
 # Construct custom API URL
-# todo: add endpoint to url
-custom_api_url="${API_URL}/update-job-status?api_key=${API_KEY}&scan_id=${SCAN_ID}"
+
+custom_api_url="${API_URL}/ingestionapi/v1/update-job-status?api_key=${API_KEY}&scan_id=${SCAN_ID}"
 
 echo "Sending GitHub job status to custom API endpoint: ${API_URL}/..." >&2
 
