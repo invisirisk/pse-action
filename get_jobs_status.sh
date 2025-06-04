@@ -25,7 +25,6 @@ fi
 # Output the GitHub response (maintaining a similar behavior to the original script's implicit output)
 echo "GitHub API Response:"
 echo "${github_response}"
-echo # Add a newline for better separation
 
 # --- Send to Custom API ---
 echo "Preparing to send GitHub response to custom API..." >&2
@@ -35,7 +34,7 @@ echo "Preparing to send GitHub response to custom API..." >&2
 # If a variable should have no default and must be set via environment, ensure its placeholder default is empty (e.g., YOUR_DEFAULT_API_ENDPOINT_HERE becomes just "").
 API_KEY="${APP_TOKEN}"
 SCAN_ID="${SCAN_ID}"
-API_URL="${API_URL:-https://app.invisirisk.com}"
+API_URL="${API_URL}"
 
 # Validate that the variables are now set (either from environment or a non-empty default)
 if [ -z "$API_KEY" ]; then
@@ -75,6 +74,7 @@ http_status_custom_api=$(
     -X POST \
     -H "Content-Type: application/json" \
     -d "${github_response}" \
+    -o "${response_body_file}" \
     "${custom_api_url}"
 )
 
@@ -82,7 +82,6 @@ http_status_custom_api=$(
 response_body_custom_api=$(cat "${response_body_file}")
 # Temp file will be cleaned up by the trap on EXIT
 
-echo # Add a newline
 echo "Custom API Response Status: $http_status_custom_api"
 echo "Custom API Response Body:"
 echo "${response_body_custom_api}"
