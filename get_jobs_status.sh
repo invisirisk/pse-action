@@ -29,29 +29,11 @@ echo "${github_response}"
 # --- Send to Custom API ---
 echo "Preparing to send GitHub response to custom API..." >&2
 
-# Use environment variables or provide default values.
-# IMPORTANT: Replace placeholder defaults below with your actual default values.
-# If a variable should have no default and must be set via environment, ensure its placeholder default is empty.
-
-# Validate that the variables are now set (either from environment or a non-empty default)
-if [ -z "$API_KEY" ]; then
-  echo "Error: API_KEY is not set and no default value is configured in the script (or the default was empty)." >&2
-  exit 1
-fi
-if [ -z "$SCAN_ID" ]; then
-  echo "Error: SCAN_ID is not set and no default value is configured in the script (or the default was empty)." >&2
-  exit 1
-fi
-if [ -z "$API_URL" ]; then
-  echo "Error: API_URL is not set and no default value is configured in the script (or the default was empty)." >&2
-  exit 1
-fi
-
 # Construct custom API URL
 
 custom_api_url="${PSE_API_URL}/ingestionapi/v1/update-job-status?api_key=${PSE_APP_TOKEN}&scan_id=${SCAN_ID}"
 
-echo "Sending GitHub job status to custom API endpoint: ${API_URL}/..." >&2
+echo "Sending GitHub job status to custom API endpoint: ${custom_api_url}" >&2
 
 # Prepare for temporary file usage and ensure cleanup
 response_body_file=""                                         # Initialize variable
@@ -85,7 +67,7 @@ echo "${response_body_custom_api}"
 
 # Check if the custom API call was successful
 if ! [[ "$http_status_custom_api" =~ ^2[0-9]{2}$ ]]; then
-  echo "Error: Custom API call to ${API_URL}/... failed with status $http_status_custom_api." >&2
+  echo "Error: Custom API call to ${custom_api_url} failed with status $http_status_custom_api." >&2
   exit 1
 fi
 
