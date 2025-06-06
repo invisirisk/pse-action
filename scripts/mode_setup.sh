@@ -173,6 +173,7 @@ pull_and_start_pse_container() {
   echo "PSE_APP_TOKEN=$APP_TOKEN" >>$GITHUB_ENV
   echo "PSE_PORTAL_URL=$PORTAL_URL" >>$GITHUB_ENV
   echo "PSE_PROXY_IP=$PSE_IP" >>$GITHUB_ENV
+  echo "PSE_SCAN_ID=$SCAN_ID" >>$GITHUB_ENV
 
   # Also save the PSE proxy IP as an output parameter
   echo "proxy_ip=$PSE_IP" >>$GITHUB_OUTPUT
