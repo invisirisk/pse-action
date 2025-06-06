@@ -40,13 +40,13 @@ if [ -z "$PSE_APP_TOKEN" ]; then
   exit 1
 fi
 
-if [ -z "$SCAN_ID" ]; then
-  echo "Error: SCAN_ID is not set. Please set this environment variable." >&2
+if [ -z "$PSE_SCAN_ID" ]; then
+  echo "Error: PSE_SCAN_ID is not set. Please set this environment variable." >&2
   exit 1
 fi
 
 # Construct custom API URL
-custom_api_url="${PSE_API_URL}/ingestionapi/v1/update-job-status?api_key=${PSE_APP_TOKEN}&scan_id=${SCAN_ID}"
+custom_api_url="${PSE_API_URL}/ingestionapi/v1/update-job-status?api_key=${PSE_APP_TOKEN}&scan_id=${PSE_SCAN_ID}"
 
 echo "Sending GitHub job status to custom API endpoint: ${custom_api_url}" >&2
 
