@@ -33,7 +33,7 @@ inputs:
     required: false
     default: 'false'
   get_jobs:
-    description: 'Set to true to run get jobs instead of setup. This should be used at the end of your workflow.'
+    description: 'Set to True to allow SaaS platform to fetch job status for current action run. This should be used at the end of your workflow.'
     required: false
     default: 'false'
   mode:
