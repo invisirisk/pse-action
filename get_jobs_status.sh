@@ -111,9 +111,9 @@ fetch_github_jobs() {
     echo "Warning: GitHub API response was empty despite successful status code. This might indicate an issue." >&2
   fi
 
-  # Output the GitHub response
-  echo "GitHub API Response:"
-  echo "${response_body}"
+  # Output the GitHub response (for debugging only)
+  echo "GitHub API Response:" >&2
+  echo "${response_body}" >&2
 
   # Return the response body
   echo "$response_body"
@@ -144,6 +144,17 @@ send_to_saas_platform() {
   json_file=$(create_temp_file ".json")
   echo "${data}" >"${json_file}"
 
+  # Debug: Print the content of the JSON file
+  echo "Debug: JSON content before validation:" >&2
+  cat "${json_file}" >&2
+  echo "" >&2
+
+  # Validate JSON format before sending
+  if ! jq empty "${json_file}" 2>/dev/null; then
+    echo "Error: Invalid JSON format in the data to be sent." >&2
+    exit 1
+  fi
+
   # Perform the POST request to the custom API using multipart/form-data
   # Capture http_status and write response body to the temp file
   local http_status
@@ -152,7 +163,7 @@ send_to_saas_platform() {
       -X POST \
       -H "accept: application/json" \
       -H "Content-Type: multipart/form-data" \
-      -F "file=@${json_file};type=application/json" \
+      -F "file=@${json_file};filename=job_status.json;type=application/json" \
       -o "${response_file}" \
       "${custom_api_url}"
   )
