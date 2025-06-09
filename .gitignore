@@ -32,5 +32,8 @@ Thumbs.db
 *.tmp
 *.bak
 
+# Test files
+test_*.sh
+
 # Developer documentation (internal only)
 DEVELOPER.md
