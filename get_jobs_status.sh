@@ -47,15 +47,50 @@ check_http_status() {
   local error_message="$2"
   local response_body="$3"
 
-  if ! [[ "$status_code" =~ ^2[0-9]{2}$ ]]; then
-    echo "Error: $error_message with status $status_code." >&2
-    if [ -n "$response_body" ]; then
-      echo "Response body: $response_body" >&2
-    fi
+  # Check if status code is in 2xx range
+  if [[ "$status_code" =~ ^2[0-9][0-9]$ ]]; then
+    return 0
+  else
+    echo "Error: $error_message" >&2
+    echo "Status code: $status_code" >&2
+    echo "Response body: $response_body" >&2
     return 1
   fi
+}
 
-  return 0
+# Function to implement exponential backoff retry logic
+retry_with_backoff() {
+  local max_attempts=3
+  local timeout=1
+  local attempt=1
+  local exit_code=0
+  local cmd="$@"
+
+  while [[ $attempt -le $max_attempts ]]; do
+    echo "Attempt $attempt of $max_attempts: $cmd" >&2
+
+    # Execute the command
+    eval "$cmd"
+    exit_code=$?
+
+    if [[ $exit_code -eq 0 ]]; then
+      break
+    fi
+
+    # Calculate sleep time with exponential backoff (1s, 2s, 4s)
+    timeout=$((timeout * 2))
+
+    echo "Command failed with exit code $exit_code. Retrying in ${timeout}s..." >&2
+    sleep $timeout
+
+    attempt=$((attempt + 1))
+  done
+
+  if [[ $exit_code -ne 0 ]]; then
+    echo "All $max_attempts attempts failed for command: $cmd" >&2
+  fi
+
+  return $exit_code
 }
 
 # Function to validate required environment variables
@@ -88,17 +123,25 @@ fetch_github_jobs() {
   local response_file
   response_file=$(create_temp_file)
 
-  # Call GitHub API with status code capture
+  # Variable to store the response body and http status
+  local response_body
   local http_status
-  http_status=$(curl -sSL -w "%{http_code}" \
-    -H "Accept: application/vnd.github+json" \
-    -H "Authorization: Bearer $GITHUB_TOKEN" \
-    -H "X-GitHub-Api-Version: ${GITHUB_API_VERSION}" \
-    -o "${response_file}" \
-    "https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}/jobs")
+
+  # Command to execute with retry logic
+  local curl_cmd="http_status=\$(curl -sSL -w \"%{http_code}\" \
+    -H \"Accept: application/vnd.github+json\" \
+    -H \"Authorization: Bearer $GITHUB_TOKEN\" \
+    -H \"X-GitHub-Api-Version: ${GITHUB_API_VERSION}\" \
+    -o \"${response_file}\" \
+    \"https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}/jobs\")"
+
+  # Execute the curl command with retry logic
+  if ! retry_with_backoff "$curl_cmd"; then
+    echo "Failed to fetch GitHub job statuses after multiple attempts" >&2
+    exit 1
+  fi
 
   # Read the response body from the temp file
-  local response_body
   response_body=$(cat "${response_file}")
 
   # Check if the GitHub API call was successful
@@ -155,18 +198,22 @@ send_to_saas_platform() {
     exit 1
   fi
 
-  # Perform the POST request to the custom API using multipart/form-data
+  # Perform the POST request to the custom API using multipart/form-data with retry logic
   # Capture http_status and write response body to the temp file
   local http_status
-  http_status=$(
-    curl -sSL -w "%{http_code}" \
+  local curl_cmd="http_status=\$(curl -sSL -w \"%{http_code}\" \
       -X POST \
-      -H "accept: application/json" \
-      -H "Content-Type: multipart/form-data" \
-      -F "file=@${json_file};filename=job_status.json;type=application/json" \
-      -o "${response_file}" \
-      "${custom_api_url}"
-  )
+      -H \"accept: application/json\" \
+      -H \"Content-Type: multipart/form-data\" \
+      -F \"file=@${json_file};filename=job_status.json;type=application/json\" \
+      -o \"${response_file}\" \
+      \"${custom_api_url}\")"
+
+  # Execute the curl command with retry logic
+  if ! retry_with_backoff "$curl_cmd"; then
+    echo "Failed to send data to custom API after multiple attempts" >&2
+    exit 1
+  fi
 
   # Read the body from the temp file
   local response_body
