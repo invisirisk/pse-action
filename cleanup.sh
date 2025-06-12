@@ -378,14 +378,14 @@ main() {
   cleanup_certificates
 
   log "PSE GitHub Action cleanup completed successfully"
-
-  # Call get_jobs_status.sh to gather job steps
-  log "Gathering Job Steps..."
-  if [ -x "$GITHUB_ACTION_PATH/get_jobs_status.sh" ]; then
-    log "Executing get_jobs_status.sh"
-    "$GITHUB_ACTION_PATH/get_jobs_status.sh"
-  else
-    log "WARNING: get_jobs_status.sh not found or not executable at $GITHUB_ACTION_PATH/get_jobs_status.sh"
+  if [ "$SEND_JOB_STATUS" = "true" ]; then
+    log "Gathering Job Steps..."
+    if [ -x "$GITHUB_ACTION_PATH/get_jobs_status.sh" ]; then
+      log "Executing get_jobs_status.sh"
+      "$GITHUB_ACTION_PATH/get_jobs_status.sh"
+    else
+      log "WARNING: get_jobs_status.sh not found or not executable at $GITHUB_ACTION_PATH/get_jobs_status.sh"
+    fi
   fi
 }
 

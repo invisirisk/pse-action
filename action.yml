@@ -32,10 +32,10 @@ inputs:
     description: 'Set to true to run cleanup instead of setup. This should be used at the end of your workflow.'
     required: false
     default: 'false'
-  get_jobs:
+  send_job_status:
     description: 'Set to True to allow SaaS platform to fetch job status for current action run. This should be used at the end of your workflow.'
     required: false
-    default: 'false'
+    default: 'true'
   mode:
     description: 'The operation mode: "prepare" only gets scan ID and ECR credentials, "setup" pulls and runs the proxy container, "binary-setup" pulls and runs the proxy container with binary mode, "intercept" configures iptables and certificates. Default is "all" which performs all operations in sequence (prepare, setup, intercept).'
     required: false
@@ -98,6 +98,7 @@ runs:
         DEBUG: ${{ inputs.debug }}
         TEST_MODE: ${{ inputs.test_mode }}
         GITHUB_TOKEN: ${{ inputs.github_token || github.token }}
+        SEND_JOB_STATUS: ${{ inputs.send_job_status }}
         MODE: ${{ inputs.mode }}
         PROXY_IP: ${{ inputs.proxy_ip }}
         PROXY_HOSTNAME: ${{ inputs.proxy_hostname }}
