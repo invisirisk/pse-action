@@ -86,9 +86,6 @@ runs:
         if [ "${{ inputs.cleanup }}" = "true" ]; then
           echo "Running PSE cleanup..."
           $GITHUB_ACTION_PATH/cleanup.sh
-        elif [ "${{ inputs.get_jobs }}" = "true" ]; then
-          echo "Gathering Job Steps..."
-          $GITHUB_ACTION_PATH/get_jobs_status.sh
         else
           echo "Running PSE setup in ${{ inputs.mode }} mode..."
           $GITHUB_ACTION_PATH/setup.sh
@@ -97,7 +94,7 @@ runs:
         API_URL: ${{ inputs.cleanup == 'true' && env.PSE_API_URL || inputs.api_url }}
         APP_TOKEN: ${{ inputs.cleanup == 'true' && env.PSE_APP_TOKEN || inputs.app_token }}
         PORTAL_URL: ${{ inputs.cleanup == 'true' && env.PSE_PORTAL_URL || inputs.portal_url || inputs.api_url }}
-        SCAN_ID: ${{ inputs.get_jobs == 'true' && env.PSE_SCAN_ID || inputs.scan_id }}
+        SCAN_ID: ${{ inputs.cleanup == 'true' && env.PSE_SCAN_ID || inputs.scan_id }}
         DEBUG: ${{ inputs.debug }}
         TEST_MODE: ${{ inputs.test_mode }}
         GITHUB_TOKEN: ${{ inputs.github_token || github.token }}

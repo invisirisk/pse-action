@@ -37,7 +37,7 @@ validate_env_vars() {
       exit 1
     fi
   fi
-  
+
   # Check for APP_TOKEN
   if [ -z "$APP_TOKEN" ]; then
     log "INFO: APP_TOKEN is not set, trying to use PSE_APP_TOKEN from previous step..."
@@ -49,7 +49,7 @@ validate_env_vars() {
       exit 1
     fi
   fi
-  
+
   # Check for PORTAL_URL
   if [ -z "$PORTAL_URL" ]; then
     log "INFO: PORTAL_URL is not set, trying to use PSE_PORTAL_URL from previous step..."
@@ -62,7 +62,7 @@ validate_env_vars() {
       log "Using API_URL as fallback for PORTAL_URL: $PORTAL_URL"
     fi
   fi
-  
+
   # Check SCAN_ID separately with warning instead of error
   if [ -z "$SCAN_ID" ]; then
     log "INFO: SCAN_ID is not set, using a default value for cleanup..."
@@ -70,7 +70,7 @@ validate_env_vars() {
     export SCAN_ID="cleanup_$(date +%s)_${GITHUB_RUN_ID:-unknown}"
     log "Using generated SCAN_ID: $SCAN_ID"
   fi
-  
+
   log "Environment validation successful"
 }
 
@@ -88,15 +88,13 @@ run_with_privilege() {
 # Function to display PSE binary logs
 display_pse_binary_logs() {
   log "Displaying logs for PSE binary"
-  
+
   # Check if in test mode
   if [ "$TEST_MODE" = "true" ]; then
     log "Running in TEST_MODE, skipping PSE binary logs display"
     return 0
   fi
-  
-  
-    
+
   LOG_FILE_TO_DISPLAY="/tmp/pse_binary.log"
 
   # Check if the log file exists
@@ -104,15 +102,15 @@ display_pse_binary_logs() {
     log "Log file $LOG_FILE_TO_DISPLAY does not exist"
     return 0
   fi
-  
+
   # Display a separator for better readability
   echo "================================================================="
   echo "                   PSE BINARY LOGS                               "
   echo "================================================================="
-  
+
   # Display the log file contents
   cat "$LOG_FILE_TO_DISPLAY" || log "Failed to display PSE binary logs"
-  
+
   # Display another separator
   echo "================================================================="
   echo "                END OF PSE BINARY LOGS                           "
@@ -124,11 +122,11 @@ url_encode() {
   local string="$1"
   local encoded=""
   local i
-  for (( i=0; i<${#string}; i++ )); do
+  for ((i = 0; i < ${#string}; i++)); do
     local c="${string:$i:1}"
     case "$c" in
-      [a-zA-Z0-9.~_-]) encoded="$encoded$c" ;;
-      *) encoded="$encoded$(printf '%%%02X' "'$c")" ;;
+    [a-zA-Z0-9.~_-]) encoded="$encoded$c" ;;
+    *) encoded="$encoded$(printf '%%%02X' "'$c")" ;;
     esac
   done
   echo "$encoded"
@@ -140,18 +138,18 @@ validate_scan_id() {
     log "ERROR: No SCAN_ID available"
     return 1
   fi
-  
+
   if [ "$SCAN_ID" = "null" ] || [ "$SCAN_ID" = "undefined" ]; then
     log "ERROR: Invalid SCAN_ID: $SCAN_ID"
     return 1
   fi
-  
+
   # Check if SCAN_ID is a valid UUID (basic check)
   if ! echo "$SCAN_ID" | grep -E '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$' >/dev/null; then
     log "WARNING: SCAN_ID does not appear to be a valid UUID: $SCAN_ID"
     # Continue anyway as it might be a different format
   fi
-  
+
   log "SCAN_ID validation passed: $SCAN_ID"
   return 0
 }
@@ -159,38 +157,35 @@ validate_scan_id() {
 # Function to signal build end
 signal_build_end() {
   log "Signaling build end to InvisiRisk API"
-  
+
   # Check if in test mode
   if [ "$TEST_MODE" = "true" ]; then
     log "Running in TEST_MODE, skipping API call"
     return 0
   fi
-  
-  
 
   # Default to PSE endpoint directly
   BASE_URL="https://pse.invisirisk.com"
   log "Using default PSE endpoint: $BASE_URL"
 
-  
   # Build URL for the GitHub run
   build_url="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
-  
+
   # Build parameters
   params="id=$(url_encode "$SCAN_ID")"
   params="${params}&build_url=$(url_encode "$build_url")"
   params="${params}&status=$(url_encode "${INPUT_JOB_STATUS:-unknown}")"
-  
+
   log "Sending end signal to PSE with parameters: $params"
-  
+
   # Send request with retries
   MAX_RETRIES=3
   RETRY_DELAY=2
   ATTEMPT=1
-  
+
   while [ $ATTEMPT -le $MAX_RETRIES ]; do
     log "Sending end signal, attempt $ATTEMPT of $MAX_RETRIES"
-    
+
     RESPONSE=$(curl -X POST "${BASE_URL}/end" \
       -H 'Content-Type: application/x-www-form-urlencoded' \
       -H 'User-Agent: pse-action' \
@@ -201,10 +196,10 @@ signal_build_end() {
       -s -w "\n%{http_code}" 2>&1)
 
     echo "Response: $RESPONSE"
-    
+
     HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
     RESPONSE_BODY=$(echo "$RESPONSE" | sed '$d')
-    
+
     if [ "$HTTP_CODE" -ge 200 ] && [ "$HTTP_CODE" -lt 300 ]; then
       log "End signal sent successfully (HTTP $HTTP_CODE)"
       log "Response: $RESPONSE_BODY"
@@ -218,7 +213,7 @@ signal_build_end() {
       ATTEMPT=$((ATTEMPT + 1))
     fi
   done
-  
+
   log "WARNING: Failed to send end signal after $MAX_RETRIES attempts"
   log "Continuing anyway..."
   return 0
@@ -227,29 +222,29 @@ signal_build_end() {
 # Function to display container logs
 display_container_logs() {
   local container_name="$1"
-  
+
   log "Displaying logs for container: $container_name"
-  
+
   # Check if in test mode
   if [ "$TEST_MODE" = "true" ]; then
     log "Running in TEST_MODE, skipping container logs display"
     return 0
   fi
-  
+
   # Check if container exists or existed, but this is a non critical error
-  if ! sudo docker ps -a -q -f name="$container_name" > /dev/null 2>&1; then
+  if ! sudo docker ps -a -q -f name="$container_name" >/dev/null 2>&1; then
     log "Container $container_name not found, cannot display logs"
     return 0
   fi
-  
+
   # Display a separator for better readability
   echo "================================================================="
   echo "                   PSE CONTAINER LOGS                            "
   echo "================================================================="
-  
+
   # Get all logs from the container
   sudo docker logs "$container_name" 2>&1 || log "Failed to retrieve container logs"
-  
+
   # Display another separator
   echo "================================================================="
   echo "                END OF PSE CONTAINER LOGS                        "
@@ -259,16 +254,16 @@ display_container_logs() {
 # Function to clean up PSE container
 cleanup_pse_container() {
   log "Cleaning up PSE container"
-  
+
   # Check if in test mode
   if [ "$TEST_MODE" = "true" ]; then
     log "Running in TEST_MODE, skipping PSE container cleanup"
     return 0
   fi
-  
+
   # Display container logs before stopping it
   display_container_logs "pse"
-  
+
   # Stop and remove PSE container if it exists
   if sudo docker ps -a | grep -q pse; then
     sudo docker stop pse 2>/dev/null || true
@@ -282,13 +277,13 @@ cleanup_pse_container() {
 # Function to clean up iptables rules
 cleanup_iptables() {
   log "Cleaning up iptables rules"
-  
+
   # Check if in test mode
   if [ "$TEST_MODE" = "true" ]; then
     log "Running in TEST_MODE, skipping iptables cleanup"
     return 0
   fi
-  
+
   # Remove iptables rules
   if sudo iptables -t nat -L pse >/dev/null 2>&1; then
     sudo iptables -t nat -D OUTPUT -j pse 2>/dev/null || true
@@ -303,13 +298,13 @@ cleanup_iptables() {
 # Function to clean up certificates
 cleanup_certificates() {
   log "Cleaning up certificates"
-  
+
   # Check if in test mode
   if [ "$TEST_MODE" = "true" ]; then
     log "Running in TEST_MODE, skipping certificate cleanup"
     return 0
   fi
-  
+
   # Remove PSE certificate from the Ubuntu CA store
   if [ -f /usr/local/share/ca-certificates/extra/pse.crt ]; then
     log "Removing PSE certificate from CA store"
@@ -326,30 +321,30 @@ cleanup_certificates() {
   else
     log "No PSE certificate found to clean up"
   fi
-  
+
   # Reset Git SSL configuration
   git config --global --unset http.sslCAInfo || true
-  
+
   # Clean up environment variables
   unset NODE_EXTRA_CA_CERTS
   unset REQUESTS_CA_BUNDLE
 
-   # Re-enable IPv6 if it was disabled
+  # Re-enable IPv6 if it was disabled
   log "Re-enabling IPv6"
   run_with_privilege sysctl -w net.ipv6.conf.all.disable_ipv6=0
   run_with_privilege sysctl -w net.ipv6.conf.default.disable_ipv6=0
   run_with_privilege sysctl -w net.ipv6.conf.lo.disable_ipv6=0
-  
+
   log "Certificate cleanup completed"
 }
 
 # Main execution
 main() {
   log "Starting PSE GitHub Action cleanup"
-  
+
   # Validate environment variables
   #validate_env_vars
-  
+
   # Determine if we're in a containerized environment
   IS_CONTAINERIZED=false
   if [ -n "$PSE_PROXY_HOSTNAME" ]; then
@@ -357,34 +352,41 @@ main() {
     IS_CONTAINERIZED=true
   fi
 
-   # Display PSE binary logs if we're using the binary setup mode
+  # Display PSE binary logs if we're using the binary setup mode
   if [ -n "$PSE_LOG_FILE" ]; then
     display_pse_binary_logs
   fi
-  
+
   # Signal build end to InvisiRisk API
   signal_build_end
 
- 
-  
   # Only display container logs and clean up container if not in a containerized environment
   # In a containerized environment, the PSE container is managed by GitHub Actions as a service container
   if [ "$IS_CONTAINERIZED" = "false" ]; then
     # Display container logs before cleanup
     display_container_logs "pse"
-    
+
     # Clean up container
     cleanup_pse_container
   else
     log "Skipping container cleanup in containerized environment"
     log "The service container will be automatically cleaned up by GitHub Actions"
   fi
-  
+
   # Always clean up iptables and certificates
   cleanup_iptables
   cleanup_certificates
-  
+
   log "PSE GitHub Action cleanup completed successfully"
+
+  # Call get_jobs_status.sh to gather job steps
+  log "Gathering Job Steps..."
+  if [ -x "$GITHUB_ACTION_PATH/get_jobs_status.sh" ]; then
+    log "Executing get_jobs_status.sh"
+    "$GITHUB_ACTION_PATH/get_jobs_status.sh"
+  else
+    log "WARNING: get_jobs_status.sh not found or not executable at $GITHUB_ACTION_PATH/get_jobs_status.sh"
+  fi
 }
 
 # Execute main function
