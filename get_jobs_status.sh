@@ -251,7 +251,7 @@ send_to_saas_platform() {
 wait_for_cleanup_step() {
   local github_data="$1"
   local cleanup_step_name="$2"
-  local max_attempts=3
+  local max_attempts=10
   local attempt=1
   local timeout=3
   local step_id
