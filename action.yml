@@ -56,6 +56,10 @@ inputs:
     description: 'Job status to be passed to the PSE container for job tracking'
     required: false
     default: 'unknown'
+  cleanup_step_name:
+    description: 'Name of the cleanup step to be passed to the PSE container for job tracking'
+    required: false
+    default: 'unknown'
 # Define outputs for the action
 outputs:
   scan_id:
@@ -105,3 +109,4 @@ runs:
         DEBUG_FORCE: ${{ inputs.mode }}
         GITHUB_REPOSITORY: ${{ github.repository }}
         GITHUB_RUN_ID: ${{ github.run_id }}
+        CLEANUP_STEP_NAME: ${{ inputs.cleanup_step_name }}
