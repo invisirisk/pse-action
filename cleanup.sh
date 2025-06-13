@@ -379,6 +379,7 @@ main() {
 
   log "PSE GitHub Action cleanup completed successfully"
   if [ "$SEND_JOB_STATUS" = "true" ]; then
+    sleep 2
     log "Gathering Job Steps..."
     if [ -x "$GITHUB_ACTION_PATH/get_jobs_status.sh" ]; then
       log "Executing get_jobs_status.sh"
