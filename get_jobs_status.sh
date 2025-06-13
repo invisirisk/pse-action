@@ -6,6 +6,16 @@ set -e
 # Optional: GitHub API version
 GITHUB_API_VERSION="${GITHUB_API_VERSION:-2022-11-28}"
 
+# Debug mode flag (default to false if not set)
+DEBUG="${DEBUG:-false}"
+
+# Function to print debug messages only when DEBUG is true
+debug() {
+  if [[ "$DEBUG" == "true" ]]; then
+    echo "[DEBUG] $*" >&2
+  fi
+}
+
 # Global variables for temporary files
 TEMP_FILES=()
 
@@ -53,7 +63,7 @@ check_http_status() {
   else
     echo "Error: $error_message" >&2
     echo "Status code: $status_code" >&2
-    echo "Response body: $response_body" >&2
+    debug "Response body: $response_body"
     return 1
   fi
 }
@@ -67,7 +77,8 @@ retry_with_backoff() {
   local cmd="$@"
 
   while [[ $attempt -le $max_attempts ]]; do
-    echo "Attempt $attempt of $max_attempts: $cmd" >&2
+    debug "Attempt $attempt of $max_attempts: $cmd"
+    [[ $attempt -gt 1 && "$DEBUG" != "true" ]] && echo "Retrying..." >&2
 
     # Execute the command
     eval "$cmd"
@@ -80,14 +91,15 @@ retry_with_backoff() {
     # Calculate sleep time with exponential backoff (1s, 2s, 4s)
     timeout=$((timeout * 2))
 
-    echo "Command failed with exit code $exit_code. Retrying in ${timeout}s..." >&2
+    debug "Command failed with exit code $exit_code. Retrying in ${timeout}s..."
     sleep $timeout
 
     attempt=$((attempt + 1))
   done
 
   if [[ $exit_code -ne 0 ]]; then
-    echo "All $max_attempts attempts failed for command: $cmd" >&2
+    echo "All $max_attempts attempts failed" >&2
+    debug "Failed command: $cmd"
   fi
 
   return $exit_code
@@ -154,9 +166,9 @@ fetch_github_jobs() {
     echo "Warning: GitHub API response was empty despite successful status code. This might indicate an issue." >&2
   fi
 
-  # Output the GitHub response (for debugging only)
-  echo "GitHub API Response:" >&2
-  echo "${response_body}" >&2
+  # Output the GitHub response only if DEBUG is true
+  debug "GitHub API Response:"
+  debug "${response_body}"
 
   # Return the response body
   echo "$response_body"
@@ -166,7 +178,8 @@ fetch_github_jobs() {
 send_to_saas_platform() {
   local data="$1"
 
-  echo "Preparing to send GitHub response to custom API..." >&2
+  debug "Preparing to send GitHub response to custom API..."
+  [[ "$DEBUG" != "true" ]] && echo "Sending data to API..." >&2
 
   # Validate required environment variables
   if ! validate_env_vars; then
@@ -176,7 +189,7 @@ send_to_saas_platform() {
   # Construct custom API URL
   local custom_api_url="${PSE_API_URL}/ingestionapi/v1/upload-generic-file?api_key=${PSE_APP_TOKEN}&scan_id=${PSE_SCAN_ID}&file_type=job_status"
 
-  echo "Sending GitHub job status to custom API endpoint: ${custom_api_url}" >&2
+  debug "Sending GitHub job status to custom API endpoint: ${custom_api_url}"
 
   # Create a temporary file for the response body
   local response_file
@@ -187,10 +200,12 @@ send_to_saas_platform() {
   json_file=$(create_temp_file ".json")
   echo "${data}" >"${json_file}"
 
-  # Debug: Print the content of the JSON file
-  echo "Debug: JSON content before validation:" >&2
-  cat "${json_file}" >&2
-  echo "" >&2
+  # Debug: Print the content of the JSON file only if DEBUG is true
+  debug "JSON content before validation:"
+  if [[ "$DEBUG" == "true" ]]; then
+    cat "${json_file}" >&2
+    echo "" >&2
+  fi
 
   # Validate JSON format before sending
   if ! jq empty "${json_file}" 2>/dev/null; then
@@ -219,9 +234,9 @@ send_to_saas_platform() {
   local response_body
   response_body=$(cat "${response_file}")
 
-  echo "Custom API Response Status: $http_status"
-  echo "Custom API Response Body:"
-  echo "${response_body}"
+  debug "Custom API Response Status: $http_status"
+  debug "Custom API Response Body:"
+  debug "${response_body}"
 
   # Check if the custom API call was successful
   if ! check_http_status "$http_status" "Custom API call to ${custom_api_url} failed" "$response_body"; then
