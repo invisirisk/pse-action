@@ -35,7 +35,7 @@ inputs:
   send_job_status:
     description: 'Set to True to allow SaaS platform to fetch job status for current action run. This should be used at the end of your workflow.'
     required: false
-    default: 'true'
+    default: 'false'
   mode:
     description: 'The operation mode: "prepare" only gets scan ID and ECR credentials, "setup" pulls and runs the proxy container, "binary-setup" pulls and runs the proxy container with binary mode, "intercept" configures iptables and certificates. Default is "all" which performs all operations in sequence (prepare, setup, intercept).'
     required: false
@@ -54,6 +54,10 @@ inputs:
     default: ''
   job_status:
     description: 'Job status to be passed to the PSE container for job tracking'
+    required: false
+    default: 'unknown'
+  cleanup_step_name:
+    description: 'Name of the cleanup step to be passed to the PSE container for job tracking'
     required: false
     default: 'unknown'
 # Define outputs for the action
@@ -80,12 +84,19 @@ outputs:
 runs:
   using: "composite"
   steps:
+    - if: ${{ inputs.send_job_status == 'true' }}
+      uses: actions/download-artifact@v4
+      with:
+        name: analytics_metadata
     - id: pse-setup
       shell: bash
       run: |
         if [ "${{ inputs.cleanup }}" = "true" ]; then
           echo "Running PSE cleanup..."
           $GITHUB_ACTION_PATH/cleanup.sh
+        elif [ "${{ inputs.send_job_status }}" = "true" ]; then
+          echo "Running PSE send job status..."
+        bash $GITHUB_ACTION_PATH/get_jobs_status.sh
         else
           echo "Running PSE setup in ${{ inputs.mode }} mode..."
           $GITHUB_ACTION_PATH/setup.sh
@@ -94,7 +105,7 @@ runs:
         API_URL: ${{ inputs.cleanup == 'true' && env.PSE_API_URL || inputs.api_url }}
         APP_TOKEN: ${{ inputs.cleanup == 'true' && env.PSE_APP_TOKEN || inputs.app_token }}
         PORTAL_URL: ${{ inputs.cleanup == 'true' && env.PSE_PORTAL_URL || inputs.portal_url || inputs.api_url }}
-        SCAN_ID: ${{ inputs.cleanup == 'true' && env.PSE_SCAN_ID || inputs.scan_id }}
+        SCAN_ID: ${{ inputs.scan_id }}
         DEBUG: ${{ inputs.debug }}
         TEST_MODE: ${{ inputs.test_mode }}
         GITHUB_TOKEN: ${{ inputs.github_token || github.token }}
@@ -105,3 +116,9 @@ runs:
         DEBUG_FORCE: ${{ inputs.mode }}
         GITHUB_REPOSITORY: ${{ github.repository }}
         GITHUB_RUN_ID: ${{ github.run_id }}
+        CLEANUP_STEP_NAME: ${{ inputs.cleanup_step_name }}
+    - if: ${{ inputs.cleanup == 'true' }}
+      uses: actions/upload-artifact@v4
+      with:
+        name: analytics_metadata
+        path: analytics_metadata.json

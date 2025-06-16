@@ -338,12 +338,27 @@ cleanup_certificates() {
   log "Certificate cleanup completed"
 }
 
+# Function to upload scan metadata
+upload_scan_metadata() {
+  log "Uploading scan metadata"
+
+  # Create a JSON file with scan details
+  log "Creating scan details JSON file"
+  JSON_FILE="analytics_metadata.json"
+
+  cat >"$JSON_FILE" <<EOF
+{
+  "scan_id": "$PSE_SCAN_ID",
+  "run_id": "$GITHUB_RUN_ID"
+}
+EOF
+}
 # Main execution
 main() {
   log "Starting PSE GitHub Action cleanup"
 
   # Validate environment variables
-  #validate_env_vars
+  validate_env_vars
 
   # Determine if we're in a containerized environment
   IS_CONTAINERIZED=false
@@ -376,18 +391,9 @@ main() {
   # Always clean up iptables and certificates
   cleanup_iptables
   cleanup_certificates
+  upload_scan_metadata
 
   log "PSE GitHub Action cleanup completed successfully"
-  if [ "$SEND_JOB_STATUS" = "true" ]; then
-    sleep 2
-    log "Gathering Job Steps..."
-    if [ -x "$GITHUB_ACTION_PATH/get_jobs_status.sh" ]; then
-      log "Executing get_jobs_status.sh"
-      "$GITHUB_ACTION_PATH/get_jobs_status.sh"
-    else
-      log "WARNING: get_jobs_status.sh not found or not executable at $GITHUB_ACTION_PATH/get_jobs_status.sh"
-    fi
-  fi
 }
 
 # Execute main function

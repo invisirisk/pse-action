@@ -16,6 +16,30 @@ debug() {
   fi
 }
 
+# Function to load metadata from analytics_metadata.json file
+load_metadata_from_file() {
+  if [ -f "analytics_metadata.json" ]; then
+    debug "Loading scan ID and run ID from analytics_metadata.json"
+    if command -v jq >/dev/null 2>&1; then
+      SCAN_ID=$(jq -r '.scan_id // empty' analytics_metadata.json)
+      GITHUB_RUN_ID=$(jq -r '.run_id // empty' analytics_metadata.json)
+      debug "Loaded SCAN_ID=$SCAN_ID and GITHUB_RUN_ID=$GITHUB_RUN_ID"
+    else
+      # Fallback to grep if jq is not available
+      SCAN_ID=$(grep -o '"scan_id"[[:space:]]*:[[:space:]]*"[^"]*"' analytics_metadata.json | sed 's/.*"scan_id"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/')
+      GITHUB_RUN_ID=$(grep -o '"run_id"[[:space:]]*:[[:space:]]*"[^"]*"' analytics_metadata.json | sed 's/.*"run_id"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/')
+      debug "Loaded SCAN_ID=$SCAN_ID and GITHUB_RUN_ID=$GITHUB_RUN_ID (using grep)"
+    fi
+  fi
+}
+
+# Print current working directory
+echo "PWD"
+pwd
+
+# Call the function to load metadata from analytics_metadata.json
+load_metadata_from_file
+
 # Global variables for temporary files
 TEMP_FILES=()
 
@@ -109,18 +133,18 @@ retry_with_backoff() {
 validate_env_vars() {
   local missing_vars=0
 
-  if [ -z "$PSE_API_URL" ]; then
-    echo "PSE_API_URL is not set. Please set this environment variable." >&2
+  if [ -z "$API_URL" ]; then
+    echo "API_URL is not set. Please set this environment variable." >&2
     missing_vars=1
   fi
 
-  if [ -z "$PSE_APP_TOKEN" ]; then
-    echo "PSE_APP_TOKEN is not set. Please set this environment variable." >&2
+  if [ -z "$APP_TOKEN" ]; then
+    echo "APP_TOKEN is not set. Please set this environment variable." >&2
     missing_vars=1
   fi
 
-  if [ -z "$PSE_SCAN_ID" ]; then
-    echo "PSE_SCAN_ID is not set. Please set this environment variable." >&2
+  if [ -z "$SCAN_ID" ]; then
+    echo "SCAN_ID is not set. Please set this environment variable." >&2
     missing_vars=1
   fi
 
@@ -138,7 +162,8 @@ fetch_github_jobs() {
   # Variable to store the response body and http status
   local response_body
   local http_status
-
+  debug "Sleeping for 5 seconds before fetching GitHub job statuses..."
+  sleep 5
   # Command to execute with retry logic
   local curl_cmd="http_status=\$(curl -sSL -w \"%{http_code}\" \
     -H \"Accept: application/vnd.github+json\" \
@@ -187,7 +212,7 @@ send_to_saas_platform() {
   fi
 
   # Construct custom API URL
-  local custom_api_url="${PSE_API_URL}/ingestionapi/v1/upload-generic-file?api_key=${PSE_APP_TOKEN}&scan_id=${PSE_SCAN_ID}&file_type=job_status"
+  local custom_api_url="${API_URL}/ingestionapi/v1/upload-generic-file?api_key=${APP_TOKEN}&scan_id=${SCAN_ID}&file_type=job_status"
 
   debug "Sending GitHub job status to custom API endpoint: ${custom_api_url}"
 
@@ -246,13 +271,94 @@ send_to_saas_platform() {
   echo "Successfully sent job status to custom API."
 }
 
+# Function to wait for cleanup step to be ready
+wait_for_cleanup_step() {
+  local github_data="$1"
+  local cleanup_step_name="$2"
+  local max_attempts=10
+  local attempt=1
+  local timeout=3
+  local step_id
+  local all_previous_steps_ready=false
+
+  echo "Checking for cleanup step: $cleanup_step_name" >&2
+
+  while [[ $attempt -le $max_attempts ]]; do
+    debug "Attempt $attempt of $max_attempts to find cleanup step ready"
+
+    # Parse the GitHub API response to find the cleanup step
+    if ! step_id=$(echo "$github_data" | jq -r --arg name "$cleanup_step_name" '.jobs[0].steps[] | select(.name==$name) | .number'); then
+      echo "Error parsing GitHub API response" >&2
+      return 1
+    fi
+
+    if [[ -z "$step_id" || "$step_id" == "null" ]]; then
+      echo "Cleanup step '$cleanup_step_name' not found in the job" >&2
+      return 1
+    fi
+
+    debug "Found cleanup step '$cleanup_step_name' with ID: $step_id"
+
+    # Check if all previous steps are completed
+    all_previous_steps_ready=true
+    local previous_steps_status
+    previous_steps_status=$(echo "$github_data" | jq -r --arg step_id "$step_id" '.jobs[0].steps[] | select(.number < ($step_id|tonumber)) | .status')
+
+    debug "Previous steps status: $previous_steps_status"
+
+    # Check if any previous step is still in progress or pending
+    if echo "$previous_steps_status" | grep -q -E 'in_progress|pending'; then
+      all_previous_steps_ready=false
+      debug "Some previous steps are still in progress or pending"
+
+      # Calculate sleep time with exponential backoff
+      local sleep_time=$((timeout * 2 ** (attempt - 1)))
+      debug "Waiting for $sleep_time seconds before checking again..."
+      echo "Waiting for previous steps to complete before cleanup step..." >&2
+      sleep $sleep_time
+
+      # Fetch updated GitHub job status
+      github_data=$(fetch_github_jobs)
+
+      attempt=$((attempt + 1))
+    else
+      debug "All previous steps before cleanup are ready"
+      break
+    fi
+  done
+
+  if [[ $attempt -gt $max_attempts ]]; then
+    echo "Exceeded maximum attempts ($max_attempts) waiting for cleanup step to be ready" >&2
+    return 1
+  fi
+
+  if [[ "$all_previous_steps_ready" == "true" ]]; then
+    echo "All steps before cleanup step are ready to proceed" >&2
+    return 0
+  else
+    echo "Failed to confirm all steps before cleanup are ready" >&2
+    return 1
+  fi
+}
+
 # Main function to orchestrate the workflow
 main() {
   # Step 1: Fetch GitHub Actions job status
   local github_data
   github_data=$(fetch_github_jobs)
 
-  # Step 2: Send data to SaaS platform
+  # Step 2: If CLEANUP_STEP_NAME is set, wait for cleanup step to be ready
+  if [[ -n "$CLEANUP_STEP_NAME" && "$CLEANUP_STEP_NAME" != "unknown" ]]; then
+    echo "CLEANUP_STEP_NAME is set to '$CLEANUP_STEP_NAME', waiting for cleanup step to be ready..." >&2
+    if ! wait_for_cleanup_step "$github_data" "$CLEANUP_STEP_NAME"; then
+      echo "Failed to wait for cleanup step, proceeding with sending data anyway" >&2
+    else
+      # Fetch the latest GitHub job status after waiting
+      github_data=$(fetch_github_jobs)
+    fi
+  fi
+
+  # Step 3: Send data to SaaS platform
   send_to_saas_platform "$github_data"
 }
 
