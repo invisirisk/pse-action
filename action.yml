@@ -56,10 +56,6 @@ inputs:
     description: 'Job status to be passed to the PSE container for job tracking'
     required: false
     default: 'unknown'
-  cleanup_step_name:
-    description: 'Name of the cleanup step to be passed to the PSE container for job tracking'
-    required: false
-    default: 'unknown'
 # Define outputs for the action
 outputs:
   scan_id:
