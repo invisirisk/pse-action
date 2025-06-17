@@ -33,10 +33,6 @@ load_metadata_from_file() {
   fi
 }
 
-# Print current working directory
-echo "PWD"
-pwd
-
 # Call the function to load metadata from analytics_metadata.json
 load_metadata_from_file
 
@@ -278,6 +274,8 @@ main() {
   github_data=$(fetch_github_jobs)
   # Extract unique run_ids for completed jobs and export them
   GITHUB_COMPLETED_RUN_IDS=$(echo "$github_data" | jq -r '.jobs[] | select(.status == "completed") | .run_id' | sort -u)
+  debug Run data: $github_data
+  debug "GITHUB_COMPLETED_RUN_IDS: $GITHUB_COMPLETED_RUN_IDS"
   export GITHUB_COMPLETED_RUN_IDS
 
   # Step 2: Send data to SaaS platform
