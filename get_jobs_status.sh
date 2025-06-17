@@ -277,7 +277,7 @@ main() {
   debug Run data: $github_data
   debug "GITHUB_UNIQUE_JOB_IDS: $GITHUB_UNIQUE_JOB_IDS"
   env
-  export GITHUB_UNIQUE_JOB_IDS ="$GITHUB_UNIQUE_JOB_IDS"
+  export GITHUB_UNIQUE_JOB_IDS="${GITHUB_UNIQUE_JOB_IDS}"
 
   # Step 2: Send data to SaaS platform
   send_to_saas_platform "$github_data"
