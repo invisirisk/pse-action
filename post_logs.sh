@@ -368,7 +368,7 @@ main() {
 
     # Find the ID of the first job that has completed.
     local first_completed_job_id
-    first_completed_job_id=$(echo "$all_jobs_data" | jq -r '(.jobs[]? | select(.status == "completed") | .id) | first')
+    first_completed_job_id=$(echo "$all_jobs_data" | jq -r '([.jobs[]? | select(.status == "completed") | .id])[0]')
 
     if [[ -z "$first_completed_job_id" ]]; then
         printf "ℹ️ No completed jobs found in this workflow run.\n"
