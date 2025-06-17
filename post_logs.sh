@@ -217,7 +217,20 @@ fetch_github_workflow_jobs() {
 # Function to download job logs
 download_job_logs() {
     local job_id="$1"
-    local output_file="${log_dir}/${job_id}.log"
+    local target_output_dir="$2"
+
+    if [ -z "$target_output_dir" ]; then
+        echo "Error: Output directory not provided to download_job_logs for job $job_id." >&2
+        return 1
+    fi
+
+    # Ensure the target output directory exists
+    if ! mkdir -p "$target_output_dir"; then
+        echo "Error: Could not create output directory '$target_output_dir' for job $job_id." >&2
+        return 1
+    fi
+
+    local output_file="${target_output_dir}/job_${job_id}_logs.txt"
 
     echo "Downloading logs for job: $job_id"
 
@@ -491,7 +504,7 @@ run_analysis() {
 
                 # download_job_logs saves the file to "${log_dir}/job_${job_id}_logs.log"
                 if download_job_logs "$first_completed_job_id" "$log_dir"; then
-                    local downloaded_log_file="${log_dir}/job_${first_completed_job_id}_logs.log"
+                    local downloaded_log_file="${log_dir}/job_${first_completed_job_id}_logs.txt"
                     if [ -f "$downloaded_log_file" ]; then
                         echo "✅ Successfully downloaded logs for job $first_completed_job_id to $downloaded_log_file"
 
