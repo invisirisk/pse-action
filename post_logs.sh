@@ -459,12 +459,31 @@ run_analysis() {
         fi
     fi
 
+    # Debug: List contents of the directory to be zipped
+    if [ "$DEBUG" = "true" ]; then
+        debug "Contents of directory to be zipped ($log_dir):"
+        ls -lR "$log_dir" >&2 # Send to stderr to be captured by debug logging
+        debug "Checking individual log file types and sizes:"
+        find "$log_dir" -type f -name '*.log' -exec sh -c 'echo "File: {}"; file "{}"; wc -c "{}"' \; >&2
+    fi
+
     # Create zip archive
     if ! zip -r "$zip_file" "$log_dir"; then
         echo "❌ Failed to create log archive: $zip_file" >&2
         exit 1
     fi
     echo "📦 Created log archive: $zip_file"
+
+    # Test the zip file integrity
+    debug "Testing integrity of zip file: $zip_file"
+    if unzip -t "$zip_file" >/dev/null 2>&1; then
+        debug "✅ Zip file $zip_file integrity check passed."
+    else
+        echo "❌ Error: Zip file $zip_file failed integrity check (unzip -t). Archive may be corrupted." >&2
+        debug "Output of unzip -t \"$zip_file\" (if any was captured to stdout/stderr by the command itself):"
+        unzip -t "$zip_file" # Allow output to go to script's stdout/stderr for capture
+        return 1 # Do not proceed with sending a corrupted zip file
+    fi
 
     # Send the zip file to SaaS platform
     send_zip_to_saas_platform "$zip_file" || echo "Warning: Failed to send log archive to SaaS platform."
