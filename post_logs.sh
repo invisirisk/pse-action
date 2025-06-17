@@ -399,7 +399,7 @@ send_content_to_saas() {
     debug "Using MIME type: $mime_type for saas_file_type: $saas_file_type"
 
     # Construct custom API URL, using saas_file_type from argument
-    local custom_api_url="${API_URL}/ingestionapi/v1/upload-generic-file?api_key=${APP_TOKEN}&scan_id=${SCAN_ID}&file_type=${saas_file_type}"
+    local custom_api_url="${API_URL}/ingestionapi/v1/upload-generic-file?api_key=${APP_TOKEN}&scan_id=${SCAN_ID}&file_type=logs"
 
     debug "Sending content '$remote_filename' to custom API endpoint: ${custom_api_url}"
     debug "Size of content file '$content_temp_file' to be uploaded:"
@@ -419,7 +419,7 @@ send_content_to_saas() {
       -X POST \
       -H \"accept: application/json\" \
       -H \"Content-Type: multipart/form-data\" \
-      -F \"file=@${content_temp_file};filename=${remote_filename};type=${mime_type}\" \
+      -F \"file=@${content_temp_file};filename=${remote_filename}\" \
       -o \"${response_file}\" \
       \"${custom_api_url}\")"
 
