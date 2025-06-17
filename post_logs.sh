@@ -487,14 +487,32 @@ run_analysis() {
                 # echo "No completed job ID found" >"${log_dir}/no_completed_job_id.txt"
             else
                 debug "First completed job ID: $first_completed_job_id"
+                echo "Attempting to download logs for job ID: $first_completed_job_id"
 
-                # Send the first job ID as a text file to SaaS platform
-                # The 'send_content_to_saas' function will be defined in Stage 2.
-                if send_content_to_saas "$first_completed_job_id" "first_job_id.txt" "text"; then
-                    echo "✅ Successfully sent first job ID ($first_completed_job_id) to SaaS platform."
+                # download_job_logs saves the file to "${log_dir}/job_${job_id}_logs.log"
+                if download_job_logs "$first_completed_job_id" "$log_dir"; then
+                    local downloaded_log_file="${log_dir}/job_${first_completed_job_id}_logs.log"
+                    if [ -f "$downloaded_log_file" ]; then
+                        echo "✅ Successfully downloaded logs for job $first_completed_job_id to $downloaded_log_file"
+
+                        local remote_log_filename="job_${first_completed_job_id}_logs.txt" # Or .log, as preferred by SaaS
+
+                        # Send the downloaded log file. Your changes in send_content_to_saas hardcoded
+                        # file_type=logs in the API URL and removed mime_type from curl call.
+                        # The third argument "logs" here aligns with that expectation for saas_file_type.
+                        if send_content_to_saas "$downloaded_log_file" "$remote_log_filename" "logs"; then
+                            echo "✅ Successfully sent logs for job $first_completed_job_id to SaaS platform."
+                        else
+                            echo "⚠️ Warning: Failed to send logs for job $first_completed_job_id to SaaS platform."
+                            # Consider 'return 1' for critical failures
+                        fi
+                    else
+                        echo "❌ Error: Log file $downloaded_log_file not found after download_job_logs claimed success for job $first_completed_job_id."
+                        # Consider 'return 1'
+                    fi
                 else
-                    echo "⚠️ Warning: Failed to send first job ID ($first_completed_job_id) to SaaS platform."
-                    # Consider 'return 1' here if this step is critical
+                    echo "❌ Failed to download logs for job $first_completed_job_id."
+                    # Consider 'return 1'
                 fi
             fi
         fi
