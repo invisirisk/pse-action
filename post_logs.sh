@@ -505,10 +505,6 @@ run_analysis() {
     rm -rf "$log_dir"
     debug "Cleaned up temporary log directory: $log_dir"
 
-    # Set output for the zip file path
-    echo "log_archive=$zip_file" >>$GITHUB_OUTPUT
-    echo "::notice title=Log Analysis Complete::Log archive created at $zip_file"
-    echo "📂 Absolute path: $(pwd)/$zip_file"
 }
 
 # Execute the main analysis function
