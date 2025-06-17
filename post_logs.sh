@@ -142,6 +142,50 @@ validate_saas_env_vars() {
     return $missing_vars
 }
 
+# Function to fetch all jobs for the current GitHub workflow run
+fetch_github_workflow_jobs() {
+    debug "Fetching GitHub workflow job statuses..."
+
+    # Create a temporary file for the response body
+    local response_file
+    response_file=$(create_temp_file "api_response_jobs.json")
+
+    local response_body
+    local http_status
+    debug "Sleeping for 2 seconds before fetching GitHub job statuses..."
+    sleep 2
+
+    local curl_cmd="http_status=\$(curl -sSL -w \"%{http_code}\" \
+    -H \"Accept: application/vnd.github+json\" \
+    -H \"Authorization: Bearer ${GITHUB_TOKEN}\" \
+    -H \"X-GitHub-Api-Version: ${GITHUB_API_VERSION:-2022-11-28}\" \
+    -o \"${response_file}\" \
+    \"https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}/jobs\")"
+
+    if ! retry_with_backoff "$curl_cmd"; then
+        echo "Error: Failed to fetch GitHub job statuses after multiple attempts" >&2
+        echo ""
+        return 1
+    fi
+
+    response_body=$(cat "${response_file}")
+
+    if ! check_http_status "$http_status" "GitHub API call for jobs failed" "$response_body"; then
+        echo ""
+        return 1
+    fi
+
+    if [ -z "$response_body" ]; then
+        debug "Warning: GitHub API response for jobs was empty despite successful status code."
+    fi
+
+    debug "GitHub API Response (Jobs):"
+    debug "${response_body}"
+
+    echo "$response_body"
+    return 0
+}
+
 # Function to download job logs
 download_job_logs() {
     local job_id="$1"
@@ -326,45 +370,46 @@ run_analysis() {
     mkdir -p "$log_dir"
     echo "Created log directory: $log_dir"
 
-    # Process all job IDs from GITHUB_UNIQUE_JOB_IDS
-    if [[ -n "${GITHUB_UNIQUE_JOB_IDS:-}" ]]; then
-        echo "Processing job IDs from GITHUB_UNIQUE_JOB_IDS: $GITHUB_UNIQUE_JOB_IDS"
+    # Fetch all jobs for the current workflow run
+    local all_jobs_data
+    all_jobs_data=$(fetch_github_workflow_jobs)
 
-        local temp_job_ids_str="$GITHUB_UNIQUE_JOB_IDS"
-        declare -a JOB_ID_ARRAY=() # Ensure it's an array and clear it
-
-        # Heuristic: if the string contains commas, assume comma-separated. Otherwise, assume space-separated.
-        if [[ "$temp_job_ids_str" == *","* ]]; then
-            debug "Parsing GITHUB_UNIQUE_JOB_IDS as comma-separated value."
-            IFS=',' read -ra JOB_ID_ARRAY <<<"$temp_job_ids_str"
-        else
-            debug "Parsing GITHUB_UNIQUE_JOB_IDS as space-separated value."
-            # Default IFS (space, tab, newline) will handle space-separated values for `read`.
-            read -ra JOB_ID_ARRAY <<<"$temp_job_ids_str"
-        fi
-
-        local processed_job_count=0
-        for job_id_raw in "${JOB_ID_ARRAY[@]}"; do
-            # Trim leading/trailing whitespace from job_id_raw
-            # Remove leading whitespace
-            job_id_temp="${job_id_raw#"${job_id_raw%%[![:space:]]*}"}"
-            # Remove trailing whitespace
-            job_id="${job_id_temp%"${job_id_temp##*[![:space:]]}"}"
-
-            if [[ -n "$job_id" ]]; then             # Ensure job_id string is not empty after trimming
-                download_job_logs "$job_id" || true # Continue even if a single log download fails
-                processed_job_count=$((processed_job_count + 1))
-            fi
-        done
-
-        if [[ $processed_job_count -eq 0 ]]; then
-            # This covers cases where GITHUB_UNIQUE_JOB_IDS was set but contained no valid/non-empty IDs after parsing and trimming.
-            echo "⚠️ No valid job IDs found in GITHUB_UNIQUE_JOB_IDS ('$GITHUB_UNIQUE_JOB_IDS')."
-            echo "No jobs to process" >"${log_dir}/no_jobs.txt"
-        fi
-    else
-        echo "⚠️ GITHUB_UNIQUE_JOB_IDS is not set or is empty."
+    if [ -z "$all_jobs_data" ]; then
+        echo "⚠️ Failed to fetch job data from GitHub API or response was empty."
         echo "No jobs to process" >"${log_dir}/no_jobs.txt"
+    else
+        # Extract unique IDs of completed jobs
+        local completed_job_ids
+        if ! command -v jq >/dev/null 2>&1; then
+            echo "Error: jq is not installed. Cannot parse job data." >&2
+            echo "jq not installed" >"${log_dir}/error.txt"
+            completed_job_ids=""
+        else
+            completed_job_ids=$(echo "$all_jobs_data" | jq -r '.jobs[]? | select(.status == "completed") | .id' | sort -u)
+        fi
+
+        if [ -z "$completed_job_ids" ]; then
+            echo "ℹ️ No completed jobs found for this workflow run or failed to parse."
+            echo "No completed jobs found" >"${log_dir}/no_completed_jobs.txt"
+        else
+            debug "Processing completed job IDs: $completed_job_ids"
+            local processed_job_count=0
+            local job_id_array
+            read -ra job_id_array <<<"$completed_job_ids"
+
+            for job_id in "${job_id_array[@]}"; do
+                job_id_trimmed=$(echo "$job_id" | xargs)
+                if [[ -n "$job_id_trimmed" ]]; then
+                    download_job_logs "$job_id_trimmed" || true
+                    processed_job_count=$((processed_job_count + 1))
+                fi
+            done
+
+            if [[ $processed_job_count -eq 0 ]]; then
+                echo "⚠️ No valid job IDs were processed from the fetched completed jobs list."
+                echo "No valid jobs processed" >"${log_dir}/no_valid_jobs.txt"
+            fi
+        fi
     fi
 
     # Create zip archive
