@@ -26,7 +26,7 @@ debug_cat_file() {
             cat "$file_to_cat" >&2
             echo "--- Debug content of $file_to_cat end ---" >&2
         elif [ "$DEBUG" = "true" ]; then
-             echo "Debug: File $file_to_cat not found or empty for catting." >&2
+            echo "Debug: File $file_to_cat not found or empty for catting." >&2
         fi
     fi
 }
@@ -251,7 +251,6 @@ download_job_logs() {
             fi
 
             local curl_download_cmd="http_status=\$(curl -s -w \"%{http_code}\" -L -o \"$curl_response_content_file\" \
-                -H \"Authorization: Bearer $GITHUB_TOKEN\" \
                 \"$redirect_url\")"
 
             if ! retry_with_backoff "$curl_download_cmd"; then
@@ -272,7 +271,7 @@ download_job_logs() {
                         echo "Warning: mv failed, but cp succeeded for $output_file. Log content might be duplicated in temp." >&2
                         return 0 # Still success as logs are in place
                     else
-                        echo "Logs download successful (HTTP $http_status) but failed to save to $output_file" > "$output_file"
+                        echo "Logs download successful (HTTP $http_status) but failed to save to $output_file" >"$output_file"
                         return 1 # Treat as failure if we can't save the log
                     fi
                 fi
