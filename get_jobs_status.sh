@@ -273,10 +273,10 @@ main() {
   local github_data
   github_data=$(fetch_github_jobs)
   # Extract unique run_ids for completed jobs and export them
-  GITHUB_COMPLETED_RUN_IDS=$(echo "$github_data" | jq -r '.jobs[] | select(.status == "completed") | .run_id' | sort -u)
+  GITHUB_UNIQUE_JOB_IDS=$(echo "$github_data" | jq -r '.jobs[] | select(.status == "completed") | .run_id' | sort -u)
   debug Run data: $github_data
-  debug "GITHUB_COMPLETED_RUN_IDS: $GITHUB_COMPLETED_RUN_IDS"
-  export GITHUB_COMPLETED_RUN_IDS
+  debug "GITHUB_UNIQUE_JOB_IDS: $GITHUB_UNIQUE_JOB_IDS"
+  export GITHUB_UNIQUE_JOB_IDS
 
   # Step 2: Send data to SaaS platform
   send_to_saas_platform "$github_data"
