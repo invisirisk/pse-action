@@ -61,22 +61,36 @@ trap cleanup EXIT SIGHUP SIGINT SIGTERM
 
 # Function to create a temporary file and add it to the cleanup list
 create_temp_file() {
-    local suffix="${1:-}"
+    local suffix="${1:-}" # Optional suffix
     local temp_file
-
-    if [ -n "$suffix" ]; then
-        temp_file=$(mktemp --suffix="$suffix")
+    # Try to create in /tmp first for runners, then fallback to mktemp default
+    if [[ -n "$suffix" ]]; then
+        temp_file=$(mktemp "/tmp/tmp.${suffix}.XXXXXX" 2>/dev/null) || temp_file=$(mktemp "tmp.${suffix}.XXXXXX")
     else
-        temp_file=$(mktemp)
+        temp_file=$(mktemp "/tmp/tmp.XXXXXX" 2>/dev/null) || temp_file=$(mktemp "tmp.XXXXXX")
     fi
 
-    if [ -z "$temp_file" ] || ! [ -f "$temp_file" ]; then
-        echo "Error: Failed to create temporary file." >&2
-        exit 1
+    if [ -z "$temp_file" ] || [ ! -f "$temp_file" ]; then
+        echo "Error: mktemp failed to create a temporary file (suffix: '$suffix')." >&2
+        return 1 # Indicate failure
     fi
-
     TEMP_FILES+=("$temp_file")
+    debug "Created temporary file: $temp_file"
     echo "$temp_file"
+}
+
+# Function to create a temporary directory and add it to the cleanup list
+create_temp_dir() {
+    local temp_dir
+    # Try to create in /tmp first for runners, then fallback to mktemp default
+    temp_dir=$(mktemp -d "/tmp/tmpdir.XXXXXX" 2>/dev/null) || temp_dir=$(mktemp -d "tmpdir.XXXXXX")
+    if [ -z "$temp_dir" ] || [ ! -d "$temp_dir" ]; then
+        echo "Error: mktemp -d failed to create a temporary directory." >&2
+        return 1 # Indicate failure
+    fi
+    TEMP_FILES+=("$temp_dir")
+    debug "Created temporary directory: $temp_dir"
+    echo "$temp_dir"
 }
 
 # Function to check HTTP status code
