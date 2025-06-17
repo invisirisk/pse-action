@@ -73,7 +73,7 @@ create_temp() {
     local opts=()
     local suffix=""
     # Simple argument parsing.
-    if [[ "$1" == "-d" ]]; then
+    if [[ "${1-}" == "-d" ]]; then
         opts+=("-d")
         shift
     fi
@@ -196,10 +196,6 @@ fetch_github_workflow_jobs() {
     local api_url="https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}/jobs"
 
     debug "Fetching GitHub workflow jobs from: $api_url"
-    # The sleep is a defensive measure to allow the GitHub API to become consistent.
-    debug "Sleeping for 2 seconds before fetching job statuses..."
-    sleep 2
-
     # We need to capture the http_status, so we run curl inside a subshell command.
     # This is one of the few cases where building a command for a wrapper is complex.
     # An alternative is to not wrap this specific curl call in retry_with_backoff.
