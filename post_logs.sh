@@ -200,6 +200,8 @@ download_job_logs() {
             return 0
         else
             echo "⚠️ GitHub CLI failed, trying API method"
+            debug "Waiting 10 seconds before attempting API log download for job $job_id..."
+            sleep 10
             # Fallback to API method if CLI fails
             local api_url="${GITHUB_API_URL}/repos/${GITHUB_REPOSITORY}/actions/jobs/${job_id}/logs"
 
@@ -404,14 +406,21 @@ run_analysis() {
             for job_id in "${job_id_array[@]}"; do
                 job_id_trimmed=$(echo "$job_id" | xargs)
                 if [[ -n "$job_id_trimmed" ]]; then
-                    download_job_logs "$job_id_trimmed" || true
+                    if ! download_job_logs "$job_id_trimmed"; then
+                        echo "❌ Critical error: Failed to download logs for job ${job_id_trimmed}. Aborting SaaS upload and further processing." >&2
+                        # No need for 'return 1' here if 'set -e' is active, as the script will exit.
+                        # However, to be explicit and ensure behavior even if 'set -e' is somehow bypassed for this function call:
+                        return 1
+                    fi
                     processed_job_count=$((processed_job_count + 1))
                 fi
             done
 
-            if [[ $processed_job_count -eq 0 ]]; then
-                echo "⚠️ No valid job IDs were processed from the fetched completed jobs list."
-                echo "No valid jobs processed" >"${log_dir}/no_valid_jobs.txt"
+            # This point is reached only if all download_job_logs calls succeeded or if there were no jobs to process.
+            if [ "$processed_job_count" -eq 0 ]; then
+                # This 'if' means either completed_job_ids was initially empty, or all job_id_trimmed were empty strings.
+                # The message "No completed jobs found" or similar would have already been echoed by prior logic if completed_job_ids was empty.
+                echo "ℹ️ No logs were processed and available to send to SaaS platform (either no completed jobs found, all were empty strings, or all failed download and script exited)."
             fi
         fi
     fi
