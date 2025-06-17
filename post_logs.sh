@@ -17,6 +17,20 @@ debug() {
     fi
 }
 
+# Function to cat file content if DEBUG is true
+debug_cat_file() {
+    local file_to_cat="$1"
+    if [ "$DEBUG" = "true" ]; then
+        if [ -f "$file_to_cat" ] && [ -s "$file_to_cat" ]; then # Check if file exists and is not empty
+            echo "--- Debug content of $file_to_cat start ---" >&2
+            cat "$file_to_cat" >&2
+            echo "--- Debug content of $file_to_cat end ---" >&2
+        elif [ "$DEBUG" = "true" ]; then
+             echo "Debug: File $file_to_cat not found or empty for catting." >&2
+        fi
+    fi
+}
+
 # Function to load metadata from analytics_metadata.json file
 load_metadata_from_file() {
     if [ -f "analytics_metadata.json" ]; then
@@ -200,8 +214,6 @@ download_job_logs() {
             return 0
         else
             echo "⚠️ GitHub CLI failed, trying API method"
-            debug "Waiting 10 seconds before attempting API log download for job $job_id..."
-            sleep 10
             # Fallback to API method if CLI fails
             local api_url="${GITHUB_API_URL}/repos/${GITHUB_REPOSITORY}/actions/jobs/${job_id}/logs"
 
@@ -230,22 +242,45 @@ download_job_logs() {
 
             # Download the actual logs with retry logic
             local http_status
-            local curl_download_cmd="http_status=\$(curl -s -w \"%{http_code}\" -L -o \"$output_file\" \
+            local curl_response_content_file
+            curl_response_content_file=$(create_temp_file "curl_api_log_response.txt")
+            if [ -z "$curl_response_content_file" ]; then
+                echo "Error: create_temp_file failed for API log download response." >&2
+                echo "Logs download failed (temp file creation error for API response)" >"$output_file"
+                return 1
+            fi
+
+            local curl_download_cmd="http_status=\$(curl -s -w \"%{http_code}\" -L -o \"$curl_response_content_file\" \
                 -H \"Authorization: Bearer $GITHUB_TOKEN\" \
                 \"$redirect_url\")"
 
             if ! retry_with_backoff "$curl_download_cmd"; then
-                echo "❌ Failed to download logs for job $job_id after multiple attempts"
-                echo "Logs download failed (API - retry failed)" >"$output_file"
+                echo "❌ Failed to download logs for job $job_id after multiple attempts (curl execution error or repeated non-HTTP failures)."
+                debug "Last curl command executed by retry_with_backoff: $curl_download_cmd"
+                debug_cat_file "$curl_response_content_file"
+                echo "Logs download failed (API - retry mechanism failed)" >"$output_file"
                 return 1
             fi
 
+            # At this point, retry_with_backoff succeeded, meaning curl executed and http_status should be set.
             if [[ "$http_status" -ge 200 && "$http_status" -lt 300 ]]; then
-                echo "✅ Saved logs for job $job_id (via API)"
+                echo "✅ Saved logs for job $job_id (via API, HTTP $http_status)"
+                if ! mv "$curl_response_content_file" "$output_file"; then
+                    echo "Error: Failed to move downloaded log content from $curl_response_content_file to $output_file" >&2
+                    # Attempt to copy as a fallback
+                    if cp "$curl_response_content_file" "$output_file"; then
+                        echo "Warning: mv failed, but cp succeeded for $output_file. Log content might be duplicated in temp." >&2
+                        return 0 # Still success as logs are in place
+                    else
+                        echo "Logs download successful (HTTP $http_status) but failed to save to $output_file" > "$output_file"
+                        return 1 # Treat as failure if we can't save the log
+                    fi
+                fi
                 return 0
             else
-                echo "❌ Failed to download logs for job $job_id (HTTP $http_status)"
-                echo "Logs download failed (HTTP $http_status)" >"$output_file"
+                echo "❌ Failed to download logs for job $job_id (API returned HTTP $http_status)"
+                debug_cat_file "$curl_response_content_file"
+                echo "Logs download failed (API - HTTP $http_status)" >"$output_file"
                 return 1
             fi
         fi
