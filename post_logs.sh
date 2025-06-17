@@ -47,7 +47,7 @@ trap cleanup EXIT SIGHUP SIGINT SIGTERM
 
 # Function to create a temporary file and add it to the cleanup list
 create_temp_file() {
-    local suffix="$1"
+    local suffix="${1:-}"
     local temp_file
 
     if [ -n "$suffix" ]; then
@@ -322,6 +322,10 @@ send_zip_to_saas_platform() {
     # Create a temporary file for the response body
     local response_file
     response_file=$(create_temp_file)
+    if [ -z "$response_file" ]; then
+        echo "Error: create_temp_file failed to return a filename for the API response." >&2
+        return 1
+    fi
 
     # Perform the POST request to the custom API using multipart/form-data with retry logic
     local http_status
