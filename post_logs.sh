@@ -365,7 +365,7 @@ send_zip_to_saas_platform() {
 
     # Perform the POST request to the custom API using multipart/form-data with retry logic
     local http_status
-    local curl_cmd="http_status=\$(curl -sSL -w \"%{http_code}\" \
+    local curl_cmd="http_status=\$(curl -sSL -v -w \"%{http_code}\" \
       -X POST \
       -H \"accept: application/json\" \
       -H \"Content-Type: multipart/form-data\" \
@@ -482,7 +482,7 @@ run_analysis() {
         echo "❌ Error: Zip file $zip_file failed integrity check (unzip -t). Archive may be corrupted." >&2
         debug "Output of unzip -t \"$zip_file\" (if any was captured to stdout/stderr by the command itself):"
         unzip -t "$zip_file" # Allow output to go to script's stdout/stderr for capture
-        return 1 # Do not proceed with sending a corrupted zip file
+        return 1             # Do not proceed with sending a corrupted zip file
     fi
 
     # Send the zip file to SaaS platform
