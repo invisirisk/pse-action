@@ -354,6 +354,9 @@ send_zip_to_saas_platform() {
     local custom_api_url="${API_URL}/ingestionapi/v1/upload-generic-file?api_key=${APP_TOKEN}&scan_id=${SCAN_ID}&file_type=logs"
 
     debug "Sending log archive to custom API endpoint: ${custom_api_url}"
+    debug "Expected size of zip file '$zip_file_path' to be uploaded:"
+    wc -c <"$zip_file_path" >&2 # Send to stderr for debug log
+    ls -l "$zip_file_path" >&2  # Send to stderr for debug log
 
     # Create a temporary file for the response body
     local response_file
@@ -477,7 +480,16 @@ run_analysis() {
     # Test the zip file integrity
     debug "Testing integrity of zip file: $zip_file"
     if unzip -t "$zip_file" >/dev/null 2>&1; then
-        debug "✅ Zip file $zip_file integrity check passed."
+        debug "✅ Zip file $zip_file basic integrity check (unzip -t) passed."
+        debug "Performing more thorough local extraction test to /dev/null..."
+        if unzip -o "$zip_file" -d /dev/null >/dev/null 2>&1; then
+            debug "✅ Zip file $zip_file full local extraction test to /dev/null passed."
+        else
+            echo "❌ Error: Zip file $zip_file failed full local extraction test (unzip -o -d /dev/null). Archive may be corrupted despite -t passing." >&2
+            debug "Output of failed unzip -o "$zip_file" -d /dev/null (if any was captured to stdout/stderr by the command itself):"
+            unzip -o "$zip_file" -d /dev/null
+            return 1 # Do not proceed with a potentially corrupted zip file
+        fi
     else
         echo "❌ Error: Zip file $zip_file failed integrity check (unzip -t). Archive may be corrupted." >&2
         debug "Output of unzip -t \"$zip_file\" (if any was captured to stdout/stderr by the command itself):"
