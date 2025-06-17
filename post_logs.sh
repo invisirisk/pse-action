@@ -481,14 +481,25 @@ run_analysis() {
     debug "Testing integrity of zip file: $zip_file"
     if unzip -t "$zip_file" >/dev/null 2>&1; then
         debug "✅ Zip file $zip_file basic integrity check (unzip -t) passed."
-        debug "Performing more thorough local extraction test to /dev/null..."
-        if unzip -o "$zip_file" -d /dev/null >/dev/null 2>&1; then
-            debug "✅ Zip file $zip_file full local extraction test to /dev/null passed."
+        debug "Performing more thorough local extraction test to a temporary directory..."
+        local temp_extract_dir
+        temp_extract_dir=$(create_temp_dir)
+
+        if [ -z "$temp_extract_dir" ] || [ ! -d "$temp_extract_dir" ]; then
+            echo "⚠️ Warning: Could not create temporary directory for full zip test. Skipping full extraction test (relying on 'unzip -t' only)." >&2
+            # If create_temp_dir fails, we can't perform this specific test.
+            # Depending on strictness, one might choose to 'return 1' here too.
+            # For now, we'll proceed if -t passed and temp dir creation failed.
+        elif unzip -o "$zip_file" -d "$temp_extract_dir" >/dev/null 2>&1; then
+            debug "✅ Zip file $zip_file full local extraction test to temp dir '$temp_extract_dir' passed."
+            rm -rf "$temp_extract_dir" # Clean up successful extraction
         else
-            echo "❌ Error: Zip file $zip_file failed full local extraction test (unzip -o -d /dev/null). Archive may be corrupted despite -t passing." >&2
-            debug "Output of failed unzip -o "$zip_file" -d /dev/null (if any was captured to stdout/stderr by the command itself):"
-            unzip -o "$zip_file" -d /dev/null
-            return 1 # Do not proceed with a potentially corrupted zip file
+            echo "❌ Error: Zip file $zip_file failed full local extraction test to temp dir '$temp_extract_dir'." >&2
+            debug "Output of failed unzip -o \"$zip_file\" -d \"$temp_extract_dir\" (if any was captured to stdout/stderr by the command itself):"
+            # Attempt to show the error from unzip directly
+            unzip -o "$zip_file" -d "$temp_extract_dir"
+            rm -rf "$temp_extract_dir" # Clean up failed/partial extraction
+            return 1                   # Do not proceed with a potentially corrupted zip file
         fi
     else
         echo "❌ Error: Zip file $zip_file failed integrity check (unzip -t). Archive may be corrupted." >&2
