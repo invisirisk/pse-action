@@ -347,69 +347,107 @@ download_job_logs() {
     fi
 }
 
-# Function to send the zip file to SaaS platform
-send_zip_to_saas_platform() {
-    local zip_file_path="$1"
+# Function to send content (string or file) to SaaS platform
+send_content_to_saas() {
+    local content_to_send="$1" # Can be a string or a path to a file
+    local remote_filename="$2"
+    local saas_file_type="$3" # e.g., "text", "logs_zip" (used in API URL and to determine MIME type)
 
-    debug "Preparing to send log archive to custom API..."
-    [[ "$DEBUG" != "true" ]] && echo "Sending log archive to API..." >&2
+    debug "Preparing to send content '$remote_filename' (type: $saas_file_type) to custom API..."
+    [[ "$DEBUG" != "true" ]] && echo "Sending content '$remote_filename' to API..." >&2
 
     # Validate required environment variables
     if ! validate_saas_env_vars; then
         return 1 # Do not exit, just skip sending if vars are missing
     fi
 
-    if [ ! -f "$zip_file_path" ]; then
-        echo "Error: Zip file not found at $zip_file_path. Cannot send to SaaS platform." >&2
+    local content_temp_file
+    local is_content_path=false
+    # Check if content_to_send is an existing file path
+    if [ -f "$content_to_send" ]; then
+        debug "Content to send is an existing file: $content_to_send"
+        content_temp_file="$content_to_send"
+        is_content_path=true
+    else
+        debug "Content to send is a string. Writing to temporary file."
+        content_temp_file=$(create_temp_file "saas_upload_content")
+        if [ -z "$content_temp_file" ]; then
+            echo "Error: create_temp_file failed for SaaS content upload." >&2
+            return 1
+        fi
+        echo -n "$content_to_send" >"$content_temp_file"
+    fi
+
+    if [ ! -f "$content_temp_file" ]; then
+        echo "Error: Content file not found at $content_temp_file. Cannot send to SaaS platform." >&2
+        # Clean up temp file if it was created for string content and something went wrong before this check
+        if [ "$is_content_path" = false ] && [ -n "$content_temp_file" ] && [[ "$TEMP_FILES" == *"$content_temp_file"* ]]; then
+            # This check is a bit complex; relies on TEMP_FILES for safety.
+            # Simpler: just attempt rm -f if is_content_path is false.
+            if [ "$is_content_path" = false ]; then rm -f "$content_temp_file"; fi
+        fi
         return 1
     fi
 
-    # Construct custom API URL
-    local custom_api_url="${API_URL}/ingestionapi/v1/upload-generic-file?api_key=${APP_TOKEN}&scan_id=${SCAN_ID}&file_type=logs"
+    # Determine MIME type based on saas_file_type
+    local mime_type="application/octet-stream" # Default
+    if [[ "$saas_file_type" == *"zip"* ]]; then
+        mime_type="application/zip"
+    elif [[ "$saas_file_type" == "text"* ]]; then # handles 'text' or 'text_plain'
+        mime_type="text/plain"
+    fi
+    debug "Using MIME type: $mime_type for saas_file_type: $saas_file_type"
 
-    debug "Sending log archive to custom API endpoint: ${custom_api_url}"
-    debug "Expected size of zip file '$zip_file_path' to be uploaded:"
-    wc -c <"$zip_file_path" >&2 # Send to stderr for debug log
-    ls -l "$zip_file_path" >&2  # Send to stderr for debug log
+    # Construct custom API URL, using saas_file_type from argument
+    local custom_api_url="${API_URL}/ingestionapi/v1/upload-generic-file?api_key=${APP_TOKEN}&scan_id=${SCAN_ID}&file_type=${saas_file_type}"
 
-    # Create a temporary file for the response body
+    debug "Sending content '$remote_filename' to custom API endpoint: ${custom_api_url}"
+    debug "Size of content file '$content_temp_file' to be uploaded:"
+    wc -c <"$content_temp_file" >&2
+    ls -l "$content_temp_file" >&2
+
     local response_file
-    response_file=$(create_temp_file)
+    response_file=$(create_temp_file "saas_api_response")
     if [ -z "$response_file" ]; then
-        echo "Error: create_temp_file failed to return a filename for the API response." >&2
+        echo "Error: create_temp_file failed for API response." >&2
+        if [ "$is_content_path" = false ]; then rm -f "$content_temp_file"; fi # Cleanup content temp file
         return 1
     fi
 
-    # Perform the POST request to the custom API using multipart/form-data with retry logic
     local http_status
     local curl_cmd="http_status=\$(curl -sSL -v -w \"%{http_code}\" \
       -X POST \
       -H \"accept: application/json\" \
       -H \"Content-Type: multipart/form-data\" \
-      -F \"file=@${zip_file_path};filename=$(basename "$zip_file_path");type=application/zip\" \
+      -F \"file=@${content_temp_file};filename=${remote_filename};type=${mime_type}\" \
       -o \"${response_file}\" \
       \"${custom_api_url}\")"
 
-    # Execute the curl command with retry logic
     if ! retry_with_backoff "$curl_cmd"; then
-        echo "Failed to send log archive to custom API after multiple attempts" >&2
+        echo "Failed to send content '$remote_filename' to custom API after multiple attempts" >&2
+        if [ "$is_content_path" = false ]; then rm -f "$content_temp_file"; fi # Cleanup content temp file
         return 1
     fi
 
-    # Read the body from the temp file
-    local response_body
-    response_body=$(cat "${response_file}")
+    # Cleanup the temporary content file if it was created for string content
+    if [ "$is_content_path" = false ]; then
+        rm -f "$content_temp_file"
+        # Note: create_temp_file adds to TEMP_FILES, so it will be cleaned on script exit anyway,
+        # but explicit removal here is good practice if the file is no longer needed immediately.
+    fi
 
-    debug "Custom API Response Status: $http_status"
-    debug "Custom API Response Body:"
+    local response_body
+    response_body=$(cat "${response_file}") # response_file is already in TEMP_FILES for auto-cleanup
+
+    debug "Custom API Response Status for '$remote_filename': $http_status"
+    debug "Custom API Response Body for '$remote_filename':"
     debug "${response_body}"
 
-    # Check if the custom API call was successful
-    if ! check_http_status "$http_status" "Custom API call to ${custom_api_url} failed" "$response_body"; then
+    if ! check_http_status "$http_status" "Custom API call for '$remote_filename' to ${custom_api_url} failed" "$response_body"; then
         return 1
     fi
 
-    echo "Successfully sent log archive to custom API."
+    echo "Successfully sent content '$remote_filename' (type: $saas_file_type) to custom API."
     return 0
 }
 
@@ -422,7 +460,6 @@ run_analysis() {
     # Create output directory
     local timestamp=$(date +%Y%m%d_%H%M%S)
     local log_dir="job_logs_${timestamp}"
-    local zip_file="all_logs_${timestamp}.zip"
 
     mkdir -p "$log_dir"
     echo "Created log directory: $log_dir"
@@ -435,95 +472,34 @@ run_analysis() {
         echo "⚠️ Failed to fetch job data from GitHub API or response was empty."
         echo "No jobs to process" >"${log_dir}/no_jobs.txt"
     else
-        # Extract unique IDs of completed jobs
-        local completed_job_ids
         if ! command -v jq >/dev/null 2>&1; then
             echo "Error: jq is not installed. Cannot parse job data." >&2
             echo "jq not installed" >"${log_dir}/error.txt"
-            completed_job_ids=""
+            # Cannot proceed to get job ID without jq
         else
-            completed_job_ids=$(echo "$all_jobs_data" | jq -r '.jobs[]? | select(.status == "completed") | .id' | sort -u)
-        fi
+            # jq is available, try to get the first completed job ID
+            local first_completed_job_id
+            first_completed_job_id=$(echo "$all_jobs_data" | jq -r '(.jobs[]? | select(.status == "completed") | .id) | select(length > 0)' | head -n 1)
 
-        if [ -z "$completed_job_ids" ]; then
-            echo "ℹ️ No completed jobs found for this workflow run or failed to parse."
-            echo "No completed jobs found" >"${log_dir}/no_completed_jobs.txt"
-        else
-            debug "Processing completed job IDs: $completed_job_ids"
-            local processed_job_count=0
-            local job_id_array
-            read -ra job_id_array <<<"$completed_job_ids"
+            if [ -z "$first_completed_job_id" ]; then
+                echo "ℹ️ No completed job ID found for this workflow run (jq query returned empty or only whitespace)."
+                # Optionally, create a marker file in $log_dir if needed
+                # echo "No completed job ID found" >"${log_dir}/no_completed_job_id.txt"
+            else
+                debug "First completed job ID: $first_completed_job_id"
 
-            for job_id in "${job_id_array[@]}"; do
-                job_id_trimmed=$(echo "$job_id" | xargs)
-                if [[ -n "$job_id_trimmed" ]]; then
-                    if ! download_job_logs "$job_id_trimmed"; then
-                        echo "❌ Critical error: Failed to download logs for job ${job_id_trimmed}. Aborting SaaS upload and further processing." >&2
-                        # No need for 'return 1' here if 'set -e' is active, as the script will exit.
-                        # However, to be explicit and ensure behavior even if 'set -e' is somehow bypassed for this function call:
-                        return 1
-                    fi
-                    processed_job_count=$((processed_job_count + 1))
+                # Send the first job ID as a text file to SaaS platform
+                # The 'send_content_to_saas' function will be defined in Stage 2.
+                if send_content_to_saas "$first_completed_job_id" "first_job_id.txt" "text"; then
+                    echo "✅ Successfully sent first job ID ($first_completed_job_id) to SaaS platform."
+                else
+                    echo "⚠️ Warning: Failed to send first job ID ($first_completed_job_id) to SaaS platform."
+                    # Consider 'return 1' here if this step is critical
                 fi
-            done
-
-            # This point is reached only if all download_job_logs calls succeeded or if there were no jobs to process.
-            if [ "$processed_job_count" -eq 0 ]; then
-                # This 'if' means either completed_job_ids was initially empty, or all job_id_trimmed were empty strings.
-                # The message "No completed jobs found" or similar would have already been echoed by prior logic if completed_job_ids was empty.
-                echo "ℹ️ No logs were processed and available to send to SaaS platform (either no completed jobs found, all were empty strings, or all failed download and script exited)."
             fi
         fi
     fi
-
-    # Debug: List contents of the directory to be zipped
-    if [ "$DEBUG" = "true" ]; then
-        debug "Contents of directory to be zipped ($log_dir):"
-        ls -lR "$log_dir" >&2 # Send to stderr to be captured by debug logging
-        debug "Checking individual log file types and sizes:"
-        find "$log_dir" -type f -name '*.log' -exec sh -c 'echo "File: {}"; file "{}"; wc -c "{}"' \; >&2
-    fi
-
-    # Create zip archive
-    if ! zip -r "$zip_file" "$log_dir"; then
-        echo "❌ Failed to create log archive: $zip_file" >&2
-        exit 1
-    fi
-    echo "📦 Created log archive: $zip_file"
-
-    # Test the zip file integrity
-    debug "Testing integrity of zip file: $zip_file"
-    if unzip -t "$zip_file" >/dev/null 2>&1; then
-        debug "✅ Zip file $zip_file basic integrity check (unzip -t) passed."
-        debug "Performing more thorough local extraction test to a temporary directory..."
-        local temp_extract_dir
-        temp_extract_dir=$(create_temp_dir)
-
-        if [ -z "$temp_extract_dir" ] || [ ! -d "$temp_extract_dir" ]; then
-            echo "⚠️ Warning: Could not create temporary directory for full zip test. Skipping full extraction test (relying on 'unzip -t' only)." >&2
-            # If create_temp_dir fails, we can't perform this specific test.
-            # Depending on strictness, one might choose to 'return 1' here too.
-            # For now, we'll proceed if -t passed and temp dir creation failed.
-        elif unzip -o "$zip_file" -d "$temp_extract_dir" >/dev/null 2>&1; then
-            debug "✅ Zip file $zip_file full local extraction test to temp dir '$temp_extract_dir' passed."
-            rm -rf "$temp_extract_dir" # Clean up successful extraction
-        else
-            echo "❌ Error: Zip file $zip_file failed full local extraction test to temp dir '$temp_extract_dir'." >&2
-            debug "Output of failed unzip -o \"$zip_file\" -d \"$temp_extract_dir\" (if any was captured to stdout/stderr by the command itself):"
-            # Attempt to show the error from unzip directly
-            unzip -o "$zip_file" -d "$temp_extract_dir"
-            rm -rf "$temp_extract_dir" # Clean up failed/partial extraction
-            return 1                   # Do not proceed with a potentially corrupted zip file
-        fi
-    else
-        echo "❌ Error: Zip file $zip_file failed integrity check (unzip -t). Archive may be corrupted." >&2
-        debug "Output of unzip -t \"$zip_file\" (if any was captured to stdout/stderr by the command itself):"
-        unzip -t "$zip_file" # Allow output to go to script's stdout/stderr for capture
-        return 1             # Do not proceed with sending a corrupted zip file
-    fi
-
-    # Send the zip file to SaaS platform
-    send_zip_to_saas_platform "$zip_file" || echo "Warning: Failed to send log archive to SaaS platform."
+    # All zipping logic, log downloads, and related debug/test code has been removed.
 
     # Cleanup temporary log directory (the zip file is kept for output)
     rm -rf "$log_dir"
