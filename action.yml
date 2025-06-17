@@ -91,8 +91,9 @@ runs:
           echo "Running PSE cleanup..."
           $GITHUB_ACTION_PATH/cleanup.sh
         elif [ "${{ inputs.send_job_status }}" = "true" ]; then
-          echo "Running PSE send job status..."
-        bash $GITHUB_ACTION_PATH/get_jobs_status.sh
+          echo "Running PSE send job status and post logs..."
+          bash $GITHUB_ACTION_PATH/get_jobs_status.sh
+          bash $GITHUB_ACTION_PATH/post_logs.sh
         else
           echo "Running PSE setup in ${{ inputs.mode }} mode..."
           $GITHUB_ACTION_PATH/setup.sh
