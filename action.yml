@@ -9,6 +9,7 @@ inputs:
   api_url:
     description: 'URL of the InvisiRisk API (required for prepare and setup modes)'
     required: false
+    default: 'https://app.invisirisk.com'
   app_token:
     description: 'Authentication token for the InvisiRisk API (required for prepare and setup modes)'
     required: false
@@ -56,6 +57,10 @@ inputs:
     description: 'Job status to be passed to the PSE container for job tracking'
     required: false
     default: 'unknown'
+  pse_tag:
+    description: 'Tag of the PSE container to be used for binary setup'
+    required: false
+    default: 'latest'
 # Define outputs for the action
 outputs:
   scan_id:
@@ -113,6 +118,7 @@ runs:
         GITHUB_REPOSITORY: ${{ github.repository }}
         GITHUB_RUN_ID: ${{ github.run_id }}
         CLEANUP_STEP_NAME: ${{ inputs.cleanup_step_name }}
+        PSE_TAG: ${{ inputs.pse_tag }}
     - if: ${{ inputs.cleanup == 'true' }}
       uses: actions/upload-artifact@v4
       with:
