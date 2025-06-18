@@ -422,35 +422,10 @@ setup_certificates() {
     log "ERROR: Failed to retrieve CA certificate after $MAX_RETRIES attempts"
     exit 1
   fi
-  
-  # Create the certificate directory if it doesn't exist
-  debug "Creating certificate directory: /usr/local/share/ca-certificates"
-
-  # Determine the certificate directory based on the OS
-  local cert_dir
-  local update_cert_command
-
-  debug "Detecting operating system for certificate setup"
-
-  if command -v apt-get >/dev/null 2>&1; then
-    cert_dir="/usr/local/share/ca-certificates"
-    update_cert_command="update-ca-certificates"
-    debug "Detected Debian-based system"
-  elif command -v yum >/dev/null 2>&1; then
-    cert_dir="/etc/pki/ca-trust/source/anchors"
-    update_cert_command="update-ca-trust"
-    debug "Detected Red Hat-based system"
-  else
-    log "ERROR: Unsupported operating system for certificate setup"
-    exit 1
-  fi
-
-  # Download the certificate from the proxy
-  debug "Downloading certificate from proxy: http://$PROXY_IP:8081/cert.crt"
 
   # Update CA certificates non-interactively
   debug "Updating CA certificates..."
-  run_with_privilege $update_cert_command
+  run_with_privilege update-ca-certificates
   
   # Set the correct path for the installed certificate
   CA_CERT_PATH="/etc/ssl/certs/pse.crt"
