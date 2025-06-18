@@ -260,11 +260,11 @@ set_outputs() {
   echo "PSE_SCAN_ID=$SCAN_ID" >>$GITHUB_ENV
 
   # Debug: Print the contents of GITHUB_OUTPUT file
-  log "Contents of GITHUB_OUTPUT file:"
+  debug "Contents of GITHUB_OUTPUT file:"
   if [ -f "$GITHUB_OUTPUT" ]; then
-    log "$(cat $GITHUB_OUTPUT)"
+    debug "$(cat $GITHUB_OUTPUT)"
   else
-    log "GITHUB_OUTPUT file does not exist or is not accessible"
+    debug "GITHUB_OUTPUT file does not exist or is not accessible"
   fi
 }
 

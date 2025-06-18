@@ -209,11 +209,11 @@ signal_build_end() {
 
     if [ "$HTTP_CODE" -ge 200 ] && [ "$HTTP_CODE" -lt 300 ]; then
       log "End signal sent successfully (HTTP $HTTP_CODE)"
-      log "Response: $RESPONSE_BODY"
+      debug "Response: $RESPONSE_BODY"
       return 0
     else
       log "Failed to send end signal (HTTP $HTTP_CODE)"
-      log "Response: $RESPONSE_BODY"
+      debug "Response: $RESPONSE_BODY"
       log "Retrying in $RETRY_DELAY seconds..."
       sleep $RETRY_DELAY
       RETRY_DELAY=$((RETRY_DELAY * 2))
@@ -309,6 +309,10 @@ cleanup_iptables() {
 
 # Function to clean up certificates
 cleanup_certificates() {
+  if [[ "$DEBUG" != "true" ]]; then
+    return 0
+  fi
+
   log "Cleaning up certificates"
 
   # Check if in test mode
