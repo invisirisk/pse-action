@@ -309,10 +309,6 @@ cleanup_iptables() {
 
 # Function to clean up certificates
 cleanup_certificates() {
-  if [[ "$DEBUG" != "true" ]]; then
-    return 0
-  fi
-
   log "Cleaning up certificates"
 
   # Check if in test mode
@@ -375,6 +371,7 @@ main() {
 
   # Validate environment variables
   validate_env_vars
+  upload_scan_metadata
 
   # Determine if we're in a containerized environment
   IS_CONTAINERIZED=false
@@ -408,7 +405,6 @@ main() {
   cleanup_iptables
   cleanup_certificates
 
-  upload_scan_metadata
 
   log "PSE GitHub Action cleanup completed successfully"
 }
