@@ -370,7 +370,7 @@ setup_http_proxy() {
   export HTTP_PROXY=http://127.0.0.1:3128
   export https_proxy=http://127.0.0.1:3128
   export HTTPS_PROXY=http://127.0.0.1:3128
-  export no_proxy="app.invisirisk.com,localhost,127.0.0.1,"
+  export no_proxy="app.invisirisk.com,localhost,127.0.0.1"
   export NO_PROXY="app.invisirisk.com,localhost,127.0.0.1"
   
   # Add to GitHub environment variables for subsequent steps
