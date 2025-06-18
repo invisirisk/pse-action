@@ -365,13 +365,33 @@ upload_scan_metadata() {
 }
 EOF
 }
+
+unset_http_proxy() {
+  log "Unsetting HTTP proxy environment variables"
+
+  local proxy_vars=(
+    "http_proxy"
+    "HTTP_PROXY"
+    "https_proxy"
+    "HTTPS_PROXY"
+    "no_proxy"
+    "NO_PROXY"
+  )
+
+  for var in "${proxy_vars[@]}"; do
+    echo "$var=" >>$GITHUB_ENV
+    unset "$var"
+  done
+
+  log "HTTP proxy environment variables unset successfully"
+}
+
 # Main execution
 main() {
   log "Starting PSE GitHub Action cleanup"
 
   # Validate environment variables
   validate_env_vars
-  upload_scan_metadata
 
   # Determine if we're in a containerized environment
   IS_CONTAINERIZED=false
@@ -404,6 +424,9 @@ main() {
   # Always clean up iptables and certificates
   cleanup_iptables
   cleanup_certificates
+  unset_http_proxy
+  upload_scan_metadata
+
 
 
   log "PSE GitHub Action cleanup completed successfully"
