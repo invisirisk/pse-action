@@ -370,16 +370,16 @@ setup_http_proxy() {
   export HTTP_PROXY=http://127.0.0.1:3128
   export https_proxy=http://127.0.0.1:3128
   export HTTPS_PROXY=http://127.0.0.1:3128
-  export no_proxy="app.invisirisk.com,localhost,127.0.0.1,docker,*.docker.internal"
-  export NO_PROXY="app.invisirisk.com,localhost,127.0.0.1,docker,*.docker.internal"
+  export no_proxy="app.invisirisk.com,localhost,127.0.0.1,"
+  export NO_PROXY="app.invisirisk.com,localhost,127.0.0.1"
   
   # Add to GitHub environment variables for subsequent steps
   echo "http_proxy=http://127.0.0.1:3128" >> $GITHUB_ENV
   echo "HTTP_PROXY=http://127.0.0.1:3128" >> $GITHUB_ENV
   echo "https_proxy=http://127.0.0.1:3128" >> $GITHUB_ENV
   echo "HTTPS_PROXY=http://127.0.0.1:3128" >> $GITHUB_ENV
-  echo "no_proxy=app.invisirisk.com,localhost,127.0.0.1,docker,*.docker.internal" >> $GITHUB_ENV
-  echo "NO_PROXY=app.invisirisk.com,localhost,127.0.0.1,docker,*.docker.internal" >> $GITHUB_ENV
+  echo "no_proxy=app.invisirisk.com,localhost,127.0.0.1" >> $GITHUB_ENV
+  echo "NO_PROXY=app.invisirisk.com,localhost,127.0.0.1" >> $GITHUB_ENV
   
   log "HTTP proxy environment variables set successfully"
 }
@@ -456,26 +456,26 @@ setup_certificates() {
   # Add handling for docker
   if command -v docker >/dev/null 2>&1; then
     echo "Docker is installed, configuring..."
-    run_with_privilege mkdir -p /etc/docker/certs.d
-    run_with_privilege cp "$CA_CERT_PATH" /etc/docker/certs.d/pse.crt
-
-    export DOCKER_CERT_PATH=/etc/docker/certs.d/pse.crt
-    
-    # Add to GITHUB_ENV to persist this variable
-    echo "DOCKER_CERT_PATH=/etc/docker/certs.d/pse.crt" >> $GITHUB_ENV
-
-    if command -v systemctl >/dev/null 2>&1; then
-      echo "Restarting docker with systemctl"
-      #run_with_privilege systemctl restart docker
-      #RESTART_EXIT_CODE=$?
-      echo "DEBUG: systemctl docker restart exit code: $RESTART_EXIT_CODE"
-    else
-      echo "Restarting docker with service"
-      #run_with_privilege service docker restart
-      #RESTART_EXIT_CODE=$?
-      echo "DEBUG: service docker restart exit code: $RESTART_EXIT_CODE"
-
-    fi
+#    run_with_privilege mkdir -p /etc/docker/certs.d
+#    run_with_privilege cp "$CA_CERT_PATH" /etc/docker/certs.d/pse.crt
+#
+#    export DOCKER_CERT_PATH=/etc/docker/certs.d/pse.crt
+#
+#    # Add to GITHUB_ENV to persist this variable
+#    echo "DOCKER_CERT_PATH=/etc/docker/certs.d/pse.crt" >> $GITHUB_ENV
+#
+#    if command -v systemctl >/dev/null 2>&1; then
+#      echo "Restarting docker with systemctl"
+#      #run_with_privilege systemctl restart docker
+#      #RESTART_EXIT_CODE=$?
+#      echo "DEBUG: systemctl docker restart exit code: $RESTART_EXIT_CODE"
+#    else
+#      echo "Restarting docker with service"
+#      #run_with_privilege service docker restart
+#      #RESTART_EXIT_CODE=$?
+#      echo "DEBUG: service docker restart exit code: $RESTART_EXIT_CODE"
+#
+#    fi
 
   fi
   
