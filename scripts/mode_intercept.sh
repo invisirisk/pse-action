@@ -370,16 +370,16 @@ setup_http_proxy() {
   export HTTP_PROXY=http://127.0.0.1:3128
   export https_proxy=http://127.0.0.1:3128
   export HTTPS_PROXY=http://127.0.0.1:3128
-  export no_proxy="app.invisirisk.com,localhost,127.0.0.1"
-  export NO_PROXY="app.invisirisk.com,localhost,127.0.0.1"
+  export no_proxy="app.invisirisk.com,localhost,127.0.0.1,docker,*.docker.internal"
+  export NO_PROXY="app.invisirisk.com,localhost,127.0.0.1,docker,*.docker.internal"
   
   # Add to GitHub environment variables for subsequent steps
   echo "http_proxy=http://127.0.0.1:3128" >> $GITHUB_ENV
   echo "HTTP_PROXY=http://127.0.0.1:3128" >> $GITHUB_ENV
   echo "https_proxy=http://127.0.0.1:3128" >> $GITHUB_ENV
   echo "HTTPS_PROXY=http://127.0.0.1:3128" >> $GITHUB_ENV
-  echo "no_proxy=app.invisirisk.com,localhost,127.0.0.1" >> $GITHUB_ENV
-  echo "NO_PROXY=app.invisirisk.com,localhost,127.0.0.1" >> $GITHUB_ENV
+  echo "no_proxy=app.invisirisk.com,localhost,127.0.0.1,docker,*.docker.internal" >> $GITHUB_ENV
+  echo "NO_PROXY=app.invisirisk.com,localhost,127.0.0.1,docker,*.docker.internal" >> $GITHUB_ENV
   
   log "HTTP proxy environment variables set successfully"
 }
