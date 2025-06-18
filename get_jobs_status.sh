@@ -33,10 +33,6 @@ load_metadata_from_file() {
   fi
 }
 
-# Print current working directory
-echo "PWD"
-pwd
-
 # Call the function to load metadata from analytics_metadata.json
 load_metadata_from_file
 
@@ -162,8 +158,6 @@ fetch_github_jobs() {
   # Variable to store the response body and http status
   local response_body
   local http_status
-  debug "Sleeping for 5 seconds before fetching GitHub job statuses..."
-  sleep 5
   # Command to execute with retry logic
   local curl_cmd="http_status=\$(curl -sSL -w \"%{http_code}\" \
     -H \"Accept: application/vnd.github+json\" \
