@@ -408,10 +408,7 @@ main() {
   cleanup_iptables
   cleanup_certificates
 
-  # Upload scan metadata if enabled
-  if [ "$UPLOAD_ARTIFACT" = "true" ]; then
-    upload_scan_metadata
-  fi
+  upload_scan_metadata
 
   log "PSE GitHub Action cleanup completed successfully"
 }
