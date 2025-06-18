@@ -33,10 +33,6 @@ load_metadata_from_file() {
   fi
 }
 
-# Print current working directory
-echo "PWD"
-pwd
-
 # Call the function to load metadata from analytics_metadata.json
 load_metadata_from_file
 

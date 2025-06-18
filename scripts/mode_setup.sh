@@ -12,6 +12,13 @@ if [ "$DEBUG" = "true" ] || [ "$DEBUG_FORCE" = "true" ]; then
   set -x
 fi
 
+# Debug function
+debug() {
+  if [[ "$DEBUG" == "true" ]]; then
+    echo "[DEBUG] $*" >&2
+  fi
+}
+
 # Log with timestamp
 log() {
   echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1"
@@ -95,7 +102,13 @@ pull_and_start_pse_container() {
 
   # Login to ECR
   log "Logging in to ECR"
+  if [[ "$DEBUG" == "true" ]]; then
+    set +x
+  fi
   echo "$ECR_TOKEN" | run_with_privilege docker login --username "$ECR_USERNAME" --password-stdin "$ECR_REGISTRY_ID.dkr.ecr.$ECR_REGION.amazonaws.com"
+  if [[ "$DEBUG" == "true" ]]; then
+    set -x
+  fi
 
   # Define possible repository paths to try
   local REPO_PATHS=(
@@ -111,7 +124,7 @@ pull_and_start_pse_container() {
   local RETRY_DELAY=5
 
   for REPO_PATH in "${REPO_PATHS[@]}"; do
-    log "Attempting to pull PSE container from $REPO_PATH"
+    debug "Attempting to pull PSE container from $REPO_PATH"
 
     while [ $ATTEMPT -le $MAX_RETRIES ]; do
       PULL_OUTPUT=$(run_with_privilege docker pull "$REPO_PATH" 2>&1) && {
@@ -123,7 +136,7 @@ pull_and_start_pse_container() {
         log "Error: $PULL_OUTPUT"
 
         if [ $ATTEMPT -lt $MAX_RETRIES ]; then
-          log "Retrying in $RETRY_DELAY seconds..."
+          debug "Retrying in $RETRY_DELAY seconds..."
           sleep $RETRY_DELAY
           RETRY_DELAY=$((RETRY_DELAY * 2))
           ATTEMPT=$((ATTEMPT + 1))
@@ -143,6 +156,9 @@ pull_and_start_pse_container() {
   fi
 
   log "Starting PSE container, in a different daemon"
+  if [[ "$DEBUG" == "true" ]]; then
+    set +x
+  fi
   run_with_privilege docker run -d --name pse \
     -e PSE_DEBUG_FLAG="--alsologtostderr" \
     -e POLICY_LOG="t" \
@@ -150,14 +166,17 @@ pull_and_start_pse_container() {
     -e INVISIRISK_PORTAL="$PORTAL_URL" \
     -e GITHUB_TOKEN="$GITHUB_TOKEN" \
     "$PSE_IMAGE"
+  if [[ "$DEBUG" == "true" ]]; then
+    set -x
+  fi
 
   # Get container IP for iptables configuration using container name from docker ps
   CONTAINER_NAME=$(run_with_privilege docker ps --filter "ancestor=$PSE_IMAGE" --format "{{.Names}}")
-  log "Found PSE container with name: $CONTAINER_NAME"
+  debug "Found PSE container with name: $CONTAINER_NAME"
 
   # Get the IP address from the container
   PSE_IP=$(run_with_privilege docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' "$CONTAINER_NAME")
-  log "Obtained PSE container IP: $PSE_IP"
+  debug "Obtained PSE container IP: $PSE_IP"
 
   # If we couldn't get the IP using the container name, fall back to the old method
   if [ -z "$PSE_IP" ]; then
@@ -180,10 +199,10 @@ pull_and_start_pse_container() {
   echo "::set-output name=proxy_ip::$PSE_IP"
 
   # Double check that the proxy IP has been properly set as output
-  log "Set proxy_ip output parameter to: $PSE_IP"
+  debug "Set proxy_ip output parameter to: $PSE_IP"
 
   log "PSE container started with IP: $PSE_IP"
-  log "Proxy IP has been saved to GitHub environment as PSE_PROXY_IP"
+  debug "Proxy IP has been saved to GitHub environment as PSE_PROXY_IP"
 }
 
 # Function to signal build start

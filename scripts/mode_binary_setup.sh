@@ -12,6 +12,13 @@ if [ "$DEBUG" = "true" ] || [ "$DEBUG_FORCE" = "true" ]; then
   set -x
 fi
 
+# Debug function
+debug() {
+  if [[ "$DEBUG" == "true" ]]; then
+    echo "[DEBUG] $*" >&2
+  fi
+}
+
 # Log with timestamp
 log() {
   echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1"
@@ -95,7 +102,13 @@ pull_and_start_pse_container() {
 
   # Login to ECR
   log "Logging in to ECR"
+  if [[ "$DEBUG" == "true" ]]; then
+    set +x
+  fi
   echo "$ECR_TOKEN" | run_with_privilege docker login --username "$ECR_USERNAME" --password-stdin "$ECR_REGISTRY_ID.dkr.ecr.$ECR_REGION.amazonaws.com"
+  if [[ "$DEBUG" == "true" ]]; then
+    set -x
+  fi
 
   # Define possible repository paths to try
   local REPO_PATHS=(
@@ -111,7 +124,7 @@ pull_and_start_pse_container() {
   local RETRY_DELAY=5
 
   for REPO_PATH in "${REPO_PATHS[@]}"; do
-    log "Attempting to pull PSE container from $REPO_PATH"
+    debug "Attempting to pull PSE container from $REPO_PATH"
 
     while [ $ATTEMPT -le $MAX_RETRIES ]; do
       PULL_OUTPUT=$(run_with_privilege docker pull "$REPO_PATH" 2>&1) && {
@@ -123,7 +136,7 @@ pull_and_start_pse_container() {
         log "Error: $PULL_OUTPUT"
 
         if [ $ATTEMPT -lt $MAX_RETRIES ]; then
-          log "Retrying in $RETRY_DELAY seconds..."
+          debug "Retrying in $RETRY_DELAY seconds..."
           sleep $RETRY_DELAY
           RETRY_DELAY=$((RETRY_DELAY * 2))
           ATTEMPT=$((ATTEMPT + 1))
@@ -159,7 +172,7 @@ pull_and_start_pse_container() {
   fi
 
   # Copy the PSE binary from the container to the host
-  log "Copying PSE binary from container to host"
+  debug "Copying PSE binary from container to host"
   if ! run_with_privilege docker cp "$TEMP_CONTAINER_ID:/pse" "$PSE_BIN_DIR/pse"; then
     log "ERROR: Failed to copy PSE binary from container"
     exit 1
@@ -168,7 +181,7 @@ pull_and_start_pse_container() {
   run_with_privilege chmod +x "$PSE_BIN_DIR/pse"
 
   # Copy the PSE policy from the container to the host
-  log "Copying PSE policy from container to host"
+  debug "Copying PSE policy from container to host"
   if ! run_with_privilege docker cp "$TEMP_CONTAINER_ID:/policy.json" "$PSE_BIN_DIR/policy.json"; then
     log "ERROR: Failed to copy PSE policy from container"
     exit 1
@@ -178,7 +191,7 @@ pull_and_start_pse_container() {
   run_with_privilege chmod +r "$PSE_BIN_DIR/policy.json"
 
   # Copy the PSE config from the container to the host
-  log "Copying PSE config from container to host"
+  debug "Copying PSE config from container to host"
   if ! run_with_privilege docker cp "$TEMP_CONTAINER_ID:/cfg.yaml" "$PSE_BIN_DIR/cfg.yaml"; then
     log "ERROR: Failed to copy PSE config from container"
     exit 1
@@ -188,7 +201,7 @@ pull_and_start_pse_container() {
   run_with_privilege chmod +r "$PSE_BIN_DIR/cfg.yaml"
 
   # Copy leaks.toml from the container to the host
-  log "Copying PSE leaks.toml from container to host"
+  debug "Copying PSE leaks.toml from container to host"
   if ! run_with_privilege docker cp "$TEMP_CONTAINER_ID:/leaks.toml" "$PSE_BIN_DIR/leaks.toml"; then
     log "ERROR: Failed to copy PSE leaks.toml from container"
     exit 1
@@ -198,8 +211,9 @@ pull_and_start_pse_container() {
   run_with_privilege chmod +r "$PSE_BIN_DIR/leaks.toml"
   run_with_privilege cp "$PSE_BIN_DIR/leaks.toml" /tmp/leaks.toml
 
-  echo "Showing directory contents of $PSE_BIN_DIR"
-  run_with_privilege ls -lrth "$PSE_BIN_DIR"
+  debug "Showing directory contents of $PSE_BIN_DIR"
+  debug "$(ls -l "$PSE_BIN_DIR")"
+  debug "$(run_with_privilege ls -lrth "$PSE_BIN_DIR")"
 
   # Remove the temporary container
   log "Removing temporary container"
@@ -263,7 +277,7 @@ pull_and_start_pse_container() {
   run_with_privilege pwd
 
   # List the directory contents for the directory containing $PSE_LOG_FILE
-  log "Directory contents for $(dirname "$PSE_LOG_FILE"):"
+  debug "Directory contents for $(dirname "$PSE_LOG_FILE"):"
   run_with_privilege ls -alh "$(dirname "$PSE_LOG_FILE")"
 
   # Find the PSE process ID reliably
