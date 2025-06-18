@@ -407,7 +407,11 @@ main() {
   # Always clean up iptables and certificates
   cleanup_iptables
   cleanup_certificates
-  upload_scan_metadata
+
+  # Upload scan metadata if enabled
+  if [ "$UPLOAD_ARTIFACT" = "true" ]; then
+    upload_scan_metadata
+  fi
 
   log "PSE GitHub Action cleanup completed successfully"
 }
