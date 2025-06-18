@@ -99,8 +99,8 @@ pull_and_start_pse_container() {
 
   # Define possible repository paths to try
   local REPO_PATHS=(
-    "$ECR_REGISTRY_ID.dkr.ecr.$ECR_REGION.amazonaws.com/invisirisk/pse-proxy:latest"
-    "invisirisk/pse-proxy:latest"
+    "$ECR_REGISTRY_ID.dkr.ecr.$ECR_REGION.amazonaws.com/invisirisk/pse-proxy:$PSE_TAG"
+    "invisirisk/pse-proxy:$PSE_TAG"
   )
 
   # Try to pull the PSE container from each repository path
