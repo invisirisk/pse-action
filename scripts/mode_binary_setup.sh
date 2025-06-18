@@ -277,7 +277,7 @@ pull_and_start_pse_container() {
   run_with_privilege pwd
 
   # List the directory contents for the directory containing $PSE_LOG_FILE
-  log "Directory contents for $(dirname "$PSE_LOG_FILE"):"
+  debug "Directory contents for $(dirname "$PSE_LOG_FILE"):"
   run_with_privilege ls -alh "$(dirname "$PSE_LOG_FILE")"
 
   # Find the PSE process ID reliably
