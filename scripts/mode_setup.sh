@@ -284,7 +284,7 @@ unset_env_variables() {
 # Function to create analytics metadata
 create_analytics_metadata() {
   log "Creating analytics metadata"
-  log "DEBUG: PSE_SCAN_ID is '$PSE_SCAN_ID'"
+  log "DEBUG: SCAN_ID for metadata is '$SCAN_ID'"
   log "DEBUG: GITHUB_RUN_ID is '$GITHUB_RUN_ID'"
   log "DEBUG: GITHUB_ACTION_PATH is '$GITHUB_ACTION_PATH'"
 
@@ -295,7 +295,7 @@ create_analytics_metadata() {
 
   cat >"$TARGET_FILE_PATH" <<EOF
 {
-  "scan_id": "$PSE_SCAN_ID",
+  "scan_id": "$SCAN_ID",
   "run_id": "$GITHUB_RUN_ID"
 }
 EOF
