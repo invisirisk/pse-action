@@ -121,6 +121,20 @@ runs:
       shell: bash
       run: |
         bash $GITHUB_ACTION_PATH/gather_metadata.sh
+    - if: ${{ inputs.upload_artifact == 'true' }}
+      name: "Debug: Display analytics_metadata.json content"
+      shell: bash
+      run: |
+        echo "--- Checking analytics_metadata.json ---"
+        if [ -f "analytics_metadata.json" ]; then
+          echo "File exists. Content:"
+          cat analytics_metadata.json
+          echo
+          echo "--- End of content ---"
+        else
+          echo "!!! ERROR: analytics_metadata.json was NOT created. !!!"
+          exit 1 # Optionally fail the workflow here
+        fi
     - if: ${{inputs.upload_artifact == 'true' }}
       uses: actions/upload-artifact@v4
       with:
