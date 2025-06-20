@@ -117,16 +117,9 @@ runs:
         GITHUB_REPOSITORY: ${{ github.repository }}
         GITHUB_RUN_ID: ${{ github.run_id }}
         CLEANUP_STEP_NAME: ${{ inputs.cleanup_step_name }}
-    - name: Debug analytics file before upload
-      if: ${{ inputs.cleanup == 'false' && inputs.upload_artifact == 'true' }}
-      shell: bash
-      run: |
-        echo "Listing contents of action path: ${{ github.action_path }}"
-        ls -l ${{ github.action_path }}
-        echo "Contents of analytics_metadata.json:"
-        cat ${{ github.action_path }}/analytics_metadata.json || echo "analytics_metadata.json not found or empty"
-    - if: ${{ inputs.cleanup == 'false' && inputs.upload_artifact == 'true' }}
+
+    - if: ${{ inputs.upload_artifact == 'true' }}
       uses: actions/upload-artifact@v4
       with:
         name: analytics_metadata
-        path: ${{ github.action_path }}/analytics_metadata.json
+        path: analytics_metadata.txt
