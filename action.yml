@@ -121,4 +121,4 @@ runs:
       uses: actions/upload-artifact@v4
       with:
         name: analytics_metadata
-        path: analytics_metadata.json
+        path: $GITHUB_ACTION_PATH/analytics_metadata.json
