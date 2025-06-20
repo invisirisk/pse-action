@@ -119,6 +119,7 @@ runs:
         CLEANUP_STEP_NAME: ${{ inputs.cleanup_step_name }}
     - if: ${{ inputs.upload_artifact == 'true' }}
       name: Create analytics metadata
+      shell: bash
       run: |
         bash $GITHUB_ACTION_PATH/create_metadata.sh
     - if: ${{ inputs.upload_artifact == 'true' }}
