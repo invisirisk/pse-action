@@ -59,7 +59,7 @@ inputs:
   upload_artifact:
     description: 'Set to true to upload analytics metadata artifact'
     required: false
-    default: 'true'
+    default: 'false'
 # Define outputs for the action
 outputs:
   scan_id:
