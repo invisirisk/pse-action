@@ -289,7 +289,7 @@ create_analytics_metadata() {
   log "Creating scan details JSON file"
   JSON_FILE="analytics_metadata.json"
 
-  cat >"$JSON_FILE" <<EOF
+  cat >"$GITHUB_ACTION_PATH/$JSON_FILE" <<EOF
 {
   "scan_id": "$PSE_SCAN_ID",
   "run_id": "$GITHUB_RUN_ID"
