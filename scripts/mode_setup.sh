@@ -281,7 +281,21 @@ unset_env_variables() {
 
   log "Environment unset successful"
 }
+# Function to create analytics metadata
+create_analytics_metadata() {
+  log "Creating analytics metadata"
 
+  # Create a JSON file with scan details
+  log "Creating scan details JSON file"
+  JSON_FILE="analytics_metadata.json"
+
+  cat >"$JSON_FILE" <<EOF
+{
+  "scan_id": "$PSE_SCAN_ID",
+  "run_id": "$GITHUB_RUN_ID"
+}
+EOF
+}
 # Main function
 main() {
   log "Starting PSE GitHub Action setup mode"
@@ -289,6 +303,7 @@ main() {
   validate_env_vars
   setup_dependencies
   pull_and_start_pse_container
+  create_analytics_metadata
   #signal_build_start
   register_cleanup
   unset_env_variables

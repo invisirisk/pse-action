@@ -350,22 +350,6 @@ cleanup_certificates() {
   log "Certificate cleanup completed"
 }
 
-# Function to upload scan metadata
-upload_scan_metadata() {
-  log "Uploading scan metadata"
-
-  # Create a JSON file with scan details
-  log "Creating scan details JSON file"
-  JSON_FILE="analytics_metadata.json"
-
-  cat >"$JSON_FILE" <<EOF
-{
-  "scan_id": "$PSE_SCAN_ID",
-  "run_id": "$GITHUB_RUN_ID"
-}
-EOF
-}
-
 unset_http_proxy() {
   log "Unsetting HTTP proxy environment variables"
 
@@ -425,9 +409,6 @@ main() {
   cleanup_iptables
   cleanup_certificates
   unset_http_proxy
-  upload_scan_metadata
-
-
 
   log "PSE GitHub Action cleanup completed successfully"
 }
