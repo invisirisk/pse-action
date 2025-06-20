@@ -117,7 +117,11 @@ runs:
         GITHUB_REPOSITORY: ${{ github.repository }}
         GITHUB_RUN_ID: ${{ github.run_id }}
         CLEANUP_STEP_NAME: ${{ inputs.cleanup_step_name }}
-    - if: ${{ inputs.cleanup == 'true' && inputs.upload_artifact == 'true' }}
+    - if: ${{inputs.upload_artifact == 'true' }}
+      shell: bash
+      run: |
+        bash $GITHUB_ACTION_PATH/gather_metadata.sh
+    - if: ${{inputs.upload_artifact == 'true' }}
       uses: actions/upload-artifact@v4
       with:
         name: analytics_metadata
