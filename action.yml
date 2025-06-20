@@ -120,6 +120,8 @@ runs:
 
     - if: ${{ inputs.upload_artifact == 'true' }}
       uses: actions/upload-artifact@v4
+      run: |
+        bash $GITHUB_ACTION_PATH/create_metadata.sh
       with:
         name: analytics_metadata
-        path: analytics_metadata.txt
+        path: analytics_metadata.json
