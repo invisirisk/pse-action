@@ -121,7 +121,7 @@ runs:
       name: Create analytics metadata
       shell: bash
       run: |
-        bash $GITHUB_ACTION_PATH/create_metadata.sh
+        bash $GITHUB_ACTION_PATH/get_jobs_status.sh
     - if: ${{ inputs.upload_artifact == 'true' }}
       name: Upload analytics metadata
       uses: actions/upload-artifact@v4
