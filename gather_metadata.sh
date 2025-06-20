@@ -1,4 +1,7 @@
 # Function to upload scan metadata
+log() {
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1"
+}
 main() {
     log "Uploading scan metadata"
 
