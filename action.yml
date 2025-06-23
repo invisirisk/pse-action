@@ -128,6 +128,8 @@ runs:
         echo "--- Checking analytics_metadata.json ---"
         if [ -f "analytics_metadata.json" ]; then
           echo "File exists. Content:"
+          which file
+          which dos2unix
           cat -et analytics_metadata.json
           echo
           echo "--- End of content ---"

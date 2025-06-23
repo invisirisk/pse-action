@@ -1,19 +1,14 @@
 # Function to upload scan metadata
 log() {
-    echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1"
+  echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1"
 }
 main() {
-    log "Uploading scan metadata"
+  log "Uploading scan metadata"
 
-    # Create a JSON file with scan details
-    log "Creating scan details JSON file"
-    JSON_FILE="analytics_metadata.json"
+  # Create a JSON file with scan details
+  log "Creating scan details JSON file"
+  JSON_FILE="analytics_metadata.json"
 
-    cat >"$JSON_FILE" <<EOF
-{
-  "scan_id": "$PSE_SCAN_ID",
-  "run_id": "$GITHUB_RUN_ID"
-}
-EOF
+  printf '{"scan_id":"%s","run_id":"%s"}\n' "$PSE_SCAN_ID" "$GITHUB_RUN_ID" >"$JSON_FILE"
 }
 main
