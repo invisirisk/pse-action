@@ -9,6 +9,6 @@ main() {
   log "Creating scan details JSON file"
   JSON_FILE="analytics_metadata.json"
 
-  stdbuf -o0 printf '{"scan_id":"%s","run_id":"%s"}\n' "$PSE_SCAN_ID" "$GITHUB_RUN_ID" >"$JSON_FILE"
+  stdbuf -o0 printf '{"scan_id":"%s","run_id":"%s"}' "$PSE_SCAN_ID" "$GITHUB_RUN_ID" >"$JSON_FILE"
 }
 main
