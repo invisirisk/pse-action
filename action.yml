@@ -84,10 +84,6 @@ outputs:
 runs:
   using: "composite"
   steps:
-    - if: ${{ inputs.send_job_status == 'true' }}
-      uses: actions/download-artifact@v4
-      with:
-        name: analytics_metadata
     - id: pse-setup
       shell: bash
       run: |
@@ -117,8 +113,3 @@ runs:
         GITHUB_REPOSITORY: ${{ github.repository }}
         GITHUB_RUN_ID: ${{ github.run_id }}
         CLEANUP_STEP_NAME: ${{ inputs.cleanup_step_name }}
-    - if: ${{ inputs.cleanup == 'true' && inputs.upload_artifact == 'true' }}
-      uses: actions/upload-artifact@v4
-      with:
-        name: analytics_metadata
-        path: analytics_metadata.json
