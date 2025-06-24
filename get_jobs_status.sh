@@ -234,6 +234,10 @@ send_to_saas_platform() {
     exit 1
   fi
 
+  # Generate a timestamp for a unique filename
+  local timestamp
+  timestamp=$(date +%s)
+
   # Perform the POST request to the custom API using multipart/form-data with retry logic
   # Capture http_status and write response body to the temp file
   local http_status
@@ -241,7 +245,7 @@ send_to_saas_platform() {
       -X POST \
       -H \"accept: application/json\" \
       -H \"Content-Type: multipart/form-data\" \
-      -F \"file=@${json_file};filename=job_status.json;type=application/json\" \
+      -F \"file=@${json_file};filename=job_status_${GITHUB_RUN_ID}_${timestamp}.json;type=application/json\" \
       -o \"${response_file}\" \
       \"${custom_api_url}\")"
 
