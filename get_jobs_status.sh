@@ -183,7 +183,7 @@ send_to_saas_platform() {
   fi
 
   # Construct custom API URL
-  local custom_api_url="${API_URL}/ingestionapi/v1/upload-generic-file?api_key=${APP_TOKEN}&run_id=${GITHUB_RUN_ID}&file_type=job_status"
+  local custom_api_url="${API_URL}/ingestionapi/v1/upload-generic-file?api_key=${APP_TOKEN}&run_id=${GITHUB_RUN_ID}_${GITHUB_RUN_ATTEMPT}&file_type=job_status"
 
   debug "Sending GitHub job status to custom API endpoint: ${custom_api_url}"
 
