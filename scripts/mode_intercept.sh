@@ -12,6 +12,13 @@ if [ "$DEBUG" = "true" ] || [ "$DEBUG_FORCE" = "true" ]; then
   set -x
 fi
 
+# Debug function
+debug() {
+  if [[ "$DEBUG" == "true" ]]; then
+    echo "[DEBUG] $*" >&2
+  fi
+}
+
 # Log with timestamp
 log() {
   echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1"
@@ -47,7 +54,7 @@ validate_environment() {
     if [ -z "$PROXY_HOSTNAME" ]; then
       log "PROXY_IP or PROXY_HOSTNAME not provided, attempting to discover PSE proxy IP"
     else
-      log "PROXY_HOSTNAME provided but PROXY_IP not set, resolving hostname to IP"
+      debug "PROXY_HOSTNAME provided but PROXY_IP not set, resolving hostname to IP"
     fi
     
     discovered_ip=$(discover_pse_proxy_ip)
@@ -77,125 +84,125 @@ validate_environment() {
 # Function to discover the PSE proxy container IP
 discover_pse_proxy_ip() {
   # Redirect all log messages to stderr so they don't get captured in the function output
-  log "Attempting to discover PSE proxy container IP" >&2
+  debug "Attempting to discover PSE proxy container IP" >&2
   local discovered_ip=""
   
   # First, check if Docker is available
   if command -v docker >/dev/null 2>&1; then
-    log "Docker is available, attempting to find PSE proxy container" >&2
+    debug "Docker is available, attempting to find PSE proxy container" >&2
     
     # Try to find the container by image name
-    log "Looking for PSE proxy container by image..." >&2
+    debug "Looking for PSE proxy container by image..." >&2
     local pse_containers=$(run_with_privilege docker ps --filter "ancestor=invisirisk/pse-proxy" --format "{{.Names}}" 2>/dev/null || echo "")
     
     # If not found, try with ECR path
     if [ -z "$pse_containers" ]; then
-      log "Trying with ECR path..." >&2
+      debug "Trying with ECR path..." >&2
       pse_containers=$(run_with_privilege docker ps --filter "ancestor=282904853176.dkr.ecr.us-west-2.amazonaws.com/invisirisk/pse-proxy" --format "{{.Names}}" 2>/dev/null || echo "")
     fi
     
     # If still not found, try with any available registry ID and region
     if [ -z "$pse_containers" ] && [ -n "$ECR_REGISTRY_ID" ] && [ -n "$ECR_REGION" ]; then
-      log "Trying with provided ECR registry ID and region..." >&2
+      debug "Trying with provided ECR registry ID and region..." >&2
       pse_containers=$(run_with_privilege docker ps --filter "ancestor=$ECR_REGISTRY_ID.dkr.ecr.$ECR_REGION.amazonaws.com/invisirisk/pse-proxy" --format "{{.Names}}" 2>/dev/null || echo "")
     fi
     
     # If containers found, get the IP of the first one
     if [ -n "$pse_containers" ]; then
       local container_name=$(echo "$pse_containers" | head -n 1)
-      log "Found PSE proxy container: $container_name" >&2
+      debug "Found PSE proxy container: $container_name" >&2
       discovered_ip=$(run_with_privilege docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' "$container_name" 2>/dev/null || echo "")
-      log "Discovered PSE proxy IP: $discovered_ip" >&2
+      debug "Discovered PSE proxy IP: $discovered_ip" >&2
     else
-      log "No PSE proxy containers found by image name" >&2
+      debug "No PSE proxy containers found by image name" >&2
     fi
   else
-    log "Docker is not available, cannot discover container directly" >&2
+    debug "Docker is not available, cannot discover container directly" >&2
   fi
   
   # If we couldn't find the IP using Docker or Docker is not available,
   # try to resolve using hostname as a fallback
   if [ -z "$discovered_ip" ]; then
-    log "Attempting to resolve PSE proxy using hostname..." >&2
+    debug "Attempting to resolve PSE proxy using hostname..." >&2
     
     # Determine which hostname to use - use PROXY_HOSTNAME if provided, otherwise default to 'pse-proxy'
     local hostname_to_try="pse-proxy"
     local alt_hostname="${hostname_to_try}.local"
     
     if [ -n "$PROXY_HOSTNAME" ]; then
-      log "Using provided PROXY_HOSTNAME: $PROXY_HOSTNAME" >&2
+      debug "Using provided PROXY_HOSTNAME: $PROXY_HOSTNAME" >&2
       hostname_to_try="$PROXY_HOSTNAME"
       alt_hostname=""  # Don't try .local suffix with user-provided hostname
     else
-      log "Using default hostname: $hostname_to_try" >&2
+      debug "Using default hostname: $hostname_to_try" >&2
     fi
     
     # Try all available hostname resolution methods in sequence until one succeeds
     
     # Method 1: getent
     if command -v getent >/dev/null 2>&1 && [ -z "$discovered_ip" ]; then
-      log "Using getent to resolve hostname $hostname_to_try" >&2
+      debug "Using getent to resolve hostname $hostname_to_try" >&2
       discovered_ip=$(getent hosts "$hostname_to_try" 2>/dev/null | awk '{ print $1 }' | head -n 1)
       
       if [ -n "$discovered_ip" ]; then
-        log "Successfully resolved using getent: $discovered_ip" >&2
+        debug "Successfully resolved using getent: $discovered_ip" >&2
       elif [ -n "$alt_hostname" ]; then
         # Try with alternative hostname if it exists
-        log "Trying alternative hostname with getent: $alt_hostname" >&2
+        debug "Trying alternative hostname with getent: $alt_hostname" >&2
         discovered_ip=$(getent hosts "$alt_hostname" 2>/dev/null | awk '{ print $1 }' | head -n 1)
         if [ -n "$discovered_ip" ]; then
-          log "Successfully resolved alternative hostname using getent: $discovered_ip" >&2
+          debug "Successfully resolved alternative hostname using getent: $discovered_ip" >&2
         fi
       fi
     fi
     
     # Method 2: host command
     if command -v host >/dev/null 2>&1 && [ -z "$discovered_ip" ]; then
-      log "Using host command to resolve hostname $hostname_to_try" >&2
+      debug "Using host command to resolve hostname $hostname_to_try" >&2
       discovered_ip=$(host -t A "$hostname_to_try" 2>/dev/null | grep "has address" | head -n 1 | awk '{ print $NF }')
       
       if [ -n "$discovered_ip" ]; then
-        log "Successfully resolved using host command: $discovered_ip" >&2
+        debug "Successfully resolved using host command: $discovered_ip" >&2
       elif [ -n "$alt_hostname" ]; then
         # Try with alternative hostname if it exists
-        log "Trying alternative hostname with host command: $alt_hostname" >&2
+        debug "Trying alternative hostname with host command: $alt_hostname" >&2
         discovered_ip=$(host -t A "$alt_hostname" 2>/dev/null | grep "has address" | head -n 1 | awk '{ print $NF }')
         if [ -n "$discovered_ip" ]; then
-          log "Successfully resolved alternative hostname using host command: $discovered_ip" >&2
+          debug "Successfully resolved alternative hostname using host command: $discovered_ip" >&2
         fi
       fi
     fi
     
     # Method 3: nslookup
     if command -v nslookup >/dev/null 2>&1 && [ -z "$discovered_ip" ]; then
-      log "Using nslookup to resolve hostname $hostname_to_try" >&2
+      debug "Using nslookup to resolve hostname $hostname_to_try" >&2
       discovered_ip=$(nslookup "$hostname_to_try" 2>/dev/null | grep "Address:" | tail -n 1 | awk '{ print $2 }')
       
       if [ -n "$discovered_ip" ]; then
-        log "Successfully resolved using nslookup: $discovered_ip" >&2
+        debug "Successfully resolved using nslookup: $discovered_ip" >&2
       elif [ -n "$alt_hostname" ]; then
         # Try with alternative hostname if it exists
-        log "Trying alternative hostname with nslookup: $alt_hostname" >&2
+        debug "Trying alternative hostname with nslookup: $alt_hostname" >&2
         discovered_ip=$(nslookup "$alt_hostname" 2>/dev/null | grep "Address:" | tail -n 1 | awk '{ print $2 }')
         if [ -n "$discovered_ip" ]; then
-          log "Successfully resolved alternative hostname using nslookup: $discovered_ip" >&2
+          debug "Successfully resolved alternative hostname using nslookup: $discovered_ip" >&2
         fi
       fi
     fi
     
     # Method 4: ping (last resort)
     if command -v ping >/dev/null 2>&1 && [ -z "$discovered_ip" ]; then
-      log "Using ping to resolve hostname $hostname_to_try" >&2
+      debug "Using ping to resolve hostname $hostname_to_try" >&2
       discovered_ip=$(ping -c 1 "$hostname_to_try" 2>/dev/null | grep "PING" | head -n 1 | awk -F'[()]' '{ print $2 }')
       
       if [ -n "$discovered_ip" ]; then
-        log "Successfully resolved using ping: $discovered_ip" >&2
+        debug "Successfully resolved using ping: $discovered_ip" >&2
       elif [ -n "$alt_hostname" ]; then
         # Try with alternative hostname if it exists
-        log "Trying alternative hostname with ping: $alt_hostname" >&2
+        debug "Trying alternative hostname with ping: $alt_hostname" >&2
         discovered_ip=$(ping -c 1 "$alt_hostname" 2>/dev/null | grep "PING" | head -n 1 | awk -F'[()]' '{ print $2 }')
         if [ -n "$discovered_ip" ]; then
-          log "Successfully resolved alternative hostname using ping: $discovered_ip" >&2
+          debug "Successfully resolved alternative hostname using ping: $discovered_ip" >&2
         fi
       fi
     fi
@@ -333,11 +340,11 @@ setup_iptables() {
     exit 1
   fi
   
-  log "Using proxy IP for iptables: $PROXY_IP"
+  debug "Using proxy IP for iptables: $PROXY_IP"
   
   # Check if iptables is available
   if ! command -v iptables >/dev/null 2>&1; then
-    log "iptables not found, installing..."
+    debug "iptables not found, installing..."
     
     # Install iptables based on the available package manager
     if command -v apt-get >/dev/null 2>&1; then
@@ -346,7 +353,7 @@ setup_iptables() {
     elif command -v yum >/dev/null 2>&1; then
       run_with_privilege yum install -y iptables
     else
-      log "ERROR: Unsupported package manager. Please install iptables manually."
+      debug "Unsupported operating system for automatic certificate installation."
       exit 1
     fi
   fi
@@ -386,7 +393,7 @@ setup_http_proxy() {
 
 # Function to set up certificates
 setup_certificates() {
-  log "Setting up certificates for HTTPS interception"
+  debug "Setting up certificates for HTTPS interception"
   
   MAX_RETRIES=5
   RETRY_DELAY=3
@@ -394,17 +401,17 @@ setup_certificates() {
   
   # Create directory for extra CA certificates if it doesn't exist
   run_with_privilege mkdir -p /usr/local/share/ca-certificates/extra
-  log "Created directory for extra CA certificates"
+  debug "Created directory for extra CA certificates"
   
   while [ $ATTEMPT -le $MAX_RETRIES ]; do
-    log "Fetching CA certificate, attempt $ATTEMPT of $MAX_RETRIES"
+    debug "Fetching CA certificate, attempt $ATTEMPT of $MAX_RETRIES"
     if curl -L -k -s -o /tmp/pse.crt https://pse.invisirisk.com/ca; then
       # Copy to the proper location for Ubuntu/Debian
       run_with_privilege cp /tmp/pse.crt /usr/local/share/ca-certificates/extra/pse.crt
-      log "CA certificate successfully retrieved and copied to /usr/local/share/ca-certificates/extra/"
+      debug "CA certificate successfully retrieved and copied to /usr/local/share/ca-certificates/extra/"
       break
     else
-      log "Failed to retrieve CA certificate, retrying in $RETRY_DELAY seconds..."
+      debug "Failed to retrieve CA certificate, retrying in $RETRY_DELAY seconds..."
       sleep $RETRY_DELAY
       RETRY_DELAY=$((RETRY_DELAY * 2))
       ATTEMPT=$((ATTEMPT + 1))
@@ -415,9 +422,9 @@ setup_certificates() {
     log "ERROR: Failed to retrieve CA certificate after $MAX_RETRIES attempts"
     exit 1
   fi
-  
+
   # Update CA certificates non-interactively
-  log "Updating CA certificates..."
+  debug "Updating CA certificates..."
   run_with_privilege update-ca-certificates
   
   # Set the correct path for the installed certificate
@@ -425,7 +432,7 @@ setup_certificates() {
   
   # Verify the certificate was properly installed
   if [ -f "$CA_CERT_PATH" ]; then
-    log "CA certificate successfully installed at $CA_CERT_PATH"
+    debug "CA certificate successfully installed at $CA_CERT_PATH"
   else
     # Try to find the actual location
     CA_CERT_PATH=$(find /etc/ssl/certs -name "*pse*" | head -n 1)
@@ -433,64 +440,63 @@ setup_certificates() {
       log "WARNING: Could not locate installed CA certificate, using default path"
       CA_CERT_PATH="/etc/ssl/certs/pse.crt"
     else
-      log "Found CA certificate at $CA_CERT_PATH"
+      debug "Found CA certificate at $CA_CERT_PATH"
     fi
   fi
   
   # Configure Git to use our CA
+  debug "Configuring Git to use the system certificate store"
   git config --global http.sslCAInfo "$CA_CERT_PATH"
-  #log "Configuring temporarily git to bypass SSL verification"
-  #git config --global http.sslVerify false
 
+  # Configure cURL to use the system certificate store
+  debug "Configuring cURL to use the system certificate store"
   
   # Set environment variables for other tools
   export NODE_EXTRA_CA_CERTS="$CA_CERT_PATH"
   export REQUESTS_CA_BUNDLE="$CA_CERT_PATH"
-
   
   # Add to GITHUB_ENV to persist these variables
   echo "NODE_EXTRA_CA_CERTS=$CA_CERT_PATH" >> $GITHUB_ENV
   echo "REQUESTS_CA_BUNDLE=$CA_CERT_PATH" >> $GITHUB_ENV
-  
 
   # Add handling for docker
   if command -v docker >/dev/null 2>&1; then
     echo "Docker is installed, configuring..."
-    run_with_privilege mkdir -p /etc/docker/certs.d
-    run_with_privilege cp "$CA_CERT_PATH" /etc/docker/certs.d/pse.crt
-
-    export DOCKER_CERT_PATH=/etc/docker/certs.d/pse.crt
-    
-    # Add to GITHUB_ENV to persist this variable
-    echo "DOCKER_CERT_PATH=/etc/docker/certs.d/pse.crt" >> $GITHUB_ENV
-
-    if command -v systemctl >/dev/null 2>&1; then
-      echo "Restarting docker with systemctl"
-      #run_with_privilege systemctl restart docker
-      #RESTART_EXIT_CODE=$?
-      echo "DEBUG: systemctl docker restart exit code: $RESTART_EXIT_CODE"
-    else
-      echo "Restarting docker with service"
-      #run_with_privilege service docker restart
-      #RESTART_EXIT_CODE=$?
-      echo "DEBUG: service docker restart exit code: $RESTART_EXIT_CODE"
-
-    fi
+#    run_with_privilege mkdir -p /etc/docker/certs.d
+#    run_with_privilege cp "$CA_CERT_PATH" /etc/docker/certs.d/pse.crt
+#
+#    export DOCKER_CERT_PATH=/etc/docker/certs.d/pse.crt
+#
+#    # Add to GITHUB_ENV to persist this variable
+#    echo "DOCKER_CERT_PATH=/etc/docker/certs.d/pse.crt" >> $GITHUB_ENV
+#
+#    if command -v systemctl >/dev/null 2>&1; then
+#      echo "Restarting docker with systemctl"
+#      #run_with_privilege systemctl restart docker
+#      #RESTART_EXIT_CODE=$?
+#      echo "DEBUG: systemctl docker restart exit code: $RESTART_EXIT_CODE"
+#    else
+#      echo "Restarting docker with service"
+#      #run_with_privilege service docker restart
+#      #RESTART_EXIT_CODE=$?
+#      echo "DEBUG: service docker restart exit code: $RESTART_EXIT_CODE"
+#
+#    fi
 
   fi
   
   # Add a delay to allow Docker to fully restart
-  log "DEBUG: Waiting for Docker to stabilize after restart"
+  debug "DEBUG: Waiting for Docker to stabilize after restart"
   #sleep 5
 
   # Verify Docker is running after restart
   if run_with_privilege docker ps >/dev/null 2>&1; then
-    log "DEBUG: Docker is running after restart"
+    debug "DEBUG: Docker is running after restart"
   else
     log "WARNING: Docker may not be running properly after restart"
   fi
   
-  log "Certificates configured successfully"
+  debug "System certificate store updated successfully"
 }
 
 

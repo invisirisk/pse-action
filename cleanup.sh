@@ -10,6 +10,13 @@ if [ "$DEBUG" = "true" ]; then
   set -x
 fi
 
+# Debug function
+debug() {
+  if [[ "$DEBUG" == "true" ]]; then
+    echo "[DEBUG] $*" >&2
+  fi
+}
+
 # Log with timestamp
 log() {
   echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1"
@@ -28,10 +35,10 @@ trap 'error_handler $LINENO' ERR
 validate_env_vars() {
   # Check for API_URL
   if [ -z "$API_URL" ]; then
-    log "INFO: API_URL is not set, trying to use PSE_API_URL from previous step..."
+    debug "API_URL is not set, trying to use PSE_API_URL from previous step..."
     if [ -n "$PSE_API_URL" ]; then
       export API_URL="$PSE_API_URL"
-      log "Using API_URL from previous step: $API_URL"
+      debug "Using API_URL from previous step: $API_URL"
     else
       log "ERROR: Could not determine API_URL. Please provide it as an input parameter or run setup first."
       exit 1
@@ -40,10 +47,10 @@ validate_env_vars() {
 
   # Check for APP_TOKEN
   if [ -z "$APP_TOKEN" ]; then
-    log "INFO: APP_TOKEN is not set, trying to use PSE_APP_TOKEN from previous step..."
+    debug "APP_TOKEN is not set, trying to use PSE_APP_TOKEN from previous step..."
     if [ -n "$PSE_APP_TOKEN" ]; then
       export APP_TOKEN="$PSE_APP_TOKEN"
-      log "Using APP_TOKEN from previous step (value hidden)"
+      debug "Using APP_TOKEN from previous step (value hidden)"
     else
       log "ERROR: Could not determine APP_TOKEN. Please provide it as an input parameter or run setup first."
       exit 1
@@ -52,26 +59,26 @@ validate_env_vars() {
 
   # Check for PORTAL_URL
   if [ -z "$PORTAL_URL" ]; then
-    log "INFO: PORTAL_URL is not set, trying to use PSE_PORTAL_URL from previous step..."
+    debug "PORTAL_URL is not set, trying to use PSE_PORTAL_URL from previous step..."
     if [ -n "$PSE_PORTAL_URL" ]; then
       export PORTAL_URL="$PSE_PORTAL_URL"
-      log "Using PORTAL_URL from previous step: $PORTAL_URL"
+      debug "Using PORTAL_URL from previous step: $PORTAL_URL"
     else
       # Try to use API_URL as fallback
       export PORTAL_URL="$API_URL"
-      log "Using API_URL as fallback for PORTAL_URL: $PORTAL_URL"
+      debug "Using API_URL as fallback for PORTAL_URL: $PORTAL_URL"
     fi
   fi
 
   # Check SCAN_ID separately with warning instead of error
   if [ -z "$SCAN_ID" ]; then
-    log "INFO: SCAN_ID is not set, using a default value for cleanup..."
+    debug "SCAN_ID is not set, using a default value for cleanup..."
     # Generate a unique ID for this cleanup session
     export SCAN_ID="cleanup_$(date +%s)_${GITHUB_RUN_ID:-unknown}"
-    log "Using generated SCAN_ID: $SCAN_ID"
+    debug "Using generated SCAN_ID: $SCAN_ID"
   fi
 
-  log "Environment validation successful"
+  debug "Environment validation successful"
 }
 
 # Helper function to run commands with or without sudo based on environment
@@ -146,11 +153,11 @@ validate_scan_id() {
 
   # Check if SCAN_ID is a valid UUID (basic check)
   if ! echo "$SCAN_ID" | grep -E '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$' >/dev/null; then
-    log "WARNING: SCAN_ID does not appear to be a valid UUID: $SCAN_ID"
+    debug "WARNING: SCAN_ID does not appear to be a valid UUID: $SCAN_ID"
     # Continue anyway as it might be a different format
   fi
 
-  log "SCAN_ID validation passed: $SCAN_ID"
+  debug "SCAN_ID validation passed: $SCAN_ID"
   return 0
 }
 
@@ -166,7 +173,7 @@ signal_build_end() {
 
   # Default to PSE endpoint directly
   BASE_URL="https://pse.invisirisk.com"
-  log "Using default PSE endpoint: $BASE_URL"
+  debug "Using default PSE endpoint: $BASE_URL"
 
   # Build URL for the GitHub run
   build_url="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
@@ -176,7 +183,7 @@ signal_build_end() {
   params="${params}&build_url=$(url_encode "$build_url")"
   params="${params}&status=$(url_encode "${INPUT_JOB_STATUS:-unknown}")"
 
-  log "Sending end signal to PSE with parameters: $params"
+  debug "Sending end signal to PSE with parameters: $params"
 
   # Send request with retries
   MAX_RETRIES=3
@@ -184,7 +191,7 @@ signal_build_end() {
   ATTEMPT=1
 
   while [ $ATTEMPT -le $MAX_RETRIES ]; do
-    log "Sending end signal, attempt $ATTEMPT of $MAX_RETRIES"
+    debug "Sending end signal, attempt $ATTEMPT of $MAX_RETRIES"
 
     RESPONSE=$(curl -X POST "${BASE_URL}/end" \
       -H 'Content-Type: application/x-www-form-urlencoded' \
@@ -195,18 +202,18 @@ signal_build_end() {
       --retry 3 --retry-delay 2 --max-time 10 \
       -s -w "\n%{http_code}" 2>&1)
 
-    echo "Response: $RESPONSE"
+    debug "Response: $RESPONSE"
 
     HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
     RESPONSE_BODY=$(echo "$RESPONSE" | sed '$d')
 
     if [ "$HTTP_CODE" -ge 200 ] && [ "$HTTP_CODE" -lt 300 ]; then
       log "End signal sent successfully (HTTP $HTTP_CODE)"
-      log "Response: $RESPONSE_BODY"
+      debug "Response: $RESPONSE_BODY"
       return 0
     else
       log "Failed to send end signal (HTTP $HTTP_CODE)"
-      log "Response: $RESPONSE_BODY"
+      debug "Response: $RESPONSE_BODY"
       log "Retrying in $RETRY_DELAY seconds..."
       sleep $RETRY_DELAY
       RETRY_DELAY=$((RETRY_DELAY * 2))
@@ -221,34 +228,39 @@ signal_build_end() {
 
 # Function to display container logs
 display_container_logs() {
-  local container_name="$1"
-
-  log "Displaying logs for container: $container_name"
-
-  # Check if in test mode
-  if [ "$TEST_MODE" = "true" ]; then
-    log "Running in TEST_MODE, skipping container logs display"
+  if [[ "$DEBUG" != "true" ]]; then
     return 0
   fi
 
-  # Check if container exists or existed, but this is a non critical error
-  if ! sudo docker ps -a -q -f name="$container_name" >/dev/null 2>&1; then
-    log "Container $container_name not found, cannot display logs"
+  debug "Displaying logs for PSE container"
+
+  # Check if in test mode
+  if [ "$TEST_MODE" = "true" ]; then
+    debug "Running in TEST_MODE, skipping container logs display"
+    return 0
+  fi
+
+  # Find the PSE proxy container
+  local container_name
+  container_name=$(run_with_privilege docker ps -a --filter "ancestor=invisirisk/pse-proxy" --format "{{.Names}}" | head -n 1)
+
+  if [ -z "$container_name" ]; then
+    debug "No PSE proxy container found to display logs"
     return 0
   fi
 
   # Display a separator for better readability
-  echo "================================================================="
-  echo "                   PSE CONTAINER LOGS                            "
-  echo "================================================================="
+  echo "=================================================================" >&2
+  echo "                PSE PROXY CONTAINER LOGS                         " >&2
+  echo "=================================================================" >&2
 
-  # Get all logs from the container
-  sudo docker logs "$container_name" 2>&1 || log "Failed to retrieve container logs"
+  # Display the container logs
+  run_with_privilege docker logs "$container_name" >&2 || debug "Failed to display logs for container $container_name"
 
   # Display another separator
-  echo "================================================================="
-  echo "                END OF PSE CONTAINER LOGS                        "
-  echo "================================================================="
+  echo "=================================================================" >&2
+  echo "             END OF PSE PROXY CONTAINER LOGS                     " >&2
+  echo "=================================================================" >&2
 }
 
 # Function to clean up PSE container
@@ -337,22 +349,26 @@ cleanup_certificates() {
 
   log "Certificate cleanup completed"
 }
+unset_http_proxy() {
+  log "Unsetting HTTP proxy environment variables"
 
-# Function to upload scan metadata
-upload_scan_metadata() {
-  log "Uploading scan metadata"
+  local proxy_vars=(
+    "http_proxy"
+    "HTTP_PROXY"
+    "https_proxy"
+    "HTTPS_PROXY"
+    "no_proxy"
+    "NO_PROXY"
+  )
 
-  # Create a JSON file with scan details
-  log "Creating scan details JSON file"
-  JSON_FILE="analytics_metadata.json"
+  for var in "${proxy_vars[@]}"; do
+    echo "$var=" >>$GITHUB_ENV
+    unset "$var"
+  done
 
-  cat >"$JSON_FILE" <<EOF
-{
-  "scan_id": "$PSE_SCAN_ID",
-  "run_id": "$GITHUB_RUN_ID"
+  log "HTTP proxy environment variables unset successfully"
 }
-EOF
-}
+
 # Main execution
 main() {
   log "Starting PSE GitHub Action cleanup"
@@ -391,7 +407,7 @@ main() {
   # Always clean up iptables and certificates
   cleanup_iptables
   cleanup_certificates
-  upload_scan_metadata
+  unset_http_proxy
 
   log "PSE GitHub Action cleanup completed successfully"
 }
