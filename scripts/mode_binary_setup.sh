@@ -341,7 +341,7 @@ signal_build_start() {
   fi
 
   # Construct API URL for build start signal
-  local API_ENDPOINT="$API_URL/utilityapi/v1/scan/$SCAN_ID/start"
+  local API_ENDPOINT="$API_URL/utilityapi/v1/scan/$SCAN_ID/start?run-id=$GITHUB_RUN_ID"
   log "Sending build start signal to $API_ENDPOINT"
 
   # Make API request to signal build start
