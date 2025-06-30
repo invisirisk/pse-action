@@ -44,6 +44,18 @@ run_with_privilege() {
   fi
 }
 
+# Set default retry configuration
+set_retry_defaults() {
+  # Set default retry configuration if not already set
+  RETRY_MAX_ATTEMPTS=${RETRY_MAX_ATTEMPTS:-5}
+  RETRY_TIMEOUT=${RETRY_TIMEOUT:-60}
+  RETRY_INITIAL_WAIT=${RETRY_INITIAL_WAIT:-2}
+
+  export RETRY_MAX_ATTEMPTS RETRY_TIMEOUT RETRY_INITIAL_WAIT
+
+  log "Retry configuration: max attempts=$RETRY_MAX_ATTEMPTS, timeout=$RETRY_TIMEOUT, initial wait=$RETRY_INITIAL_WAIT"
+}
+
 # Validate required environment variables
 validate_env_vars() {
   local required_vars=("API_URL" "APP_TOKEN")
@@ -63,6 +75,66 @@ validate_env_vars() {
   fi
 
   log "Environment validation successful"
+}
+
+# Function to retry commands with exponential backoff
+retry_with_backoff() {
+  local max_attempts=${RETRY_MAX_ATTEMPTS:-5}
+  local timeout=${RETRY_TIMEOUT:-60}
+  local attempt=1
+  local exitCode=0
+  local wait_time=${RETRY_INITIAL_WAIT:-2}
+
+  while ((attempt <= max_attempts)); do
+    if [[ "$DEBUG" == "true" ]]; then
+      log "Attempt $attempt of $max_attempts: $@"
+    fi
+
+    # Execute the command
+    "$@"
+    exitCode=$?
+
+    if [[ $exitCode == 0 ]]; then
+      break
+    fi
+
+    log "Command failed with exit code $exitCode. Retrying in ${wait_time}s (attempt $attempt/$max_attempts)"
+    sleep $wait_time
+
+    # Exponential backoff with jitter
+    wait_time=$((wait_time * 2))
+    attempt=$((attempt + 1))
+  done
+
+  if [[ $exitCode != 0 ]]; then
+    log "ERROR: Command failed after $max_attempts attempts"
+  fi
+
+  return $exitCode
+}
+
+# Function to make API calls with retries
+api_call_with_retry() {
+  local method=$1
+  local url=$2
+  shift 2
+
+  local temp_file=$(mktemp)
+  local exit_code=0
+
+  # Execute curl with retries and store output in temp file
+  if ! retry_with_backoff curl -L -s -X "$method" "$url" "$@" -o "$temp_file"; then
+    log "ERROR: API call to $url failed after multiple retries"
+    exit_code=1
+  fi
+
+  # Output the response
+  cat "$temp_file"
+
+  # Clean up
+  rm -f "$temp_file"
+
+  return $exit_code
 }
 
 # Function to parse JSON
@@ -130,9 +202,9 @@ get_ecr_credentials() {
   local API_ENDPOINT="$API_URL/utilityapi/v1/registry?api_key=$APP_TOKEN"
   debug "Obtaining ECR credentials from $API_ENDPOINT"
 
-  # Make API request to get ECR credentials
+  # Make API request to get ECR credentials with retry
   local RESPONSE
-  RESPONSE=$(curl -L -s -X GET "$API_ENDPOINT")
+  RESPONSE=$(api_call_with_retry "GET" "$API_ENDPOINT")
 
   debug "API response received: $RESPONSE"
 
@@ -191,12 +263,12 @@ prepare_scan_id() {
   local API_ENDPOINT="$API_URL/utilityapi/v1/scan"
   debug "Creating scan in InvisiRisk Portal at $API_ENDPOINT"
 
-  # Make API request to create scan
+  # Make API request to create scan with retry
   local RESPONSE
   if [[ "$DEBUG" == "true" ]]; then
     set +x
   fi
-  RESPONSE=$(curl -L -X POST "$API_ENDPOINT" \
+  RESPONSE=$(api_call_with_retry "POST" "$API_ENDPOINT" \
     -H "Content-Type: application/json" \
     -d "{\"api_key\":\"$APP_TOKEN\",\"run_id\":\"${GITHUB_RUN_ID}_${GITHUB_RUN_ATTEMPT}\"}")
   if [[ "$DEBUG" == "true" ]]; then
@@ -296,6 +368,7 @@ main() {
 
   install_dependencies
   validate_env_vars
+  set_retry_defaults
   get_ecr_credentials
   prepare_scan_id
   set_outputs
