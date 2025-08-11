@@ -159,9 +159,14 @@ pull_and_start_pse_container() {
   if [[ "$DEBUG" == "true" ]]; then
     set +x
   fi
+    # Set POLICY_LOG based on DEBUG: empty when DEBUG is false, "t" when true
+  local POLICY_LOG_VAL=""
+  if [[ "$DEBUG" == "true" ]]; then
+    POLICY_LOG_VAL="t"
+  fi
   run_with_privilege docker run -d --name pse \
-    -e PSE_DEBUG_FLAG="--alsologtostderr" \
-    -e POLICY_LOG="t" \
+    -e PSE_DEBUG_FLAG="--stderrthreshold=ERROR" \
+    -e POLICY_LOG="$POLICY_LOG_VAL" \
     -e INVISIRISK_JWT_TOKEN="$APP_TOKEN" \
     -e INVISIRISK_PORTAL="$PORTAL_URL" \
     -e GITHUB_TOKEN="$GITHUB_TOKEN" \
