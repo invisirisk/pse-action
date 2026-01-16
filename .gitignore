@@ -37,3 +37,5 @@ test_*.sh
 
 # Developer documentation (internal only)
 DEVELOPER.md
+!README.md
+*.md

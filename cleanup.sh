@@ -161,6 +161,53 @@ validate_scan_id() {
   return 0
 }
 
+# Function to collect dependency graphs
+collect_dependency_graphs() {
+  log "Collecting dependency graphs"
+  
+  # Check if in test mode
+  if [ "$TEST_MODE" = "true" ]; then
+    log "Running in TEST_MODE, skipping dependency graph collection"
+    return 0
+  fi
+  
+  # Check if SCAN_ID is available
+  if [ -z "$SCAN_ID" ]; then
+    log "WARNING: SCAN_ID not available, skipping dependency graph collection"
+    return 0
+  fi
+  
+  # Get the script directory
+  SCRIPT_DIR="$(dirname "$0")"
+  DEPGRAPH_SCRIPT="$SCRIPT_DIR/scripts/collect_depgraph.sh"
+  
+  # Check if the depgraph collection script exists
+  if [ ! -f "$DEPGRAPH_SCRIPT" ]; then
+    debug "Dependency graph collection script not found at $DEPGRAPH_SCRIPT"
+    debug "Skipping dependency graph collection"
+    return 0
+  fi
+  
+  # Make the script executable
+  chmod +x "$DEPGRAPH_SCRIPT"
+  
+  # Execute the dependency graph collection script
+  log "Running dependency graph collection script"
+  
+  # Run the script and let output stream directly to stdout/stderr
+  # This ensures all logs appear in GitHub Actions in real-time
+  local depgraph_exit_code=0
+  bash "$DEPGRAPH_SCRIPT" || depgraph_exit_code=$?
+  
+  # Check if it failed
+  if [ "$depgraph_exit_code" -ne 0 ]; then
+    log "WARNING: Dependency graph collection failed with exit code $depgraph_exit_code, but continuing"
+    return 0
+  fi
+  
+  log "Dependency graph collection completed"
+}
+
 # Function to signal build end
 signal_build_end() {
   log "Signaling build end to InvisiRisk API"
