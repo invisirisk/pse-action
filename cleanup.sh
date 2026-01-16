@@ -435,6 +435,9 @@ main() {
     display_pse_binary_logs
   fi
 
+  # Collect dependency graphs before signaling build end
+  collect_dependency_graphs
+
   # Signal build end to InvisiRisk API
   signal_build_end
 
