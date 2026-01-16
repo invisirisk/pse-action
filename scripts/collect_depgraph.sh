@@ -21,6 +21,7 @@ echo "[STEP 1] Listing project directories (3 levels deep)..."
 file_list=$(find "$PROJECT_PATH" -maxdepth 3 \( -type f -o -type d \) 2>/dev/null | \
   grep -v '/\.git/' | \
   sed "s|^$PROJECT_PATH/||" | \
+  sed "s|^$PROJECT_PATH$||" | \
   grep -v '^$' | \
   jq -R . | jq -s .)
 
@@ -60,12 +61,17 @@ if [ "$http_code" != "200" ]; then
   exit 1
 fi
 
-discovery_count=$(echo "$discover_body" | jq '.discoveries | length' 2>/dev/null || echo "0")
+# Parse discovery count with proper error handling
+discovery_count=$(echo "$discover_body" | jq -r '.discoveries | length' 2>/dev/null)
+if [ -z "$discovery_count" ] || [ "$discovery_count" = "null" ]; then
+  discovery_count=0
+fi
+
 echo "✓ Discovered $discovery_count technology(ies)"
 echo ""
 
 # Exit if no discoveries
-if [ "$discovery_count" -eq 0 ]; then
+if [ "$discovery_count" -eq 0 ] 2>/dev/null; then
   echo "No technologies found. Exiting."
   exit 0
 fi
