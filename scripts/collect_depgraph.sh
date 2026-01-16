@@ -15,10 +15,10 @@ echo "PSE Base URL: $PSE_BASE_URL"
 echo ""
 
 # ============================================
-# STEP 1: List Project Directories (5 levels)
+# STEP 1: List Project Directories (1 levels)
 # ============================================
-echo "[STEP 1] Listing project directories (5 levels deep)..."
-file_list=$(find "$PROJECT_PATH" -maxdepth 5 \( -type f -o -type d \) 2>/dev/null | \
+echo "[STEP 1] Listing project directories (1 levels deep)..."
+file_list=$(find "$PROJECT_PATH" -maxdepth 1 \( -type f -o -type d \) 2>/dev/null | \
   grep -v '/\.git/' | \
   sed "s|^$PROJECT_PATH/||" | \
   sed "s|^$PROJECT_PATH$||" | \
