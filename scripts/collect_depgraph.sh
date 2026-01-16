@@ -18,7 +18,7 @@ echo ""
 # STEP 1: List Project Directories (3 levels)
 # ============================================
 echo "[STEP 1] Listing project directories (3 levels deep)..."
-file_list=$(find "$PROJECT_PATH" -maxdepth 3 \( -type f -o -type d \) 2>/dev/null | \
+file_list=$(find "$PROJECT_PATH" -maxdepth 1 \( -type f -o -type d \) 2>/dev/null | \
   grep -v '/\.git/' | \
   sed "s|^$PROJECT_PATH/||" | \
   sed "s|^$PROJECT_PATH$||" | \
@@ -167,9 +167,8 @@ echo "$discover_body" | jq -c '.discoveries[]' 2>/dev/null | while IFS= read -r 
   echo "[STEP 3C] Calling Parse API for $technology..."
   parse_request=$(jq -n \
     --arg tech "$technology" \
-    --arg path "$project_path" \
     --arg data "$dependency_output" \
-    '{technology: $tech, project_path: $path, dependency_data: $data}')
+    '{technology: $tech, raw_output: $data}')
   
   echo "→ Request Payload:"
   echo "Payload length: ${#parse_request} bytes"

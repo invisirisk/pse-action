@@ -171,12 +171,6 @@ collect_dependency_graphs() {
     return 0
   fi
   
-  # Check if SCAN_ID is available
-  if [ -z "$SCAN_ID" ]; then
-    log "WARNING: SCAN_ID not available, skipping dependency graph collection"
-    return 0
-  fi
-  
   # Get the script directory
   SCRIPT_DIR="$(dirname "$0")"
   DEPGRAPH_SCRIPT="$SCRIPT_DIR/scripts/collect_depgraph.sh"
