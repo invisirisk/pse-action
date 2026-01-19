@@ -143,14 +143,18 @@ echo "$discover_body" | jq -c '.discoveries[]' 2>/dev/null | while IFS= read -r 
   
   echo "→ Running script in: $project_path"
   cd "$project_path"
-  dependency_output=$(bash "$script_file" 2>&1) || {
-    echo "✗ Script execution failed"
-    cd - > /dev/null
-    rm -f "$script_file"
-    continue
-  }
+  dependency_output=$(bash "$script_file" 2>&1)
+  script_exit_code=$?
   cd - > /dev/null
   rm -f "$script_file"
+  
+  if [ $script_exit_code -ne 0 ]; then
+    echo "✗ Script execution failed (exit code: $script_exit_code)"
+    echo "← Script Error Output:"
+    echo "$dependency_output"
+    echo ""
+    continue
+  fi
   
   echo "← Script Output:"
   echo "Output length: ${#dependency_output} bytes"
