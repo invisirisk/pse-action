@@ -144,23 +144,29 @@ echo "$discover_body" | jq -c '.discoveries[]' 2>/dev/null | while IFS= read -r 
   
   echo "→ Running script in: $project_path"
   cd "$project_path"
-  dependency_output=$(bash "$script_file" 2>&1)
+  
+  # Use temp file to handle potentially large outputs
+  dependency_output_file="/tmp/depgraph_output_${technology}_$$.txt"
+  bash "$script_file" > "$dependency_output_file" 2>&1
   script_exit_code=$?
+  
   cd - > /dev/null
   rm -f "$script_file"
   
   if [ $script_exit_code -ne 0 ]; then
     echo "✗ Script execution failed (exit code: $script_exit_code)"
     echo "← Script Error Output:"
-    echo "$dependency_output"
+    head -c 5000 "$dependency_output_file"
     echo ""
+    rm -f "$dependency_output_file"
     continue
   fi
   
+  output_size=$(stat -f%z "$dependency_output_file" 2>/dev/null || stat -c%s "$dependency_output_file" 2>/dev/null)
   echo "← Script Output:"
-  echo "Output length: ${#dependency_output} bytes"
+  echo "Output length: $output_size bytes"
   echo "Output preview (first 500 chars):"
-  echo "${dependency_output:0:500}"
+  head -c 500 "$dependency_output_file"
   echo ""
   
   echo "✓ Script executed successfully"
@@ -170,25 +176,29 @@ echo "$discover_body" | jq -c '.discoveries[]' 2>/dev/null | while IFS= read -r 
   # STEP 3C: Call Parse API
   # ============================================
   echo "[STEP 3C] Calling Parse API for $technology..."
-  parse_request=$(jq -n \
-    --arg tech "$technology" \
-    --arg data "$dependency_output" \
-    '{technology: $tech, raw_output: $data}')
   
+  # Build JSON request using file to avoid "Argument list too long" error with large outputs
+  parse_request_file="/tmp/depgraph_request_${technology}_$$.json"
+  jq -Rs --arg tech "$technology" '{technology: $tech, raw_output: .}' < "$dependency_output_file" > "$parse_request_file"
+  
+  request_size=$(stat -f%z "$parse_request_file" 2>/dev/null || stat -c%s "$parse_request_file" 2>/dev/null)
   echo "→ Request Payload:"
-  echo "Payload length: ${#parse_request} bytes"
+  echo "Payload length: $request_size bytes"
   echo "Payload preview (first 300 chars):"
-  echo "${parse_request:0:300}" | jq -C '.' 2>/dev/null || echo "${parse_request:0:300}"
+  head -c 300 "$parse_request_file" | jq -C '.' 2>/dev/null || head -c 300 "$parse_request_file"
   echo ""
   
   echo "→ Calling: POST $PSE_BASE_URL/depgraph/parse"
   parse_response=$(curl -X POST "$PSE_BASE_URL/depgraph/parse" \
     -H "Content-Type: application/json" \
-    -d "$parse_request" \
+    -d @"$parse_request_file" \
     -k --tlsv1.2 \
     --connect-timeout 10 \
     --max-time 30 \
     -s -w "\nHTTP_CODE:%{http_code}")
+  
+  # Clean up temp files
+  rm -f "$dependency_output_file" "$parse_request_file"
   
   parse_http_code=$(echo "$parse_response" | grep "HTTP_CODE:" | cut -d: -f2)
   parse_body=$(echo "$parse_response" | sed '/HTTP_CODE:/d')
