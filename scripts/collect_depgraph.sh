@@ -2,7 +2,8 @@
 # PSE Dependency Graph Collection Script
 # Simplified version with clear logging for debugging
 
-set -e  # Exit on error
+# Note: set -e is NOT used here to allow proper error handling and reporting
+# Each critical operation checks its own exit code
 
 PSE_BASE_URL="https://pse.invisirisk.com"
 PROJECT_PATH="${GITHUB_WORKSPACE:-.}"
