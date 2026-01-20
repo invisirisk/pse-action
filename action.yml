@@ -60,6 +60,10 @@ inputs:
     description: 'Set to true to upload analytics metadata artifact'
     required: false
     default: 'true'
+  parse_deps:
+    description: 'Set to true to collect dependency graphs during cleanup, false to skip. Default is true if not specified.'
+    required: false
+    default: ''
 # Define outputs for the action
 outputs:
   scan_id:
@@ -114,3 +118,4 @@ runs:
         GITHUB_RUN_ID: ${{ github.run_id }}
         GITHUB_RUN_ATTEMPT: ${{ github.run_attempt }}
         CLEANUP_STEP_NAME: ${{ inputs.cleanup_step_name }}
+        PARSE_DEPS: ${{ inputs.parse_deps}}

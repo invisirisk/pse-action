@@ -438,8 +438,12 @@ main() {
     display_pse_binary_logs
   fi
 
-  # Collect dependency graphs before signaling build end
-  collect_dependency_graphs
+  # Collect dependency graphs before signaling build end (if enabled)
+  if [ "${PSE_PARSE_DEPS:-true}" = "false" ]; then
+    log "Dependency graph collection disabled via parse_deps flag"
+  else
+    collect_dependency_graphs
+  fi
 
   # Signal build end to InvisiRisk API
   signal_build_end
