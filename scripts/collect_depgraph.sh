@@ -31,58 +31,67 @@ echo "✓ Found $file_count files/directories"
 echo ""
 
 # ============================================
-# STEP 2: Call Discovery API
+# STEP 2: Call Scan API (Discover + Generate Scripts)
 # ============================================
-echo "[STEP 2] Calling Discovery API..."
-discover_request=$(jq -n --argjson files "$file_list" '{project_files: $files}')
+echo "[STEP 2] Calling Scan API (discovers technologies and generates scripts)..."
+scan_request=$(jq -n --argjson files "$file_list" '{project_files: $files, include_dev_deps: true}')
 
 echo "→ Request Payload:"
-echo "$discover_request" | jq -C '.' 2>/dev/null || echo "$discover_request"
+echo "$scan_request" | jq -C '.' 2>/dev/null || echo "$scan_request"
 echo ""
 
-echo "→ Calling: POST $PSE_BASE_URL/depgraph/discover"
-discover_response=$(curl -X POST "$PSE_BASE_URL/depgraph/discover" \
+echo "→ Calling: POST $PSE_BASE_URL/depgraph/scan"
+scan_response=$(curl -X POST "$PSE_BASE_URL/depgraph/scan" \
   -H "Content-Type: application/json" \
-  -d "$discover_request" \
+  -d "$scan_request" \
   -k --tlsv1.2 \
   --connect-timeout 10 \
   --max-time 30 \
   -s -w "\nHTTP_CODE:%{http_code}")
 
-http_code=$(echo "$discover_response" | grep "HTTP_CODE:" | cut -d: -f2)
-discover_body=$(echo "$discover_response" | sed '/HTTP_CODE:/d')
+http_code=$(echo "$scan_response" | grep "HTTP_CODE:" | cut -d: -f2)
+scan_body=$(echo "$scan_response" | sed '/HTTP_CODE:/d')
 
 echo "← Response (HTTP $http_code):"
-echo "$discover_body" | jq -C '.' 2>/dev/null || echo "$discover_body"
+echo "$scan_body" | jq -C '.' 2>/dev/null || echo "$scan_body"
 echo ""
 
 # Check for errors
 if [ "$http_code" != "200" ]; then
-  echo "✗ Discovery API failed with HTTP $http_code"
+  echo "✗ Scan API failed with HTTP $http_code"
   exit 1
 fi
 
-# Parse discovery count with proper error handling
-discovery_count=$(echo "$discover_body" | jq -r '.discoveries | length' 2>/dev/null)
+# Parse scan results
+scripts_count=$(echo "$scan_body" | jq -r '.scripts | length' 2>/dev/null)
+discovery_count=$(echo "$scan_body" | jq -r '.summary.total_discoveries' 2>/dev/null)
+
+if [ -z "$scripts_count" ] || [ "$scripts_count" = "null" ]; then
+  scripts_count=0
+fi
+
 if [ -z "$discovery_count" ] || [ "$discovery_count" = "null" ]; then
   discovery_count=0
 fi
 
 echo "✓ Discovered $discovery_count technology(ies)"
+echo "✓ Generated $scripts_count script(s)"
 echo ""
 
-# Exit if no discoveries
-if [ "$discovery_count" -eq 0 ] 2>/dev/null; then
+# Exit if no scripts
+if [ "$scripts_count" -eq 0 ] 2>/dev/null; then
   echo "No technologies found. Exiting."
   exit 0
 fi
 
 # ============================================
-# STEP 3: Process Each Discovery
+# STEP 3: Process Each Script
 # ============================================
-echo "$discover_body" | jq -c '.discoveries[]' 2>/dev/null | while IFS= read -r discovery; do
-  technology=$(echo "$discovery" | jq -r '.technology')
-  project_path=$(echo "$discovery" | jq -r '.project_path // "."')
+echo "$scan_body" | jq -c '.scripts[]' 2>/dev/null | while IFS= read -r script_obj; do
+  technology=$(echo "$script_obj" | jq -r '.technology')
+  project_path=$(echo "$script_obj" | jq -r '.project_path // "."')
+  script_content=$(echo "$script_obj" | jq -r '.script')
+  confidence=$(echo "$script_obj" | jq -r '.confidence')
   
   # Convert to absolute path
   if [[ ! "$project_path" = /* ]]; then
@@ -92,54 +101,16 @@ echo "$discover_body" | jq -c '.discoveries[]' 2>/dev/null | while IFS= read -r 
   echo "========================================="
   echo "Processing: $technology"
   echo "Path: $project_path"
+  echo "Confidence: $confidence"
   echo "========================================="
   echo ""
   
   # ============================================
-  # STEP 3A: Call Script API
+  # STEP 3A: Execute Script
   # ============================================
-  echo "[STEP 3A] Calling Script API for $technology..."
-  script_request=$(jq -n \
-    --arg tech "$technology" \
-    --arg path "$project_path" \
-    '{technology: $tech, project_path: $path, include_dev_deps: true}')
-  
-  echo "→ Request Payload:"
-  echo "$script_request" | jq -C '.' 2>/dev/null || echo "$script_request"
-  echo ""
-  
-  echo "→ Calling: POST $PSE_BASE_URL/depgraph/script"
-  script_response=$(curl -X POST "$PSE_BASE_URL/depgraph/script" \
-    -H "Content-Type: application/json" \
-    -d "$script_request" \
-    -k --tlsv1.2 \
-    --connect-timeout 10 \
-    --max-time 30 \
-    -s -w "\nHTTP_CODE:%{http_code}")
-  
-  script_http_code=$(echo "$script_response" | grep "HTTP_CODE:" | cut -d: -f2)
-  script_body=$(echo "$script_response" | sed '/HTTP_CODE:/d')
-  
-  echo "← Response (HTTP $script_http_code):"
-  echo "Script length: ${#script_body} bytes"
-  echo "Script preview (first 200 chars):"
-  echo "${script_body:0:200}"
-  echo ""
-  
-  if [ "$script_http_code" != "200" ] || [ -z "$script_body" ]; then
-    echo "✗ Script API failed for $technology"
-    continue
-  fi
-  
-  echo "✓ Script retrieved successfully"
-  echo ""
-  
-  # ============================================
-  # STEP 3B: Execute Script
-  # ============================================
-  echo "[STEP 3B] Executing dependency script for $technology..."
+  echo "[STEP 3A] Executing dependency script for $technology..."
   script_file="/tmp/depgraph_${technology}_$$.sh"
-  echo "$script_body" > "$script_file"
+  echo "$script_content" > "$script_file"
   chmod +x "$script_file"
   
   echo "→ Running script in: $project_path"
@@ -173,9 +144,9 @@ echo "$discover_body" | jq -c '.discoveries[]' 2>/dev/null | while IFS= read -r 
   echo ""
   
   # ============================================
-  # STEP 3C: Call Parse API
+  # STEP 3B: Call Parse API
   # ============================================
-  echo "[STEP 3C] Calling Parse API for $technology..."
+  echo "[STEP 3B] Calling Parse API for $technology..."
   
   # Build JSON request using file to avoid "Argument list too long" error with large outputs
   parse_request_file="/tmp/depgraph_request_${technology}_$$.json"
