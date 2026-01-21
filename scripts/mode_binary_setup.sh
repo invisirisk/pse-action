@@ -15,7 +15,7 @@ fi
 # Debug function
 debug() {
   if [[ "$DEBUG" == "true" ]]; then
-    echo "[DEBUG] $*" >&2
+    echo "[DEBUG] $*"
   fi
 }
 

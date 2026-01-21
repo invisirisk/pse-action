@@ -292,11 +292,11 @@ display_container_logs() {
     return 0
   fi
 
-  debug "Displaying logs for PSE container"
+  log "Displaying logs for PSE container"
 
   # Check if in test mode
   if [ "$TEST_MODE" = "true" ]; then
-    debug "Running in TEST_MODE, skipping container logs display"
+    log "Running in TEST_MODE, skipping container logs display"
     return 0
   fi
 
@@ -305,22 +305,22 @@ display_container_logs() {
   container_name=$(run_with_privilege docker ps -a --filter "ancestor=invisirisk/pse-proxy" --format "{{.Names}}" | head -n 1)
 
   if [ -z "$container_name" ]; then
-    debug "No PSE proxy container found to display logs"
+    log "No PSE proxy container found to display logs"
     return 0
   fi
 
   # Display a separator for better readability
-  echo "=================================================================" >&2
-  echo "                PSE PROXY CONTAINER LOGS                         " >&2
-  echo "=================================================================" >&2
+  echo "================================================================="
+  echo "                PSE PROXY CONTAINER LOGS                         "
+  echo "================================================================="
 
   # Display the container logs
-  run_with_privilege docker logs "$container_name" >&2 || debug "Failed to display logs for container $container_name"
+  run_with_privilege docker logs "$container_name" || log "Failed to display logs for container $container_name"
 
   # Display another separator
-  echo "=================================================================" >&2
-  echo "             END OF PSE PROXY CONTAINER LOGS                     " >&2
-  echo "=================================================================" >&2
+  echo "================================================================="
+  echo "             END OF PSE PROXY CONTAINER LOGS                     "
+  echo "================================================================="
 }
 
 # Function to clean up PSE container
