@@ -10,10 +10,18 @@ if [ "$DEBUG" = "true" ]; then
   set -x
 fi
 
+# Get DEBUG_PSE flag (defaults to false)
+DEBUG_PSE="${DEBUG_PSE:-false}"
+
 # Debug function
 debug() {
-  if [[ "$DEBUG" == "true" ]]; then
-    echo "[DEBUG] $*" >&2
+    echo "[DEBUG] $*"
+}
+
+# PSE debug logging (controlled by DEBUG_PSE flag)
+log_debug() {
+  if [ "$DEBUG_PSE" = "true" ]; then
+    echo "$@"
   fi
 }
 
@@ -94,6 +102,11 @@ run_with_privilege() {
 
 # Function to display PSE binary logs
 display_pse_binary_logs() {
+  # Only show logs if DEBUG_PSE is enabled
+  if [ "$DEBUG_PSE" != "true" ]; then
+    return 0
+  fi
+
   log "Displaying logs for PSE binary"
 
   # Check if in test mode
@@ -162,15 +175,11 @@ validate_scan_id() {
 }
 
 collect_dependency_graphs() {
-  echo "========================================="
-  echo "STARTING DEPENDENCY GRAPH COLLECTION"
-  echo "========================================="
-  echo "TEST_MODE: ${TEST_MODE:-<not set>}"
-  echo ""
+  log_debug "Starting dependency graph collection..."
   
   # Check if in test mode
   if [ "$TEST_MODE" = "true" ]; then
-    echo "Running in TEST_MODE, skipping dependency graph collection"
+    log_debug "Running in TEST_MODE, skipping dependency graph collection"
     return 0
   fi
   
@@ -180,8 +189,8 @@ collect_dependency_graphs() {
   
   # Check if the depgraph collection script exists
   if [ ! -f "$DEPGRAPH_SCRIPT" ]; then
-    echo "Dependency graph collection script not found at $DEPGRAPH_SCRIPT"
-    echo "Skipping dependency graph collection"
+    log_debug "Dependency graph collection script not found at $DEPGRAPH_SCRIPT"
+    log_debug "Skipping dependency graph collection"
     return 0
   fi
   
@@ -191,12 +200,12 @@ collect_dependency_graphs() {
   # Set GITHUB_WORKSPACE if not already set (defaults to /app for docker)
   if [ -z "$GITHUB_WORKSPACE" ]; then
     export GITHUB_WORKSPACE="/app"
-    echo "GITHUB_WORKSPACE set to: $GITHUB_WORKSPACE"
+    log_debug "GITHUB_WORKSPACE set to: $GITHUB_WORKSPACE"
   fi
   
   # Execute the dependency graph collection script
-  echo "Running dependency graph collection script at: $DEPGRAPH_SCRIPT"
-  echo ""
+  log_debug "Running dependency graph collection script at: $DEPGRAPH_SCRIPT"
+  log_debug ""
   
   # Run the script and let output stream directly to stdout/stderr
   # This ensures all echos appear in GitHub Actions in real-time
@@ -205,11 +214,11 @@ collect_dependency_graphs() {
   
   # Check if it failed
   if [ "$depgraph_exit_code" -ne 0 ]; then
-    echo "WARNING: Dependency graph collection failed with exit code $depgraph_exit_code, but continuing"
+    log "WARNING: Dependency graph collection failed with exit code $depgraph_exit_code, but continuing"
     return 0
   fi
   
-  echo "Dependency graph collection completed"
+  log_debug "Dependency graph collection completed"
 }
 # Function to signal build end
 signal_build_end() {
@@ -278,7 +287,8 @@ signal_build_end() {
 
 # Function to display container logs
 display_container_logs() {
-  if [[ "$DEBUG" != "true" ]]; then
+  # Only show logs if DEBUG_PSE is enabled
+  if [ "$DEBUG_PSE" != "true" ]; then
     return 0
   fi
 
