@@ -27,7 +27,7 @@ inputs:
   debug_pse:
     description: 'Enable debug mode for PSE container'
     required: false
-    default: false
+    default: true
   test_mode:
     description: 'Enable test mode to bypass API calls and container setup for testing'
     required: false
