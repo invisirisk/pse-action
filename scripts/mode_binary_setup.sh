@@ -5,13 +5,6 @@
 # Enable strict error handling
 set -e
 
-# Enable debug mode if requested or forced
-if [ "$DEBUG" = "true" ] || [ "$DEBUG_FORCE" = "true" ]; then
-  DEBUG="true"
-  export DEBUG
-  set -x
-fi
-
 # Debug function
 debug() {
   if [[ "$DEBUG" == "true" ]]; then
@@ -106,9 +99,7 @@ pull_and_start_pse_container() {
     set +x
   fi
   echo "$ECR_TOKEN" | run_with_privilege docker login --username "$ECR_USERNAME" --password-stdin "$ECR_REGISTRY_ID.dkr.ecr.$ECR_REGION.amazonaws.com"
-  if [[ "$DEBUG" == "true" ]]; then
-    set -x
-  fi
+
 
   # Define possible repository paths to try
   local REPO_PATHS=(

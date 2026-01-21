@@ -5,10 +5,6 @@
 # Enable strict error handling
 set -e
 
-# Enable debug mode if requested
-if [ "$DEBUG" = "true" ]; then
-  set -x
-fi
 
 # Get DEBUG flag (defaults to false)
 DEBUG="${DEBUG:-false}"

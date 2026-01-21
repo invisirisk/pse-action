@@ -6,11 +6,7 @@
 set -e
 
 # Enable debug mode if requested or forced
-if [ "$DEBUG" = "true" ] || [ "$DEBUG_FORCE" = "true" ]; then
-  DEBUG="true"
-  export DEBUG
-  set -x
-fi
+
 
 # Debug function
 debug() {
@@ -199,9 +195,7 @@ prepare_scan_id() {
   RESPONSE=$(curl -L -X POST "$API_ENDPOINT" \
     -H "Content-Type: application/json" \
     -d "{\"api_key\":\"$APP_TOKEN\",\"run_id\":\"${GITHUB_RUN_ID}_${GITHUB_RUN_ATTEMPT}\"}")
-  if [[ "$DEBUG" == "true" ]]; then
-    set -x
-  fi
+
 
   debug "API response received: $RESPONSE"
 
