@@ -62,20 +62,14 @@ if [ "$http_code" != "200" ]; then
   exit 1
 fi
 
-# Parse scan results
-scripts_count=$(echo "$scan_body" | jq -r '.scripts | length' 2>/dev/null)
-discovery_count=$(echo "$scan_body" | jq -r '.summary.total_discoveries' 2>/dev/null)
+# Parse scan results - API now returns direct array of scripts
+scripts_count=$(echo "$scan_body" | jq -r 'length' 2>/dev/null)
 
 if [ -z "$scripts_count" ] || [ "$scripts_count" = "null" ]; then
   scripts_count=0
 fi
 
-if [ -z "$discovery_count" ] || [ "$discovery_count" = "null" ]; then
-  discovery_count=0
-fi
-
-echo "✓ Discovered $discovery_count technology(ies)"
-echo "✓ Generated $scripts_count script(s)"
+echo "✓ Detected $scripts_count technology(ies)"
 echo ""
 
 # Exit if no scripts
@@ -87,7 +81,7 @@ fi
 # ============================================
 # STEP 3: Process Each Script
 # ============================================
-echo "$scan_body" | jq -c '.scripts[]' 2>/dev/null | while IFS= read -r script_obj; do
+echo "$scan_body" | jq -c '.[]' 2>/dev/null | while IFS= read -r script_obj; do
   technology=$(echo "$script_obj" | jq -r '.technology')
   project_path=$(echo "$script_obj" | jq -r '.project_path // "."')
   script_content=$(echo "$script_obj" | jq -r '.script')
