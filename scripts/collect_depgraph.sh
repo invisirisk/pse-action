@@ -1,17 +1,17 @@
 #!/bin/bash
 # PSE Dependency Graph Collection Script
-# Supports DEBUG_PSE flag for verbose logging
+# Supports DEBUG flag for verbose logging
 
 # Note: set -e is NOT used here to allow proper error handling and reporting
 # Each critical operation checks its own exit code
 
 PSE_BASE_URL="https://pse.invisirisk.com"
 PROJECT_PATH="${GITHUB_WORKSPACE:-.}"
-DEBUG_PSE="${DEBUG_PSE:-false}"
+DEBUG="${DEBUG:-false}"
 
 # Logging helpers
 log_debug() {
-  if [ "$DEBUG_PSE" = "true" ]; then
+  if [ "$DEBUG" = "true" ]; then
     echo "$@"
   fi
 }
@@ -25,7 +25,7 @@ log_debug "PSE DEPENDENCY GRAPH COLLECTION"
 log_debug "========================================="
 log_debug "Project Path: $PROJECT_PATH"
 log_debug "PSE Base URL: $PSE_BASE_URL"
-log_debug "Debug Mode: $DEBUG_PSE"
+log_debug "Debug Mode: $DEBUG"
 log_debug ""
 
 # ============================================
@@ -144,7 +144,7 @@ echo "$scan_body" | jq -c '.[]' 2>/dev/null | while IFS= read -r script_obj; do
   log_debug "← Script Output:"
   log_debug "Output length: $output_size bytes"
   log_debug "Output preview (first 500 chars):"
-  if [ "$DEBUG_PSE" = "true" ]; then
+  if [ "$DEBUG" = "true" ]; then
     head -c 500 "$dependency_output_file"
   fi
   log_debug ""
@@ -165,7 +165,7 @@ echo "$scan_body" | jq -c '.[]' 2>/dev/null | while IFS= read -r script_obj; do
   log_debug "→ Request Payload:"
   log_debug "Payload length: $request_size bytes"
   log_debug "Payload preview (first 300 chars):"
-  if [ "$DEBUG_PSE" = "true" ]; then
+  if [ "$DEBUG" = "true" ]; then
     head -c 300 "$parse_request_file" | jq -C '.' 2>/dev/null || head -c 300 "$parse_request_file"
   fi
   log_debug ""

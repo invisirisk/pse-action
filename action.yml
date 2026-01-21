@@ -24,10 +24,6 @@ inputs:
     description: 'Enable debug mode for verbose logging'
     required: false
     default: 'false'
-  debug_pse:
-    description: 'Enable debug mode for PSE container'
-    required: false
-    default: true
   test_mode:
     description: 'Enable test mode to bypass API calls and container setup for testing'
     required: false
@@ -123,5 +119,4 @@ runs:
         GITHUB_RUN_ATTEMPT: ${{ github.run_attempt }}
         CLEANUP_STEP_NAME: ${{ inputs.cleanup_step_name }}
         PARSE_DEPS: ${{ inputs.parse_deps}}
-        DEBUG_PSE: ${{ inputs.debug_pse }}
         

@@ -10,17 +10,17 @@ if [ "$DEBUG" = "true" ]; then
   set -x
 fi
 
-# Get DEBUG_PSE flag (defaults to false)
-DEBUG_PSE="${DEBUG_PSE:-false}"
+# Get DEBUG flag (defaults to false)
+DEBUG="${DEBUG:-false}"
 
 # Debug function
 debug() {
     echo "[DEBUG] $*"
 }
 
-# PSE debug logging (controlled by DEBUG_PSE flag)
+# PSE debug logging (controlled by DEBUG flag)
 log_debug() {
-  if [ "$DEBUG_PSE" = "true" ]; then
+  if [ "$DEBUG" = "true" ]; then
     echo "$@"
   fi
 }
@@ -102,8 +102,8 @@ run_with_privilege() {
 
 # Function to display PSE binary logs
 display_pse_binary_logs() {
-  # Only show logs if DEBUG_PSE is enabled
-  if [ "$DEBUG_PSE" != "true" ]; then
+  # Only show logs if DEBUG is enabled
+  if [ "$DEBUG" != "true" ]; then
     return 0
   fi
 
@@ -287,8 +287,8 @@ signal_build_end() {
 
 # Function to display container logs
 display_container_logs() {
-  # Only show logs if DEBUG_PSE is enabled
-  if [ "$DEBUG_PSE" != "true" ]; then
+  # Only show logs if DEBUG is enabled
+  if [ "$DEBUG" != "true" ]; then
     return 0
   fi
 
