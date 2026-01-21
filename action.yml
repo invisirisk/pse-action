@@ -72,9 +72,6 @@ outputs:
   ecr_username:
     description: 'ECR username for accessing the PSE container'
     value: ${{ steps.pse-setup.outputs.ecr_username }}
-  ecr_token:
-    description: 'ECR token for accessing the PSE container'
-    value: ${{ steps.pse-setup.outputs.ecr_token }}
   ecr_region:
     description: 'ECR region for accessing the PSE container'
     value: ${{ steps.pse-setup.outputs.ecr_region }}

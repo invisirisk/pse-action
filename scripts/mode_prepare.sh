@@ -124,13 +124,16 @@ get_ecr_credentials() {
 
   # Construct API URL for ECR credentials
   local API_ENDPOINT="$API_URL/utilityapi/v1/registry?api_key=$APP_TOKEN"
-  debug "Obtaining ECR credentials from $API_ENDPOINT"
+  debug "Obtaining ECR credentials from API"
 
   # Make API request to get ECR credentials
   local RESPONSE
-  RESPONSE=$(curl -L -s -X GET "$API_ENDPOINT")
+  local HTTP_CODE
+  RESPONSE=$(curl -L -s -w "\n%{http_code}" -X GET "$API_ENDPOINT")
+  HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
+  RESPONSE=$(echo "$RESPONSE" | sed '$d')
 
-  debug "API response received: $RESPONSE"
+  debug "API response status: $HTTP_CODE"
 
   # Check if response contains an error
   if echo "$RESPONSE" | grep -q "error"; then
@@ -185,19 +188,18 @@ prepare_scan_id() {
 
   # Create a new scan in the InvisiRisk Portal
   local API_ENDPOINT="$API_URL/utilityapi/v1/scan"
-  debug "Creating scan in InvisiRisk Portal at $API_ENDPOINT"
+  debug "Creating scan in InvisiRisk Portal"
 
   # Make API request to create scan
   local RESPONSE
-  if [[ "$DEBUG" == "true" ]]; then
-    set +x
-  fi
-  RESPONSE=$(curl -L -X POST "$API_ENDPOINT" \
+  local HTTP_CODE
+  RESPONSE=$(curl -L -s -w "\n%{http_code}" -X POST "$API_ENDPOINT" \
     -H "Content-Type: application/json" \
     -d "{\"api_key\":\"$APP_TOKEN\",\"run_id\":\"${GITHUB_RUN_ID}_${GITHUB_RUN_ATTEMPT}\"}")
+  HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
+  RESPONSE=$(echo "$RESPONSE" | sed '$d')
 
-
-  debug "API response received: $RESPONSE"
+  debug "API response status: $HTTP_CODE"
 
   # Check if response contains an error
   if echo "$RESPONSE" | grep -q "error"; then
@@ -254,10 +256,9 @@ set_outputs() {
   echo "PSE_SCAN_ID=$SCAN_ID" >>$GITHUB_ENV
   echo "DEBUG=${DEBUG:-false}" >>$GITHUB_ENV
 
-  # Debug: Print the contents of GITHUB_OUTPUT file
-  debug "Contents of GITHUB_OUTPUT file:"
+  # Debug: Confirm outputs were set
   if [ -f "$GITHUB_OUTPUT" ]; then
-    debug "$(cat $GITHUB_OUTPUT)"
+    debug "GitHub outputs have been set successfully"
   else
     debug "GITHUB_OUTPUT file does not exist or is not accessible"
   fi
