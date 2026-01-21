@@ -267,12 +267,12 @@ install_dependencies() {
   log "Installing dependencies"
 
   # Detect the package manager
-  if command -v apt-get >/dev/null 2>&1; then
+  if command -v apt-get >/dev/null 2>&2; then
     # Debian/Ubuntu (apt-get)
     log "Detected apt-get package manager"
     run_with_privilege apt-get update
     run_with_privilege apt-get install -y curl git procps jq
-  elif command -v apk >/dev/null 2>&1; then
+  elif command -v apk >/dev/null 2>&2; then
     # Alpine (apk)
     log "Detected apk package manager"
     run_with_privilege apk update
