@@ -258,6 +258,7 @@ set_outputs() {
   echo "PSE_APP_TOKEN=$APP_TOKEN" >>$GITHUB_ENV
   echo "PSE_PORTAL_URL=$PORTAL_URL" >>$GITHUB_ENV
   echo "PSE_SCAN_ID=$SCAN_ID" >>$GITHUB_ENV
+  echo "DEBUG_PSE=${DEBUG_PSE:-false}" >>$GITHUB_ENV
 
   # Debug: Print the contents of GITHUB_OUTPUT file
   debug "Contents of GITHUB_OUTPUT file:"
