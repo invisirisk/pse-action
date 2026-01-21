@@ -300,11 +300,11 @@ display_container_logs() {
     return 0
   fi
 
-  # Find the PSE proxy container
-  local container_name
-  container_name=$(run_with_privilege docker ps -a --filter "ancestor=invisirisk/pse-proxy" --format "{{.Names}}" | head -n 1)
-
-  if [ -z "$container_name" ]; then
+  # Find the PSE proxy container by name
+  local container_name="pse"
+  
+  # Check if container exists
+  if ! run_with_privilege docker ps -a --format "{{.Names}}" | grep -q "^${container_name}$"; then
     log "No PSE proxy container found to display logs"
     return 0
   fi
@@ -332,9 +332,6 @@ cleanup_pse_container() {
     log "Running in TEST_MODE, skipping PSE container cleanup"
     return 0
   fi
-
-  # Display container logs before stopping it
-  display_container_logs "pse"
 
   # Stop and remove PSE container if it exists
   if sudo docker ps -a | grep -q pse; then
