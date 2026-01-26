@@ -1,6 +1,6 @@
 #!/bin/bash
 # PSE Dependency Graph Collection Script - Simplified
-# Fetches and executes a complete collection script from /depgraph endpoint
+# Fetches and executes a complete collection script from /collector/depgraph endpoint
 
 PSE_BASE_URL="https://pse.invisirisk.com"
 PROJECT_PATH="${GITHUB_WORKSPACE:-.}"
@@ -8,8 +8,8 @@ DEBUG="${DEBUG:-false}"
 
 echo "[INFO] Starting dependency graph collection"
 
-# Fetch complete collection script from /depgraph endpoint
-collection_script=$(curl -X POST "$PSE_BASE_URL/depgraph" \
+# Fetch complete collection script from /collector/depgraph endpoint
+collection_script=$(curl -X POST "$PSE_BASE_URL/collector/depgraph" \
   -H "Content-Type: application/json" \
   -d "{\"project_path\":\"$PROJECT_PATH\",\"pse_base_url\":\"$PSE_BASE_URL\",\"include_dev_deps\":false,\"debug\":$DEBUG}" \
   -k --tlsv1.2 \
