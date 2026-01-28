@@ -10,8 +10,8 @@ set -e
 DEBUG="${DEBUG:-false}"
 
 
-# PSE log_debug logging (controlled by DEBUG flag)
-log_debug() {
+# PSE debug logging (controlled by DEBUG flag)
+debug() {
   if [ "$DEBUG" = "true" ]; then
     echo "$@"
   fi
@@ -35,10 +35,10 @@ trap 'error_handler $LINENO' ERR
 validate_env_vars() {
   # Check for API_URL
   if [ -z "$API_URL" ]; then
-    log_debug "API_URL is not set, trying to use PSE_API_URL from previous step..."
+    debug "API_URL is not set, trying to use PSE_API_URL from previous step..."
     if [ -n "$PSE_API_URL" ]; then
       export API_URL="$PSE_API_URL"
-      log_debug "Using API_URL from previous step: $API_URL"
+      debug "Using API_URL from previous step: $API_URL"
     else
       log "ERROR: Could not determine API_URL. Please provide it as an input parameter or run setup first."
       exit 1
@@ -47,10 +47,10 @@ validate_env_vars() {
 
   # Check for APP_TOKEN
   if [ -z "$APP_TOKEN" ]; then
-    log_debug "APP_TOKEN is not set, trying to use PSE_APP_TOKEN from previous step..."
+    debug "APP_TOKEN is not set, trying to use PSE_APP_TOKEN from previous step..."
     if [ -n "$PSE_APP_TOKEN" ]; then
       export APP_TOKEN="$PSE_APP_TOKEN"
-      log_debug "Using APP_TOKEN from previous step (value hidden)"
+      debug "Using APP_TOKEN from previous step (value hidden)"
     else
       log "ERROR: Could not determine APP_TOKEN. Please provide it as an input parameter or run setup first."
       exit 1
@@ -59,26 +59,26 @@ validate_env_vars() {
 
   # Check for PORTAL_URL
   if [ -z "$PORTAL_URL" ]; then
-    log_debug "PORTAL_URL is not set, trying to use PSE_PORTAL_URL from previous step..."
+    debug "PORTAL_URL is not set, trying to use PSE_PORTAL_URL from previous step..."
     if [ -n "$PSE_PORTAL_URL" ]; then
       export PORTAL_URL="$PSE_PORTAL_URL"
-      log_debug "Using PORTAL_URL from previous step: $PORTAL_URL"
+      debug "Using PORTAL_URL from previous step: $PORTAL_URL"
     else
       # Try to use API_URL as fallback
       export PORTAL_URL="$API_URL"
-      log_debug "Using API_URL as fallback for PORTAL_URL: $PORTAL_URL"
+      debug "Using API_URL as fallback for PORTAL_URL: $PORTAL_URL"
     fi
   fi
 
   # Check SCAN_ID separately with warning instead of error
   if [ -z "$SCAN_ID" ]; then
-    log_debug "SCAN_ID is not set, using a default value for cleanup..."
+    debug "SCAN_ID is not set, using a default value for cleanup..."
     # Generate a unique ID for this cleanup session
     export SCAN_ID="cleanup_$(date +%s)_${GITHUB_RUN_ID:-unknown}"
-    log_debug "Using generated SCAN_ID: $SCAN_ID"
+    debug "Using generated SCAN_ID: $SCAN_ID"
   fi
 
-  log_debug "Environment validation successful"
+  debug "Environment validation successful"
 }
 
 # Helper function to run commands with or without sudo based on environment
@@ -158,17 +158,17 @@ validate_scan_id() {
 
   # Check if SCAN_ID is a valid UUID (basic check)
   if ! echo "$SCAN_ID" | grep -E '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$' >/dev/null; then
-    log_debug "WARNING: SCAN_ID does not appear to be a valid UUID: $SCAN_ID"
+    debug "WARNING: SCAN_ID does not appear to be a valid UUID: $SCAN_ID"
     # Continue anyway as it might be a different format
   fi
 
-  log_debug "SCAN_ID validation passed: $SCAN_ID"
+  debug "SCAN_ID validation passed: $SCAN_ID"
   return 0
 }
 
 # Function to collect dependency graphs
 collect_dependency_graphs() {
-  log_debug "Starting dependency graph collection..."
+  debug "Starting dependency graph collection..."
 
   # Inline dependency graph collection
   local PSE_BASE_URL="https://pse.invisirisk.com"
@@ -206,7 +206,7 @@ signal_build_end() {
 
   # Default to PSE endpoint directly
   BASE_URL="https://pse.invisirisk.com"
-  log_debug "Using default PSE endpoint: $BASE_URL"
+  debug "Using default PSE endpoint: $BASE_URL"
 
   # Build URL for the GitHub run
   build_url="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
@@ -216,7 +216,7 @@ signal_build_end() {
   params="${params}&build_url=$(url_encode "$build_url")"
   params="${params}&status=$(url_encode "${INPUT_JOB_STATUS:-unknown}")"
 
-  log_debug "Sending end signal to PSE with parameters: $params"
+  debug "Sending end signal to PSE with parameters: $params"
 
   # Send request with retries
   MAX_RETRIES=3
@@ -224,7 +224,7 @@ signal_build_end() {
   ATTEMPT=1
 
   while [ $ATTEMPT -le $MAX_RETRIES ]; do
-    log_debug "Sending end signal, attempt $ATTEMPT of $MAX_RETRIES"
+    debug "Sending end signal, attempt $ATTEMPT of $MAX_RETRIES"
 
     RESPONSE=$(curl -X POST "${BASE_URL}/end" \
       -H 'Content-Type: application/x-www-form-urlencoded' \
@@ -235,18 +235,18 @@ signal_build_end() {
       --retry 3 --retry-delay 2 --max-time 10 \
       -s -w "\n%{http_code}" 2>&1)
 
-    log_debug "Response: $RESPONSE"
+    debug "Response: $RESPONSE"
 
     HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
     RESPONSE_BODY=$(echo "$RESPONSE" | sed '$d')
 
     if [ "$HTTP_CODE" -ge 200 ] && [ "$HTTP_CODE" -lt 300 ]; then
       log "End signal sent successfully (HTTP $HTTP_CODE)"
-      log_debug "Response: $RESPONSE_BODY"
+      debug "Response: $RESPONSE_BODY"
       return 0
     else
       log "Failed to send end signal (HTTP $HTTP_CODE)"
-      log_debug "Response: $RESPONSE_BODY"
+      debug "Response: $RESPONSE_BODY"
       log "Retrying in $RETRY_DELAY seconds..."
       sleep $RETRY_DELAY
       RETRY_DELAY=$((RETRY_DELAY * 2))
