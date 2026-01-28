@@ -420,8 +420,8 @@ main() {
   fi
 
   # Collect dependency graphs before signaling build end (if enabled)
-  if [ "${PSE_PARSE_DEPS:-true}" = "false" ]; then
-    log "Dependency graph collection disabled via parse_deps flag"
+  if [ "${PSE_COLLECT_DEPENDENCIES:-true}" = "false" ]; then
+    log "Dependency graph collection disabled via collect_dependencies flag"
   else
     collect_dependency_graphs
   fi

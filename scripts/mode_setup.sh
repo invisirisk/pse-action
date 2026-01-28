@@ -38,14 +38,7 @@ run_with_privilege() {
   fi
 }
 
-set_global_envs() {
-  # Store envs for to use throughout the job
-  if [ -z "$PARSE_DEPS" ]; then
-    echo "PSE_PARSE_DEPS=true" >> $GITHUB_ENV
-  else
-    echo "PSE_PARSE_DEPS=$PARSE_DEPS" >> $GITHUB_ENV
-  fi
-}
+
 
 # Validate required environment variables
 validate_env_vars() {
@@ -288,7 +281,6 @@ main() {
 
   validate_env_vars
   setup_dependencies
-  set_global_envs
   pull_and_start_pse_container
   #signal_build_start
   register_cleanup

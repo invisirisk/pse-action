@@ -255,6 +255,8 @@ set_outputs() {
   echo "PSE_PORTAL_URL=$PORTAL_URL" >>$GITHUB_ENV
   echo "PSE_SCAN_ID=$SCAN_ID" >>$GITHUB_ENV
   echo "DEBUG=${DEBUG:-false}" >>$GITHUB_ENV
+  echo "INCLUDE_DEV_DEPS=${INCLUDE_DEV_DEPS:-true}" >>$GITHUB_ENV
+  echo "PSE_COLLECT_DEPENDENCIES=${COLLECT_DEPENDENCIES:-true}" >>$GITHUB_ENV
 
   # Debug: Confirm outputs were set
   if [ -f "$GITHUB_OUTPUT" ]; then
