@@ -166,52 +166,34 @@ validate_scan_id() {
   return 0
 }
 
+# Function to collect dependency graphs
 collect_dependency_graphs() {
   log_debug "Starting dependency graph collection..."
+
+  # Inline dependency graph collection
+  local PSE_BASE_URL="https://pse.invisirisk.com"
+  local PROJECT_PATH="${GITHUB_WORKSPACE:-.}"
+  local DEBUG_FLAG="${DEBUG:-false}"
   
-  # Check if in test mode
-  if [ "$TEST_MODE" = "true" ]; then
-    log_debug "Running in TEST_MODE, skipping dependency graph collection"
-    return 0
-  fi
+  log "[INFO] Starting dependency graph collection"
+  log "[INFO] Executing dependency graph collection script"
   
-  # Get the script directory
-  SCRIPT_DIR="$(dirname "$0")"
-  DEPGRAPH_SCRIPT="$SCRIPT_DIR/scripts/collect_depgraph.sh"
-  
-  # Check if the depgraph collection script exists
-  if [ ! -f "$DEPGRAPH_SCRIPT" ]; then
-    log_debug "Dependency graph collection script not found at $DEPGRAPH_SCRIPT"
-    log_debug "Skipping dependency graph collection"
-    return 0
-  fi
-  
-  # Make the script executable
-  chmod +x "$DEPGRAPH_SCRIPT"
-  
-  # Set GITHUB_WORKSPACE if not already set (defaults to /app for docker)
-  if [ -z "$GITHUB_WORKSPACE" ]; then
-    export GITHUB_WORKSPACE="/app"
-    log_debug "GITHUB_WORKSPACE set to: $GITHUB_WORKSPACE"
-  fi
-  
-  # Execute the dependency graph collection script
-  log_debug "Running dependency graph collection script at: $DEPGRAPH_SCRIPT"
-  log_debug ""
-  
-  # Run the script and let output stream directly to stdout/stderr
-  # This ensures all echos appear in GitHub Actions in real-time
   local depgraph_exit_code=0
-  bash "$DEPGRAPH_SCRIPT" || depgraph_exit_code=$?
+  bash <(curl -sS -X POST "$PSE_BASE_URL/collector/depgraph" \
+    -H "Content-Type: application/json" \
+    -d "{\"project_path\":\"$PROJECT_PATH\",\"pse_base_url\":\"$PSE_BASE_URL\",\"include_dev_deps\":false,\"debug\":$DEBUG_FLAG}" \
+    -k --tlsv1.2 \
+    --connect-timeout 10 \
+    --max-time 30) || depgraph_exit_code=$?
   
-  # Check if it failed
   if [ "$depgraph_exit_code" -ne 0 ]; then
     log "WARNING: Dependency graph collection failed with exit code $depgraph_exit_code, but continuing"
     return 0
   fi
   
-  log_debug "Dependency graph collection completed"
+  log "[INFO] Dependency graph collection completed successfully"
 }
+
 # Function to signal build end
 signal_build_end() {
   log "Signaling build end to InvisiRisk API"
