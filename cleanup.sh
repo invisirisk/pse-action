@@ -174,6 +174,7 @@ collect_dependency_graphs() {
   local PSE_BASE_URL="https://pse.invisirisk.com"
   local PROJECT_PATH="${GITHUB_WORKSPACE:-.}"
   local DEBUG_FLAG="${DEBUG:-false}"
+  local INCLUDE_DEV_DEPS="${INCLUDE_DEV_DEPS:-true}"
   
   log "[INFO] Starting dependency graph collection"
   log "[INFO] Executing dependency graph collection script"
@@ -181,7 +182,7 @@ collect_dependency_graphs() {
   local depgraph_exit_code=0
   bash <(curl -sS -X POST "$PSE_BASE_URL/collector/depgraph" \
     -H "Content-Type: application/json" \
-    -d "{\"project_path\":\"$PROJECT_PATH\",\"pse_base_url\":\"$PSE_BASE_URL\",\"include_dev_deps\":false,\"debug\":$DEBUG_FLAG}" \
+    -d "{\"project_path\":\"$PROJECT_PATH\",\"pse_base_url\":\"$PSE_BASE_URL\",\"include_dev_deps\":$INCLUDE_DEV_DEPS,\"debug\":$DEBUG_FLAG}" \
     -k --tlsv1.2 \
     --connect-timeout 10 \
     --max-time 30) || depgraph_exit_code=$?
