@@ -180,9 +180,12 @@ collect_dependency_graphs() {
   log "[INFO] Executing dependency graph collection script"
   
   local depgraph_exit_code=0
-  bash <(curl -sS -X POST "$PSE_BASE_URL/collector/depgraph" \
-    -H "Content-Type: application/json" \
-    -d "{\"project_path\":\"$PROJECT_PATH\",\"pse_base_url\":\"$PSE_BASE_URL\",\"include_dev_deps\":$INCLUDE_DEV_DEPS,\"debug\":$DEBUG_FLAG}" \
+  bash <(curl -sS -X GET "$PSE_BASE_URL/collector/depgraph" \
+    -G \
+    --data-urlencode "project_path=$PROJECT_PATH" \
+    --data-urlencode "pse_base_url=$PSE_BASE_URL" \
+    --data-urlencode "include_dev_deps=$INCLUDE_DEV_DEPS" \
+    --data-urlencode "debug=$DEBUG_FLAG" \
     -k --tlsv1.2 \
     --connect-timeout 10 \
     --max-time 30) || depgraph_exit_code=$?
