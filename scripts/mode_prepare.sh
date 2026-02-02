@@ -123,7 +123,10 @@ get_ecr_credentials() {
   fi
 
   # Construct API URL for ECR credentials
-  local API_ENDPOINT="$API_URL/utilityapi/v1/registry?api_key=$APP_TOKEN"
+  # local API_ENDPOINT="$API_URL/utilityapi/v1/registry?api_key=$APP_TOKEN"
+  # using static as dev api is not able to fetch ecr credentials
+  local API_ENDPOINT="https://app.stage.invisirisk.com/utilityapi/v1/registry?api_key=l_qPT73KaVz4ORF1Hj_Y68QG4b2LxaiDaKJiKy_lt5i_zMiSDLhUPWLb1dBBIGhPBKStREgf9V-3kEFot94Ikw"
+
   debug "Obtaining ECR credentials from API"
 
   # Make API request to get ECR credentials
