@@ -5,17 +5,11 @@
 # Enable strict error handling
 set -e
 
-# Enable debug mode if requested or forced
-if [ "$DEBUG" = "true" ] || [ "$DEBUG_FORCE" = "true" ]; then
-  DEBUG="true"
-  export DEBUG
-  set -x
-fi
 
 # Debug function
 debug() {
   if [[ "$DEBUG" == "true" ]]; then
-    echo "[DEBUG] $*" >&2
+    echo "[DEBUG] $*"
   fi
 }
 
@@ -43,6 +37,8 @@ run_with_privilege() {
     sudo "$@"
   fi
 }
+
+
 
 # Validate required environment variables
 validate_env_vars() {
@@ -106,9 +102,7 @@ pull_and_start_pse_container() {
     set +x
   fi
   echo "$ECR_TOKEN" | run_with_privilege docker login --username "$ECR_USERNAME" --password-stdin "$ECR_REGISTRY_ID.dkr.ecr.$ECR_REGION.amazonaws.com"
-  if [[ "$DEBUG" == "true" ]]; then
-    set -x
-  fi
+
 
   # Define possible repository paths to try
   local REPO_PATHS=(
@@ -166,9 +160,7 @@ pull_and_start_pse_container() {
     -e INVISIRISK_PORTAL="$PORTAL_URL" \
     -e GITHUB_TOKEN="$GITHUB_TOKEN" \
     "$PSE_IMAGE"
-  if [[ "$DEBUG" == "true" ]]; then
-    set -x
-  fi
+
 
   # Get container IP for iptables configuration using container name from docker ps
   CONTAINER_NAME=$(run_with_privilege docker ps --filter "ancestor=$PSE_IMAGE" --format "{{.Names}}")
@@ -193,6 +185,7 @@ pull_and_start_pse_container() {
   echo "PSE_PORTAL_URL=$PORTAL_URL" >>$GITHUB_ENV
   echo "PSE_PROXY_IP=$PSE_IP" >>$GITHUB_ENV
   echo "PSE_SCAN_ID=$SCAN_ID" >>$GITHUB_ENV
+  echo "DEBUG=${DEBUG:-false}" >>$GITHUB_ENV
 
   # Also save the PSE proxy IP as an output parameter
   echo "proxy_ip=$PSE_IP" >>$GITHUB_OUTPUT

@@ -6,11 +6,7 @@
 set -e
 
 # Enable debug mode if requested or forced
-if [ "$DEBUG" = "true" ] || [ "$DEBUG_FORCE" = "true" ]; then
-  DEBUG="true"
-  export DEBUG
-  set -x
-fi
+
 
 # Debug function
 debug() {

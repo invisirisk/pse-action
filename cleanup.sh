@@ -5,15 +5,18 @@
 # Enable strict error handling
 set -e
 
-# Enable debug mode if requested
-if [ "$DEBUG" = "true" ]; then
-  set -x
-fi
 
-# Debug function
+# Get DEBUG flag (defaults to false)
+DEBUG="${DEBUG:-false}"
+
+# PSE Base URL
+PSE_BASE_URL="https://pse.invisirisk.com"
+
+
+# PSE debug logging (controlled by DEBUG flag)
 debug() {
-  if [[ "$DEBUG" == "true" ]]; then
-    echo "[DEBUG] $*" >&2
+  if [ "$DEBUG" = "true" ]; then
+    echo "$@"
   fi
 }
 
@@ -94,6 +97,11 @@ run_with_privilege() {
 
 # Function to display PSE binary logs
 display_pse_binary_logs() {
+  # Only show logs if DEBUG is enabled
+  if [ "$DEBUG" != "true" ]; then
+    return 0
+  fi
+
   log "Displaying logs for PSE binary"
 
   # Check if in test mode
@@ -161,6 +169,37 @@ validate_scan_id() {
   return 0
 }
 
+# Function to collect dependency graphs
+collect_dependency_graphs() {
+  debug "Starting dependency graph collection..."
+
+  # Inline dependency graph collection
+  local PROJECT_PATH="${GITHUB_WORKSPACE:-.}"
+  local DEBUG_FLAG="${DEBUG:-false}"
+  local INCLUDE_DEV_DEPS="${INCLUDE_DEV_DEPS:-true}"
+  
+  log "[INFO] Starting dependency graph collection"
+  log "[INFO] Executing dependency graph collection script"
+  
+  local depgraph_exit_code=0
+  bash <(curl -sS -X GET "$PSE_BASE_URL/collector/depgraph" \
+    -G \
+    --data-urlencode "project_path=$PROJECT_PATH" \
+    --data-urlencode "pse_base_url=$PSE_BASE_URL" \
+    --data-urlencode "include_dev_deps=$INCLUDE_DEV_DEPS" \
+    --data-urlencode "debug=$DEBUG_FLAG" \
+    -k --tlsv1.2 \
+    --connect-timeout 10 \
+    --max-time 30) || depgraph_exit_code=$?
+  
+  if [ "$depgraph_exit_code" -ne 0 ]; then
+    log "WARNING: Dependency graph collection failed with exit code $depgraph_exit_code, but continuing"
+    return 0
+  fi
+  
+  log "[INFO] Dependency graph collection completed successfully"
+}
+
 # Function to signal build end
 signal_build_end() {
   log "Signaling build end to InvisiRisk API"
@@ -172,8 +211,7 @@ signal_build_end() {
   fi
 
   # Default to PSE endpoint directly
-  BASE_URL="https://pse.invisirisk.com"
-  debug "Using default PSE endpoint: $BASE_URL"
+  debug "Using default PSE endpoint: $PSE_BASE_URL"
 
   # Build URL for the GitHub run
   build_url="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
@@ -193,7 +231,7 @@ signal_build_end() {
   while [ $ATTEMPT -le $MAX_RETRIES ]; do
     debug "Sending end signal, attempt $ATTEMPT of $MAX_RETRIES"
 
-    RESPONSE=$(curl -X POST "${BASE_URL}/end" \
+    RESPONSE=$(curl -X POST "${PSE_BASE_URL}/end" \
       -H 'Content-Type: application/x-www-form-urlencoded' \
       -H 'User-Agent: pse-action' \
       -d "$params" \
@@ -228,39 +266,40 @@ signal_build_end() {
 
 # Function to display container logs
 display_container_logs() {
-  if [[ "$DEBUG" != "true" ]]; then
+  # Only show logs if DEBUG is enabled
+  if [ "$DEBUG" != "true" ]; then
     return 0
   fi
 
-  debug "Displaying logs for PSE container"
+  log "Displaying logs for PSE container"
 
   # Check if in test mode
   if [ "$TEST_MODE" = "true" ]; then
-    debug "Running in TEST_MODE, skipping container logs display"
+    log "Running in TEST_MODE, skipping container logs display"
     return 0
   fi
 
-  # Find the PSE proxy container
-  local container_name
-  container_name=$(run_with_privilege docker ps -a --filter "ancestor=invisirisk/pse-proxy" --format "{{.Names}}" | head -n 1)
-
-  if [ -z "$container_name" ]; then
-    debug "No PSE proxy container found to display logs"
+  # Find the PSE proxy container by name
+  local container_name="pse"
+  
+  # Check if container exists
+  if ! run_with_privilege docker ps -a --format "{{.Names}}" | grep -q "^${container_name}$"; then
+    log "PSE proxy container '${container_name}' not found - skipping log display"
     return 0
   fi
 
   # Display a separator for better readability
-  echo "=================================================================" >&2
-  echo "                PSE PROXY CONTAINER LOGS                         " >&2
-  echo "=================================================================" >&2
+  echo "================================================================="
+  echo "                PSE PROXY CONTAINER LOGS                         "
+  echo "================================================================="
 
   # Display the container logs
-  run_with_privilege docker logs "$container_name" >&2 || debug "Failed to display logs for container $container_name"
+  run_with_privilege docker logs "$container_name" || log "Failed to display logs for container $container_name"
 
   # Display another separator
-  echo "=================================================================" >&2
-  echo "             END OF PSE PROXY CONTAINER LOGS                     " >&2
-  echo "=================================================================" >&2
+  echo "================================================================="
+  echo "             END OF PSE PROXY CONTAINER LOGS                     "
+  echo "================================================================="
 }
 
 # Function to clean up PSE container
@@ -272,9 +311,6 @@ cleanup_pse_container() {
     log "Running in TEST_MODE, skipping PSE container cleanup"
     return 0
   fi
-
-  # Display container logs before stopping it
-  display_container_logs "pse"
 
   # Stop and remove PSE container if it exists
   if sudo docker ps -a | grep -q pse; then
@@ -386,6 +422,13 @@ main() {
   # Display PSE binary logs if we're using the binary setup mode
   if [ -n "$PSE_LOG_FILE" ]; then
     display_pse_binary_logs
+  fi
+
+  # Collect dependency graphs before signaling build end (if enabled)
+  if [ "${PSE_COLLECT_DEPENDENCIES:-true}" = "false" ]; then
+    log "Dependency graph collection disabled via collect_dependencies flag"
+  else
+    collect_dependency_graphs
   fi
 
   # Signal build end to InvisiRisk API
