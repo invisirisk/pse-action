@@ -9,6 +9,9 @@ set -e
 # Get DEBUG flag (defaults to false)
 DEBUG="${DEBUG:-false}"
 
+# PSE Base URL
+PSE_BASE_URL="https://pse.invisirisk.com"
+
 
 # PSE debug logging (controlled by DEBUG flag)
 debug() {
@@ -171,7 +174,6 @@ collect_dependency_graphs() {
   debug "Starting dependency graph collection..."
 
   # Inline dependency graph collection
-  local PSE_BASE_URL="https://pse.invisirisk.com"
   local PROJECT_PATH="${GITHUB_WORKSPACE:-.}"
   local DEBUG_FLAG="${DEBUG:-false}"
   local INCLUDE_DEV_DEPS="${INCLUDE_DEV_DEPS:-true}"
@@ -209,8 +211,7 @@ signal_build_end() {
   fi
 
   # Default to PSE endpoint directly
-  BASE_URL="https://pse.invisirisk.com"
-  debug "Using default PSE endpoint: $BASE_URL"
+  debug "Using default PSE endpoint: $PSE_BASE_URL"
 
   # Build URL for the GitHub run
   build_url="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
@@ -230,7 +231,7 @@ signal_build_end() {
   while [ $ATTEMPT -le $MAX_RETRIES ]; do
     debug "Sending end signal, attempt $ATTEMPT of $MAX_RETRIES"
 
-    RESPONSE=$(curl -X POST "${BASE_URL}/end" \
+    RESPONSE=$(curl -X POST "${PSE_BASE_URL}/end" \
       -H 'Content-Type: application/x-www-form-urlencoded' \
       -H 'User-Agent: pse-action' \
       -d "$params" \
@@ -283,7 +284,7 @@ display_container_logs() {
   
   # Check if container exists
   if ! run_with_privilege docker ps -a --format "{{.Names}}" | grep -q "^${container_name}$"; then
-    log "No PSE proxy container found to display logs"
+    log "PSE proxy container '${container_name}' not found - skipping log display"
     return 0
   fi
 
