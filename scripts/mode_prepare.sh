@@ -132,7 +132,7 @@ get_ecr_credentials() {
   local HTTP_CODE
   RESPONSE=$(curl -L -s -w "\n%{http_code}" -X GET "$API_ENDPOINT")
   HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
-  RESPONSE=$(echo "$RESPONSE" | sed '$d')
+  RESPONSE=$(echo "$RESPONSE" | sed '$d') # Remove trailing HTTP status code
 
   debug "API response status: $HTTP_CODE"
 
