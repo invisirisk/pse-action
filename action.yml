@@ -56,10 +56,6 @@ inputs:
     description: 'Job status to be passed to the PSE container for job tracking'
     required: false
     default: 'unknown'
-  upload_artifact:
-    description: 'Set to true to upload analytics metadata artifact'
-    required: false
-    default: 'true'
   collect_dependencies:
     description: 'Set to true to collect dependency graphs during cleanup, false to skip. Default is true if not specified.'
     required: false

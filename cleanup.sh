@@ -174,7 +174,7 @@ collect_dependency_graphs() {
   debug "Starting dependency graph collection..."
 
   # Inline dependency graph collection
-  local PROJECT_PATH="${GITHUB_WORKSPACE:-.}"
+  local PROJECT_PATH="$(pwd)"
   local DEBUG_FLAG="${DEBUG:-false}"
   local INCLUDE_DEV_DEPS="${INCLUDE_DEV_DEPS:-true}"
   
