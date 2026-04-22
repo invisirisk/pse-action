@@ -57,12 +57,12 @@ inputs:
     description: 'Job status to be passed to the PSE container for job tracking'
     required: false
     default: 'unknown'
-  upload_artifact:
-    description: 'Set to true to upload analytics metadata artifact'
-    required: false
-    default: 'true'
   collect_dependencies:
     description: 'Set to true to collect dependency graphs during cleanup, false to skip. Default is true if not specified.'
+    required: false
+    default: ''
+  workdir:
+    description: 'Working directory to use as the project path for dependency graph collection. Defaults to the current directory (pwd) if not specified.'
     required: false
     default: ''
 # Define outputs for the action
@@ -117,4 +117,5 @@ runs:
         GITHUB_RUN_ATTEMPT: ${{ github.run_attempt }}
         CLEANUP_STEP_NAME: ${{ inputs.cleanup_step_name }}
         COLLECT_DEPENDENCIES: ${{ inputs.collect_dependencies}}
+        WORKDIR: ${{ inputs.workdir }}
         
