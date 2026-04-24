@@ -246,46 +246,55 @@ send_to_saas_platform() {
   echo "Successfully sent job status to custom API."
 }
 
-# Function to update the current job's status before sending to the SaaS platform.
+# Function to extract only the current job and fix its status.
 #
-# During post-step execution the GitHub API still reports the job as "in_progress".
-# We examine n-1 steps — excluding:
-#   1. Any step currently "in_progress" (the PSE post step itself)
-#   2. "Post ..." steps that are still "queued" (pending post-cleanup steps from
-#      earlier actions that will run after us)
-# If every qualifying step has status "completed", we override the job's status
-# to "success" so that veribom_upload_api build aggregation sees the correct state.
+# Problems solved:
+#   1. The GitHub API returns ALL jobs for the run, but veribom_upload_api's
+#      parse_github_json_logs takes jobs[0]. If the current job isn't first,
+#      the wrong job gets parsed. We filter to only the current job.
+#   2. During post-step execution the job is still "in_progress". We check
+#      all steps that are NOT in_progress or queued (those are the PSE post
+#      step, pending Post-* cleanup steps, and "Complete job"). If every
+#      remaining step is "completed", we set the job status to "success".
+#
+# The output keeps the {"jobs": [...]} wrapper that parse_github_json_logs expects.
 transform_job_status() {
   local data="$1"
 
-  if [ -z "$GITHUB_JOB" ]; then
-    debug "GITHUB_JOB is not set, skipping job status transformation"
-    echo "$data"
-    return
-  fi
+  debug "Extracting current job (GITHUB_JOB=$GITHUB_JOB) and computing status"
 
-  debug "Checking step statuses for job: $GITHUB_JOB"
-
-  echo "$data" | jq --arg job "$GITHUB_JOB" '
-    .jobs |= map(
-      if (.name == $job or (.name | startswith($job + " ("))) then
-        (
-          (.steps // []) | map(select(
-            .status != "in_progress" and
-            ((.name | test("^Post ")) | not or .status != "queued")
-          ))
-        ) as $qualifying |
-        ($qualifying | length) as $total |
-        ($qualifying | map(select(.status == "completed")) | length) as $done |
-        if $total > 0 and $total == $done then
-          .status = "success"
-        else
-          .
-        end
-      else
-        .
+  echo "$data" | jq --arg job "${GITHUB_JOB:-}" '
+    # Find the current job: match by name, or by in_progress status as fallback
+    (.jobs // []) as $all_jobs |
+    (
+      ($all_jobs | map(select(.name == $job or (.name | startswith($job + " ("))))) |
+      if length > 0 then . else
+        # Fallback: the job that is currently in_progress is ours
+        ($all_jobs | map(select(.status == "in_progress")))
       end
-    )
+    ) as $matched |
+
+    if ($matched | length) > 0 then
+      ($matched[0]) as $current_job |
+
+      # Exclude steps that are in_progress (our post step) or queued
+      # (pending Post-* steps, "Complete job", etc.)
+      (($current_job.steps // []) | map(select(
+        .status != "in_progress" and .status != "queued"
+      ))) as $qualifying |
+
+      ($qualifying | length) as $total |
+      ($qualifying | map(select(.status == "completed")) | length) as $done |
+
+      ($current_job |
+        if $total > 0 and $total == $done then .status = "success"
+        else . end
+      ) |
+
+      {"jobs": [.], "total_count": 1}
+    else
+      {"jobs": [], "total_count": 0}
+    end
   '
 }
 
