@@ -1,0 +1,10 @@
+{
+  "name": "pse-action",
+  "version": "1.0.0",
+  "private": true,
+  "description": "InvisiRisk PSE Security Proxy GitHub Action",
+  "main": "main.js",
+  "engines": {
+    "node": ">=20"
+  }
+}

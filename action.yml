@@ -28,14 +28,10 @@ inputs:
     description: 'Enable test mode to bypass API calls and container setup for testing'
     required: false
     default: 'false'
-  cleanup:
-    description: 'Set to true to run cleanup instead of setup. This should be used at the end of your workflow.'
-    required: false
-    default: 'false'
   send_job_status:
-    description: 'Set to True to allow SaaS platform to fetch job status for current action run. This should be used at the end of your workflow.'
+    description: 'Set to true to allow SaaS platform to fetch job status for current action run. Runs automatically during cleanup.'
     required: false
-    default: 'false'
+    default: 'true'
   mode:
     description: 'The operation mode: "prepare" only gets scan ID and ECR credentials, "setup" pulls and runs the proxy container, "binary-setup" pulls and runs the proxy container with binary mode, "intercept" configures iptables and certificates. Default is "all" which performs all operations in sequence (prepare, setup, intercept).'
     required: false
@@ -52,10 +48,6 @@ inputs:
     description: 'Scan ID from the prepare step. Required for setup and intercept modes unless test_mode is true.'
     required: false
     default: ''
-  job_status:
-    description: 'Job status to be passed to the PSE container for job tracking'
-    required: false
-    default: 'unknown'
   collect_dependencies:
     description: 'Set to true to collect dependency graphs during cleanup, false to skip. Default is true if not specified.'
     required: false
@@ -64,57 +56,22 @@ inputs:
     description: 'Working directory to use as the project path for dependency graph collection. Defaults to the current directory (pwd) if not specified.'
     required: false
     default: ''
+
 # Define outputs for the action
 outputs:
   scan_id:
     description: 'The scan ID generated or used by the action'
-    value: ${{ steps.pse-setup.outputs.scan_id }}
   ecr_username:
     description: 'ECR username for accessing the PSE container'
-    value: ${{ steps.pse-setup.outputs.ecr_username }}
   ecr_region:
     description: 'ECR region for accessing the PSE container'
-    value: ${{ steps.pse-setup.outputs.ecr_region }}
   ecr_registry_id:
     description: 'ECR registry ID for accessing the PSE container'
-    value: ${{ steps.pse-setup.outputs.ecr_registry_id }}
   proxy_ip:
     description: 'IP address of the PSE proxy container'
-    value: ${{ steps.pse-setup.outputs.proxy_ip }}
 
 runs:
-  using: "composite"
-  steps:
-    - id: pse-setup
-      shell: bash
-      run: |
-        if [ "${{ inputs.cleanup }}" = "true" ]; then
-          echo "Running PSE cleanup..."
-          $GITHUB_ACTION_PATH/cleanup.sh
-        elif [ "${{ inputs.send_job_status }}" = "true" ]; then
-          echo "Running PSE send job status..."
-        bash $GITHUB_ACTION_PATH/get_jobs_status.sh
-        else
-          echo "Running PSE setup in ${{ inputs.mode }} mode..."
-          $GITHUB_ACTION_PATH/setup.sh
-        fi
-      env:
-        API_URL: ${{ inputs.cleanup == 'true' && env.PSE_API_URL || inputs.api_url }}
-        APP_TOKEN: ${{ inputs.cleanup == 'true' && env.PSE_APP_TOKEN || inputs.app_token }}
-        PORTAL_URL: ${{ inputs.cleanup == 'true' && env.PSE_PORTAL_URL || inputs.portal_url || inputs.api_url }}
-        SCAN_ID: ${{ inputs.scan_id }}
-        DEBUG: ${{ inputs.debug }}
-        TEST_MODE: ${{ inputs.test_mode }}
-        GITHUB_TOKEN: ${{ inputs.github_token || github.token }}
-        SEND_JOB_STATUS: ${{ inputs.send_job_status }}
-        MODE: ${{ inputs.mode }}
-        PROXY_IP: ${{ inputs.proxy_ip }}
-        PROXY_HOSTNAME: ${{ inputs.proxy_hostname }}
-        DEBUG_FORCE: ${{ inputs.mode }}
-        GITHUB_REPOSITORY: ${{ github.repository }}
-        GITHUB_RUN_ID: ${{ github.run_id }}
-        GITHUB_RUN_ATTEMPT: ${{ github.run_attempt }}
-        CLEANUP_STEP_NAME: ${{ inputs.cleanup_step_name }}
-        COLLECT_DEPENDENCIES: ${{ inputs.collect_dependencies}}
-        WORKDIR: ${{ inputs.workdir }}
-        
+  using: 'node20'
+  main: 'main.js'
+  post: 'post.js'
+  post-if: always()
