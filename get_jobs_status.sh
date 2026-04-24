@@ -246,15 +246,11 @@ send_to_saas_platform() {
   echo "Successfully sent job status to custom API."
 }
 
-# Function to aggregate completed step conclusions and mark the current job as "completed".
+# Function to update the current job's status before sending to the SaaS platform.
 #
 # During post-step execution the GitHub API still reports the job as "in_progress".
-# We derive the real outcome by examining every step that already has a conclusion,
-# then override .status and .conclusion on the matching job entry so that downstream
-# build aggregation in veribom_upload_api receives a meaningful concluded status.
-#
-# Conclusion priority (highest wins):
-#   cancelled > timed_out > failure / startup_failure > success
+# If every step in the current job has status "success", we override the job's
+# status to "success" so that veribom_upload_api build aggregation sees the correct state.
 transform_job_status() {
   local data="$1"
 
@@ -264,21 +260,15 @@ transform_job_status() {
     return
   fi
 
-  debug "Aggregating step statuses for job: $GITHUB_JOB"
+  debug "Checking step statuses for job: $GITHUB_JOB"
 
   echo "$data" | jq --arg job "$GITHUB_JOB" '
     .jobs |= map(
       if (.name == $job or (.name | startswith($job + " ("))) then
-        ((.steps // []) | map(select(.conclusion != null)) | map(.conclusion)) as $conclusions |
-        if ($conclusions | length) > 0 then
-          (
-            if   ($conclusions | any(. == "cancelled"))                          then "cancelled"
-            elif ($conclusions | any(. == "timed_out"))                          then "timed_out"
-            elif ($conclusions | any(. == "failure" or . == "startup_failure"))  then "failure"
-            else "success"
-            end
-          ) as $aggregated |
-          .status = "completed" | .conclusion = $aggregated
+        ((.steps // []) | length) as $total |
+        ((.steps // []) | map(select(.status == "success")) | length) as $succeeded |
+        if $total > 0 and $total == $succeeded then
+          .status = "success"
         else
           .
         end
