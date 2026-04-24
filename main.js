@@ -27,6 +27,9 @@ function run() {
 
   const env = {
     ...process.env,
+    // Ensure GITHUB_ACTION_PATH points to this action's directory.
+    // In node20 actions the runner may not set this automatically (unlike composite actions).
+    GITHUB_ACTION_PATH: process.env.GITHUB_ACTION_PATH || actionPath,
     API_URL: apiUrl,
     APP_TOKEN: appToken,
     PORTAL_URL: portalUrl,
