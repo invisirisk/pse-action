@@ -1,4 +1,5 @@
 const { execSync } = require('child_process');
+const fs = require('fs');
 const path = require('path');
 
 function getInput(name) {
@@ -47,7 +48,16 @@ function run() {
     }
   }
 
-  // Step 2: Run cleanup
+  // Step 2: Read computed job status from get_jobs_status.sh and pass to cleanup
+  let jobStatus = 'unknown';
+  try {
+    jobStatus = fs.readFileSync('/tmp/pse_computed_job_status', 'utf8').trim();
+  } catch (_) {
+    // File won't exist if job status step was skipped or failed
+  }
+  env.INPUT_JOB_STATUS = jobStatus;
+
+  // Step 3: Run cleanup
   console.log('Running PSE cleanup...');
   execSync(`bash ${path.join(actionPath, 'cleanup.sh')}`, {
     stdio: 'inherit',

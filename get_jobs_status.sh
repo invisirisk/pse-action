@@ -246,22 +246,14 @@ send_to_saas_platform() {
   echo "Successfully sent job status to custom API."
 }
 
-# Function to extract only the current job and fix its status.
-#
-# Problems solved:
-#   1. The GitHub API returns ALL jobs for the run, but veribom_upload_api's
-#      parse_github_json_logs takes jobs[0]. If the current job isn't first,
-#      the wrong job gets parsed. We filter to only the current job.
-#   2. During post-step execution the job is still "in_progress". We check
-#      all steps that are NOT in_progress or queued (those are the PSE post
-#      step, pending Post-* cleanup steps, and "Complete job"). If every
-#      remaining step is "completed", we set the job status to "success".
-#
-# The output keeps the {"jobs": [...]} wrapper that parse_github_json_logs expects.
+# Function to extract only the current job from the full run jobs response.
+# The job JSON is sent to the SaaS platform as-is (no status mutation).
+# veribom_upload_api's parse_github_json_logs takes jobs[0], so we filter
+# to just the current job to ensure the right job is parsed.
 transform_job_status() {
   local data="$1"
 
-  debug "Extracting current job (GITHUB_JOB=$GITHUB_JOB) and computing status"
+  debug "Extracting current job (GITHUB_JOB=$GITHUB_JOB)"
 
   echo "$data" | jq --arg job "${GITHUB_JOB:-}" '
     # Find the current job: match by name, or by in_progress status as fallback
@@ -275,26 +267,27 @@ transform_job_status() {
     ) as $matched |
 
     if ($matched | length) > 0 then
-      ($matched[0]) as $current_job |
-
-      # Exclude steps that are in_progress (our post step) or queued
-      # (pending Post-* steps, "Complete job", etc.)
-      (($current_job.steps // []) | map(select(
-        .status != "in_progress" and .status != "queued"
-      ))) as $qualifying |
-
-      ($qualifying | length) as $total |
-      ($qualifying | map(select(.status == "completed")) | length) as $done |
-
-      ($current_job |
-        if $total > 0 and $total == $done then .status = "success"
-        else . end
-      ) |
-
-      {"jobs": [.], "total_count": 1}
+      {"jobs": [$matched[0]], "total_count": 1}
     else
       {"jobs": [], "total_count": 0}
     end
+  '
+}
+
+# Function to derive the effective job status from completed steps.
+# Used only for the /end query param — the job JSON itself is not mutated.
+# During post-step execution the job is "in_progress" from GitHub's perspective.
+# We exclude in_progress (our post step) and queued steps (pending Post-* steps,
+# "Complete job"), then check if every remaining step is "completed".
+compute_end_status() {
+  local data="$1"
+
+  echo "$data" | jq -r '
+    (.jobs[0].steps // []) as $steps |
+    ($steps | map(select(.status != "in_progress" and .status != "queued"))) as $qualifying |
+    ($qualifying | length) as $total |
+    ($qualifying | map(select(.status == "completed")) | length) as $done |
+    if $total > 0 and $total == $done then "success" else "in_progress" end
   '
 }
 
@@ -304,15 +297,19 @@ main() {
   local github_data
   github_data=$(fetch_github_jobs)
 
-  # Step 2: Aggregate step statuses for the current job.
-  # During post-step execution the job is still "in_progress" from GitHub's perspective.
-  # We inspect all completed steps to derive the real outcome so that the build aggregation
-  # in veribom_upload_api receives a meaningful concluded status.
+  # Step 2: Filter to the current job (no status mutation — raw API data is sent)
   local transformed_data
   transformed_data=$(transform_job_status "$github_data")
 
   # Step 3: Send data to SaaS platform
   send_to_saas_platform "$transformed_data"
+
+  # Step 4: Compute effective status from step statuses and write to file.
+  # post.js reads this to set INPUT_JOB_STATUS for cleanup.sh's /end call.
+  local computed_status
+  computed_status=$(compute_end_status "$transformed_data")
+  echo "$computed_status" > /tmp/pse_computed_job_status
+  debug "Computed end status: $computed_status"
 }
 
 # Execute the main function
