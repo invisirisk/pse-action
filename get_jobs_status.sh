@@ -249,8 +249,12 @@ send_to_saas_platform() {
 # Function to update the current job's status before sending to the SaaS platform.
 #
 # During post-step execution the GitHub API still reports the job as "in_progress".
-# If every step in the current job has status "success", we override the job's
-# status to "success" so that veribom_upload_api build aggregation sees the correct state.
+# We examine n-1 steps — excluding:
+#   1. Any step currently "in_progress" (the PSE post step itself)
+#   2. "Post ..." steps that are still "queued" (pending post-cleanup steps from
+#      earlier actions that will run after us)
+# If every qualifying step has status "completed", we override the job's status
+# to "success" so that veribom_upload_api build aggregation sees the correct state.
 transform_job_status() {
   local data="$1"
 
@@ -265,9 +269,15 @@ transform_job_status() {
   echo "$data" | jq --arg job "$GITHUB_JOB" '
     .jobs |= map(
       if (.name == $job or (.name | startswith($job + " ("))) then
-        ((.steps // []) | length) as $total |
-        ((.steps // []) | map(select(.status == "success")) | length) as $succeeded |
-        if $total > 0 and $total == $succeeded then
+        (
+          (.steps // []) | map(select(
+            .status != "in_progress" and
+            ((.name | test("^Post ")) | not or .status != "queued")
+          ))
+        ) as $qualifying |
+        ($qualifying | length) as $total |
+        ($qualifying | map(select(.status == "completed")) | length) as $done |
+        if $total > 0 and $total == $done then
           .status = "success"
         else
           .
