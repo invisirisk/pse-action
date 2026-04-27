@@ -77,7 +77,7 @@ function run() {
   // Step 1: Install pse-data-collector via bootstrap
   console.log('Installing pse-data-collector...');
   const gatewayUrl = `${apiUrl}/ingestionapi/v1`;
-  const bootstrapEnv = { ...env, API_KEY: appToken, DEBUG: debug };
+  const bootstrapEnv = { ...env, API_URL: apiUrl, API_KEY: appToken, DEBUG: debug };
   const bootstrapScript = path.join(__dirname, 'bootstrap_collector.sh');
   sh(`bash "${bootstrapScript}"`, bootstrapEnv);
 
