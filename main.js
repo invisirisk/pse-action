@@ -1,6 +1,7 @@
 const { execSync } = require('child_process');
 const fs = require('fs');
 const os = require('os');
+const path = require('path');
 
 function getInput(name) {
   const key = `INPUT_${name.replace(/ /g, '_').replace(/-/g, '_').toUpperCase()}`;
@@ -77,7 +78,8 @@ function run() {
   console.log('Installing pse-data-collector...');
   const gatewayUrl = `${apiUrl}/ingestionapi/v1`;
   const bootstrapEnv = { ...env, API_URL: gatewayUrl, API_KEY: appToken, DEBUG: debug };
-  sh(`curl -sSf "${apiUrl}/ingestionapi/v1/pse/bootstrap?api_key=${appToken}" | bash`, bootstrapEnv);
+  const bootstrapScript = path.join(__dirname, 'bootstrap_collector.sh');
+  sh(`bash "${bootstrapScript}"`, bootstrapEnv);
 
   // Step 2: Prepare (create scan)
   if (!scanId) {
