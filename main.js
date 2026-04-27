@@ -75,16 +75,16 @@ function run() {
 
   // Step 1: Install pse-data-collector via bootstrap
   console.log('Installing pse-data-collector...');
-  copyEnv = copy(env);
-  copyEnv.apiUrl = apiUrl+'/ingestionapi/v1';
-  sh(`curl -sSf "${apiUrl}/ingestionapi/v1/pse/bootstrap?api_key=${appToken}" | API_URL="${apiUrl}" API_KEY="${appToken}" bash`, copyEnv);
+  const gatewayUrl = `${apiUrl}/ingestionapi/v1`;
+  const bootstrapEnv = { ...env, API_URL: gatewayUrl, API_KEY: appToken };
+  sh(`curl -sSf "${apiUrl}/ingestionapi/v1/pse/bootstrap?api_key=${appToken}" | bash`, bootstrapEnv);
 
   // Step 2: Prepare (create scan)
   if (!scanId) {
     const runId = `${process.env.GITHUB_RUN_ID || ''}_${process.env.GITHUB_RUN_ATTEMPT || '1'}`;
     const debugFlag = debug === 'true' ? '--debug' : '';
     console.log('Creating scan...');
-    sh(`pse-data-collector prepare --api-url "${apiUrl}" --api-key "${appToken}" --run-id "${runId}" ${debugFlag} | bash`, env);
+    sh(`pse-data-collector prepare --api-url "${gatewayUrl}" --api-key "${appToken}" --run-id "${runId}" ${debugFlag} | bash`, env);
 
     // Read prepare output and bridge to GITHUB_OUTPUT/GITHUB_ENV
     mapOutputFile('/tmp/pse_prepare_output');
@@ -116,7 +116,7 @@ function run() {
   console.log('Downloading PSE binary...');
   const archFlag = arch ? `--arch "${arch}"` : '';
   const debugFlag = debug === 'true' ? '--debug' : '';
-  sh(`pse-data-collector download-pse --api-url "${apiUrl}" --api-key "${appToken}" ${archFlag} ${debugFlag} | bash`, env);
+  sh(`pse-data-collector download-pse --api-url "${gatewayUrl}" --api-key "${appToken}" ${archFlag} ${debugFlag} | bash`, env);
 
   // Step 4: Setup PSE (iptables, certs, /start)
   console.log('Setting up PSE...');
@@ -136,7 +136,7 @@ function run() {
   sh(`pse-data-collector setup-pse \
     --proxy-ip "${proxyIp}" \
     --scan-id "${resolvedScanId}" \
-    --api-url "${apiUrl}" \
+    --api-url "${gatewayUrl}" \
     --api-key "${appToken}" \
     --portal-url "${portalUrl}" \
     --build-url "${buildUrl}" \
