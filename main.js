@@ -1,5 +1,4 @@
 const { execSync } = require('child_process');
-const path = require('path');
 const fs = require('fs');
 const os = require('os');
 
@@ -15,48 +14,141 @@ function saveState(name, value) {
   }
 }
 
-function run() {
-  const actionPath = __dirname;
+function appendGithubEnv(key, value) {
+  const envFile = process.env.GITHUB_ENV;
+  if (envFile) {
+    fs.appendFileSync(envFile, `${key}=${value}${os.EOL}`, 'utf8');
+  }
+}
 
-  // Map action inputs to environment variables expected by setup.sh
-  const sendJobStatus = getInput('send_job_status');
+function appendGithubOutput(key, value) {
+  const outputFile = process.env.GITHUB_OUTPUT;
+  if (outputFile) {
+    fs.appendFileSync(outputFile, `${key}=${value}${os.EOL}`, 'utf8');
+  }
+}
+
+function mapOutputFile(filePath) {
+  if (!fs.existsSync(filePath)) return;
+  const content = fs.readFileSync(filePath, 'utf8');
+  for (const line of content.trim().split('\n')) {
+    const idx = line.indexOf('=');
+    if (idx === -1) continue;
+    const key = line.slice(0, idx);
+    const value = line.slice(idx + 1);
+    appendGithubOutput(key, value);
+    appendGithubEnv(key, value);
+  }
+}
+
+function sh(cmd, env) {
+  execSync(cmd, { stdio: 'inherit', env, shell: '/bin/bash' });
+}
+
+function run() {
   const apiUrl = getInput('api_url');
   const appToken = getInput('app_token');
   const portalUrl = getInput('portal_url') || apiUrl;
   const debug = getInput('debug');
+  const testMode = getInput('test_mode');
+  const scanId = getInput('scan_id');
+  const arch = getInput('arch');
+  const sendJobStatus = getInput('send_job_status');
+  const mode = getInput('mode') || 'all';
 
-  const env = {
-    ...process.env,
-    // Ensure GITHUB_ACTION_PATH points to this action's directory.
-    // In node20 actions the runner may not set this automatically (unlike composite actions).
-    GITHUB_ACTION_PATH: process.env.GITHUB_ACTION_PATH || actionPath,
-    API_URL: apiUrl,
-    APP_TOKEN: appToken,
-    PORTAL_URL: portalUrl,
-    SCAN_ID: getInput('scan_id'),
-    DEBUG: debug,
-    TEST_MODE: getInput('test_mode'),
-    GITHUB_TOKEN: getInput('github_token') || process.env.GITHUB_TOKEN,
-    MODE: getInput('mode'),
-    PROXY_IP: getInput('proxy_ip'),
-    PROXY_HOSTNAME: getInput('proxy_hostname'),
-    COLLECT_DEPENDENCIES: getInput('collect_dependencies'),
-    WORKDIR: getInput('workdir'),
-  };
+  const env = { ...process.env };
 
-  console.log(`Running PSE setup in ${env.MODE || 'all'} mode...`);
-  execSync(`bash ${path.join(actionPath, 'setup.sh')}`, {
-    stdio: 'inherit',
-    env,
-  });
-
-  // Save inputs to state for the post step (cleanup/job-status)
+  // Save state for post step
   saveState('api_url', apiUrl);
   saveState('app_token', appToken);
   saveState('portal_url', portalUrl);
   saveState('debug', debug);
   saveState('send_job_status', sendJobStatus);
-  saveState('github_token', env.GITHUB_TOKEN);
+  saveState('github_token', env.GITHUB_TOKEN || '');
+
+  console.log(`Running PSE setup in ${mode} mode...`);
+
+  if (testMode === 'true') {
+    console.log('Test mode enabled, skipping API calls.');
+    return;
+  }
+
+  // Step 1: Install pse-data-collector via bootstrap
+  console.log('Installing pse-data-collector...');
+  sh(`curl -sSf "${apiUrl}/pse/bootstrap" | API_URL="${apiUrl}" API_KEY="${appToken}" bash`, env);
+
+  // Step 2: Prepare (create scan)
+  if (!scanId) {
+    const runId = `${process.env.GITHUB_RUN_ID || ''}_${process.env.GITHUB_RUN_ATTEMPT || '1'}`;
+    const debugFlag = debug === 'true' ? '--debug' : '';
+    console.log('Creating scan...');
+    sh(`pse-data-collector prepare --api-url "${apiUrl}" --api-key "${appToken}" --run-id "${runId}" ${debugFlag} | bash`, env);
+
+    // Read prepare output and bridge to GITHUB_OUTPUT/GITHUB_ENV
+    mapOutputFile('/tmp/pse_prepare_output');
+
+    // Also save scan_id to state
+    if (fs.existsSync('/tmp/pse_prepare_output')) {
+      const prepareContent = fs.readFileSync('/tmp/pse_prepare_output', 'utf8');
+      const scanIdMatch = prepareContent.match(/SCAN_ID=(.+)/);
+      if (scanIdMatch) {
+        saveState('scan_id', scanIdMatch[1].trim());
+      }
+    }
+  } else {
+    appendGithubOutput('SCAN_ID', scanId);
+    appendGithubEnv('SCAN_ID', scanId);
+    saveState('scan_id', scanId);
+  }
+
+  // Read SCAN_ID from env (set by mapOutputFile or directly)
+  const resolvedScanId = scanId || (() => {
+    try {
+      const content = fs.readFileSync('/tmp/pse_prepare_output', 'utf8');
+      const match = content.match(/SCAN_ID=(.+)/);
+      return match ? match[1].trim() : '';
+    } catch (_) { return ''; }
+  })();
+
+  // Step 3: Download PSE binary
+  console.log('Downloading PSE binary...');
+  const archFlag = arch ? `--arch "${arch}"` : '';
+  const debugFlag = debug === 'true' ? '--debug' : '';
+  sh(`pse-data-collector download-pse --api-url "${apiUrl}" --api-key "${appToken}" ${archFlag} ${debugFlag} | bash`, env);
+
+  // Step 4: Setup PSE (iptables, certs, /start)
+  console.log('Setting up PSE...');
+  const proxyIp = (() => {
+    // Auto-detect: use hostname -I to get the host IP
+    try {
+      return execSync("hostname -I | awk '{print $1}'", { encoding: 'utf8' }).trim();
+    } catch (_) { return '127.0.0.1'; }
+  })();
+
+  const buildUrl = `https://github.com/${process.env.GITHUB_REPOSITORY || ''}/actions/runs/${process.env.GITHUB_RUN_ID || ''}`;
+  const scmOrigin = `https://github.com/${process.env.GITHUB_REPOSITORY || ''}`;
+  const scmBranch = (process.env.GITHUB_REF_NAME || '').replace('refs/heads/', '');
+  const scmCommit = process.env.GITHUB_SHA || '';
+  const project = process.env.GITHUB_REPOSITORY || '';
+
+  sh(`pse-data-collector setup-pse \
+    --proxy-ip "${proxyIp}" \
+    --scan-id "${resolvedScanId}" \
+    --api-url "${apiUrl}" \
+    --api-key "${appToken}" \
+    --portal-url "${portalUrl}" \
+    --build-url "${buildUrl}" \
+    --scm-origin "${scmOrigin}" \
+    --scm-branch "${scmBranch}" \
+    --scm-commit "${scmCommit}" \
+    --project "${project}" \
+    ${debugFlag} | bash`, env);
+
+  // Bridge /tmp/pse_env to GITHUB_ENV/GITHUB_OUTPUT
+  mapOutputFile('/tmp/pse_env');
+
+  appendGithubOutput('proxy_ip', proxyIp);
+  appendGithubOutput('scan_id', resolvedScanId);
 }
 
 try {

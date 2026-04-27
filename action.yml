@@ -7,17 +7,17 @@ branding:
 
 inputs:
   api_url:
-    description: 'URL of the InvisiRisk API (required for prepare and setup modes)'
-    required: false
+    description: 'URL of the InvisiRisk API'
+    required: true
   app_token:
-    description: 'Authentication token for the InvisiRisk API (required for prepare and setup modes)'
-    required: false
+    description: 'Authentication token for the InvisiRisk API'
+    required: true
   portal_url:
     description: 'URL of the InvisiRisk Portal (defaults to api_url if not provided)'
     required: false
     default: ''
   github_token:
-    description: 'GitHub token to be passed to the PSE container for GitHub authentication'
+    description: 'GitHub token for GitHub API access'
     required: false
     default: ${{ github.token }}
   debug:
@@ -25,50 +25,39 @@ inputs:
     required: false
     default: 'false'
   test_mode:
-    description: 'Enable test mode to bypass API calls and container setup for testing'
+    description: 'Enable test mode to bypass API calls'
     required: false
     default: 'false'
   send_job_status:
-    description: 'Set to true to allow SaaS platform to fetch job status for current action run. Runs automatically during cleanup.'
+    description: 'Allow SaaS platform to fetch job status during cleanup'
     required: false
     default: 'true'
   mode:
-    description: 'The operation mode: "prepare" only gets scan ID and ECR credentials, "setup" pulls and runs the proxy container, "binary-setup" pulls and runs the proxy container with binary mode, "intercept" configures iptables and certificates. Default is "all" which performs all operations in sequence (prepare, setup, intercept).'
+    description: 'Operation mode: "all" (default) performs prepare, download, setup, intercept'
     required: false
     default: 'all'
-  proxy_ip:
-    description: 'IP address of the PSE proxy container when using "intercept" mode. Required for intercept mode unless proxy_hostname is provided.'
-    required: false
-    default: ''
-  proxy_hostname:
-    description: 'Hostname of the PSE proxy container when using "intercept" mode with service containers. Use this instead of proxy_ip.'
-    required: false
-    default: ''
   scan_id:
-    description: 'Scan ID from the prepare step. Required for setup and intercept modes unless test_mode is true.'
+    description: 'Scan ID from a previous prepare step'
     required: false
     default: ''
   collect_dependencies:
-    description: 'Set to true to collect dependency graphs during cleanup, false to skip. Default is true if not specified.'
+    description: 'Collect dependency graphs during cleanup (default true)'
     required: false
     default: ''
   workdir:
-    description: 'Working directory to use as the project path for dependency graph collection. Defaults to the current directory (pwd) if not specified.'
+    description: 'Project path for dependency graph collection'
+    required: false
+    default: ''
+  arch:
+    description: 'Binary architecture (amd64, arm64). Auto-detected if empty.'
     required: false
     default: ''
 
-# Define outputs for the action
 outputs:
   scan_id:
     description: 'The scan ID generated or used by the action'
-  ecr_username:
-    description: 'ECR username for accessing the PSE container'
-  ecr_region:
-    description: 'ECR region for accessing the PSE container'
-  ecr_registry_id:
-    description: 'ECR registry ID for accessing the PSE container'
   proxy_ip:
-    description: 'IP address of the PSE proxy container'
+    description: 'IP address of the PSE proxy'
 
 runs:
   using: 'node20'

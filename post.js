@@ -11,6 +11,10 @@ function getState(name) {
   return (process.env[`STATE_${name}`] || '').trim();
 }
 
+function sh(cmd, env) {
+  execSync(cmd, { stdio: 'inherit', env, shell: '/bin/bash' });
+}
+
 function run() {
   const actionPath = __dirname;
 
@@ -20,11 +24,12 @@ function run() {
   const portalUrl = getState('portal_url') || process.env.PSE_PORTAL_URL || apiUrl;
   const debug = getState('debug') || process.env.DEBUG || 'false';
   const githubToken = getState('github_token') || process.env.GITHUB_TOKEN || '';
+  const scanId = getState('scan_id') || process.env.SCAN_ID || process.env.PSE_SCAN_ID || '';
+  const collectDeps = process.env.PSE_COLLECT_DEPENDENCIES !== 'false';
+  const workdir = process.env.IR_WORKDIR || '';
 
   const env = {
     ...process.env,
-    // Ensure GITHUB_ACTION_PATH points to this action's directory.
-    // In node20 actions the runner may not set this automatically (unlike composite actions).
     GITHUB_ACTION_PATH: process.env.GITHUB_ACTION_PATH || actionPath,
     API_URL: apiUrl,
     APP_TOKEN: appToken,
@@ -33,10 +38,10 @@ function run() {
     GITHUB_TOKEN: githubToken,
   };
 
-  // Step 1: Send job status if enabled
+  // Step 1: Send job status if enabled (GitHub-specific, kept in action)
   const sendJobStatus = getState('send_job_status') || getInput('send_job_status');
   if (sendJobStatus === 'true') {
-    console.log('Running PSE send job status...');
+    console.log('Fetching and sending job status...');
     try {
       execSync(`bash ${path.join(actionPath, 'get_jobs_status.sh')}`, {
         stdio: 'inherit',
@@ -44,25 +49,37 @@ function run() {
       });
     } catch (error) {
       console.error(`Warning: Failed to send job status: ${error.message}`);
-      // Continue with cleanup even if job status fails
     }
   }
 
-  // Step 2: Read computed job status from get_jobs_status.sh and pass to cleanup
+  // Step 2: Read computed job status
   let jobStatus = 'unknown';
   try {
     jobStatus = fs.readFileSync('/tmp/pse_computed_job_status', 'utf8').trim();
   } catch (_) {
     // File won't exist if job status step was skipped or failed
   }
-  env.INPUT_JOB_STATUS = jobStatus;
 
-  // Step 3: Run cleanup
+  // Step 3: Run cleanup via pse-data-collector
   console.log('Running PSE cleanup...');
-  execSync(`bash ${path.join(actionPath, 'cleanup.sh')}`, {
-    stdio: 'inherit',
-    env,
-  });
+  const debugFlag = debug === 'true' ? '--debug' : '';
+  const depgraphFlag = collectDeps ? '--depgraph' : '--depgraph=false';
+  const workdirFlag = workdir ? `--workdir "${workdir}"` : '';
+  const buildUrl = `https://github.com/${process.env.GITHUB_REPOSITORY || ''}/actions/runs/${process.env.GITHUB_RUN_ID || ''}`;
+
+  try {
+    sh(`pse-data-collector cleanup \
+      --scan-id "${scanId}" \
+      --api-url "${apiUrl}" \
+      --api-key "${appToken}" \
+      --job-status "${jobStatus}" \
+      ${depgraphFlag} \
+      --build-url "${buildUrl}" \
+      ${workdirFlag} \
+      ${debugFlag} | bash`, env);
+  } catch (error) {
+    console.error(`Warning: Cleanup had errors: ${error.message}`);
+  }
 }
 
 try {
