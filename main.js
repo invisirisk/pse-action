@@ -75,7 +75,7 @@ function run() {
 
   // Step 1: Install pse-data-collector via bootstrap
   console.log('Installing pse-data-collector...');
-  sh(`curl -sSf "${apiUrl}/pse/bootstrap" | API_URL="${apiUrl}" API_KEY="${appToken}" bash`, env);
+  sh(`curl -sSf "${apiUrl}/ingestionapi/v1/pse/bootstrap" | API_URL="${apiUrl}" API_KEY="${appToken}" bash`, env);
 
   // Step 2: Prepare (create scan)
   if (!scanId) {
