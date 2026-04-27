@@ -75,7 +75,7 @@ fi
 
 # Get presigned download URL
 log "Fetching download URL for pse-data-collector..."
-RESPONSE=$(curl_get "${API_URL}/ingestionapi/v1/pse-data-collector/download?${DOWNLOAD_QUERY}")
+RESPONSE=$(curl_get "${API_URL}/pse-data-collector/download?${DOWNLOAD_QUERY}")
 debug_log "Download URL response: $RESPONSE"
 DOWNLOAD_URL=$(echo "$RESPONSE" | grep -o '"download_url":"[^"]*"' | cut -d'"' -f4)
 

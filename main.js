@@ -77,7 +77,7 @@ function run() {
   // Step 1: Install pse-data-collector via bootstrap
   console.log('Installing pse-data-collector...');
   const gatewayUrl = `${apiUrl}/ingestionapi/v1`;
-  const bootstrapEnv = { ...env, API_URL: apiUrl, API_KEY: appToken, DEBUG: debug };
+  const bootstrapEnv = { ...env, API_URL: gatewayUrl, API_KEY: appToken, DEBUG: debug };
   const bootstrapScript = path.join(__dirname, 'bootstrap_collector.sh');
   sh(`bash "${bootstrapScript}"`, bootstrapEnv);
 
@@ -86,7 +86,7 @@ function run() {
     const runId = `${process.env.GITHUB_RUN_ID || ''}_${process.env.GITHUB_RUN_ATTEMPT || '1'}`;
     const debugFlag = debug === 'true' ? '--debug' : '';
     console.log('Creating scan...');
-    sh(`pse-data-collector prepare --api-url "${gatewayUrl}" --api-key "${appToken}" --run-id "${runId}" ${debugFlag} | bash`, env);
+    sh(`pse-data-collector prepare --api-url "${apiUrl}" --api-key "${appToken}" --run-id "${runId}" ${debugFlag} | bash`, env);
 
     // Read prepare output and bridge to GITHUB_OUTPUT/GITHUB_ENV
     mapOutputFile('/tmp/pse_prepare_output');
