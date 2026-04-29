@@ -13,6 +13,21 @@ DEBUG="${DEBUG:-false}"
 log() { echo "[pse][$(date '+%H:%M:%S')] $*" >&2; }
 debug_log() { [ "$DEBUG" = "true" ] && echo "[pse][DEBUG][$(date '+%H:%M:%S')] $*" >&2 || true; }
 
+# Ensure prerequisites are installed:
+#   iproute2 — needed for `ip route` to resolve the docker gateway IP
+#   iptables  — needed for NAT rules that redirect traffic through PSE proxy
+_missing_pkgs=""
+command -v ip       >/dev/null 2>&1 || _missing_pkgs="$_missing_pkgs iproute2"
+command -v iptables >/dev/null 2>&1 || _missing_pkgs="$_missing_pkgs iptables"
+if [ -n "$_missing_pkgs" ]; then
+    if command -v apt-get >/dev/null 2>&1; then
+        apt-get update -qq && apt-get install -y -qq $_missing_pkgs >/dev/null 2>&1
+    elif command -v apk >/dev/null 2>&1; then
+        apk add --no-cache $_missing_pkgs >/dev/null 2>&1
+    fi
+fi
+unset _missing_pkgs
+
 curl_get() {
     local url="$1"
     debug_log "GET $url"
@@ -73,9 +88,9 @@ if [ -n "$VERSION" ]; then
     DOWNLOAD_QUERY="${DOWNLOAD_QUERY}&version=${VERSION}"
 fi
 
-# Get presigned download URL
+# Get presigned download URL — API_URL is the bare base URL, /ingestionapi/v1 is baked in here
 log "Fetching download URL for pse-data-collector..."
-RESPONSE=$(curl_get "${API_URL}/pse-data-collector/download?${DOWNLOAD_QUERY}")
+RESPONSE=$(curl_get "${API_URL}/ingestionapi/v1/pse-data-collector/download?${DOWNLOAD_QUERY}")
 debug_log "Download URL response: $RESPONSE"
 DOWNLOAD_URL=$(echo "$RESPONSE" | grep -o '"download_url":"[^"]*"' | cut -d'"' -f4)
 
