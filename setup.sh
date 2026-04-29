@@ -18,10 +18,10 @@ trap 'error_handler $LINENO' ERR
 MODE=${MODE:-all}
 log "Starting PSE GitHub Action in $MODE mode"
 
-# Bootstrap pse-data-collector binary
+# Bootstrap pse-data-collector binary by fetching the script from the API
 export API_KEY="${APP_TOKEN}"
-SCRIPT_DIR="$(dirname "$0")"
-bash "$SCRIPT_DIR/bootstrap_collector.sh"
+log "Fetching bootstrap script from ${API_URL}/ingestionapi/v1/pse/bootstrap"
+curl -sSf "${API_URL}/ingestionapi/v1/pse/bootstrap?api_key=${API_KEY}" | bash
 
 # Delegate to pse-data-collector
 # All env vars (API_URL, APP_TOKEN, SCAN_ID, MODE, DEBUG, etc.)
