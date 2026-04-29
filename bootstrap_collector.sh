@@ -32,7 +32,6 @@ curl_get() {
     local url="$1"
     debug_log "GET $url"
     if [ "$DEBUG" = "true" ]; then
-        # Show full response body even on HTTP error
         HTTP_CODE=$(curl -sS -w "\n%{http_code}" -o /tmp/pse_curl_body "$url" 2>&1 || true)
         BODY=$(cat /tmp/pse_curl_body 2>/dev/null || true)
         STATUS=$(echo "$HTTP_CODE" | tail -1)
@@ -50,7 +49,7 @@ curl_get() {
 
 if [ -z "$API_URL" ] || [ -z "$API_KEY" ]; then
     echo "Usage: API_URL=<url> API_KEY=<key> bash bootstrap_collector.sh"
-    echo "  API_URL: Base URL of the upload API"
+    echo "  API_URL: Base URL of the upload API (e.g. https://app.invisirisk.com)"
     echo "  API_KEY: API key for authentication"
     exit 1
 fi
@@ -82,13 +81,13 @@ debug_log "API_URL=$API_URL"
 debug_log "INSTALL_DIR=$INSTALL_DIR"
 debug_log "VERSION=${VERSION:-latest}"
 
-# Build download URL
+# Build download URL — API_URL must include /ingestionapi/v1
 DOWNLOAD_QUERY="arch=${ARCH}&os=${OS}&api_key=${API_KEY}"
 if [ -n "$VERSION" ]; then
     DOWNLOAD_QUERY="${DOWNLOAD_QUERY}&version=${VERSION}"
 fi
 
-# Get presigned download URL — API_URL is the bare base URL, /ingestionapi/v1 is baked in here
+# Get presigned download URL
 log "Fetching download URL for pse-data-collector..."
 RESPONSE=$(curl_get "${API_URL}/ingestionapi/v1/pse-data-collector/download?${DOWNLOAD_QUERY}")
 debug_log "Download URL response: $RESPONSE"
@@ -100,13 +99,12 @@ if [ -z "$DOWNLOAD_URL" ]; then
 fi
 debug_log "Resolved download URL: $DOWNLOAD_URL"
 
-# Download binary directly
+# Download binary to temp file, then install atomically
 log "Downloading pse-data-collector..."
 TEMP_BIN=$(mktemp)
 curl -sSf -o "$TEMP_BIN" "$DOWNLOAD_URL"
 chmod +x "$TEMP_BIN"
 
-# Install
 log "Installing to ${INSTALL_DIR}/pse-data-collector..."
 if [ "$(id -u)" = "0" ]; then
     mv "$TEMP_BIN" "${INSTALL_DIR}/pse-data-collector"
