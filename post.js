@@ -1,6 +1,5 @@
 const { execSync } = require('child_process');
 const fs = require('fs');
-const path = require('path');
 
 function getInput(name) {
   const key = `INPUT_${name.replace(/ /g, '_').replace(/-/g, '_').toUpperCase()}`;
@@ -12,8 +11,6 @@ function getState(name) {
 }
 
 function run() {
-  const actionPath = __dirname;
-
   // Resolve env vars: prefer state saved from main step, fall back to PSE_* from GITHUB_ENV
   const apiUrl = getState('api_url') || process.env.PSE_API_URL || '';
   const appToken = getState('app_token') || process.env.PSE_APP_TOKEN || '';
@@ -23,9 +20,6 @@ function run() {
 
   const env = {
     ...process.env,
-    // Ensure GITHUB_ACTION_PATH points to this action's directory.
-    // In node20 actions the runner may not set this automatically (unlike composite actions).
-    GITHUB_ACTION_PATH: process.env.GITHUB_ACTION_PATH || actionPath,
     API_URL: apiUrl,
     APP_TOKEN: appToken,
     PORTAL_URL: portalUrl,
@@ -38,7 +32,7 @@ function run() {
   if (sendJobStatus === 'true') {
     console.log('Running PSE send job status...');
     try {
-      execSync(`bash ${path.join(actionPath, 'get_jobs_status.sh')}`, {
+      execSync('pse-data-collector get-jobs-status', {
         stdio: 'inherit',
         env,
       });
@@ -48,7 +42,7 @@ function run() {
     }
   }
 
-  // Step 2: Read computed job status from get_jobs_status.sh and pass to cleanup
+  // Step 2: Read computed job status from get-jobs-status and pass to cleanup
   let jobStatus = 'unknown';
   try {
     jobStatus = fs.readFileSync('/tmp/pse_computed_job_status', 'utf8').trim();
@@ -57,9 +51,9 @@ function run() {
   }
   env.INPUT_JOB_STATUS = jobStatus;
 
-  // Step 3: Run cleanup
+  // Step 3: Run cleanup via pse-data-collector
   console.log('Running PSE cleanup...');
-  execSync(`bash ${path.join(actionPath, 'cleanup.sh')}`, {
+  execSync(`pse-data-collector cleanup --job-status ${jobStatus}`, {
     stdio: 'inherit',
     env,
   });
