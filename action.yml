@@ -33,9 +33,9 @@ inputs:
     required: false
     default: 'true'
   mode:
-    description: 'The operation mode: "prepare" only gets scan ID and ECR credentials, "setup" pulls and runs the proxy container, "binary-setup" pulls and runs the proxy container with binary mode, "intercept" configures iptables and certificates. Default is "all" which performs all operations in sequence (prepare, setup, intercept).'
+    description: 'The operation mode: "prepare" only gets scan ID and ECR credentials, "setup" pulls and runs the proxy container, "binary-setup" pulls and runs the proxy container with binary mode, "intercept" configures iptables and certificates, "docker-intercept" downloads and runs PSE binary then intercepts. Default is "docker-intercept".'
     required: false
-    default: 'all'
+    default: 'docker-intercept'
   proxy_ip:
     description: 'IP address of the PSE proxy container when using "intercept" mode. Required for intercept mode unless proxy_hostname is provided.'
     required: false

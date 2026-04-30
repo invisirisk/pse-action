@@ -25,6 +25,7 @@ function run() {
     PORTAL_URL: portalUrl,
     DEBUG: debug,
     GITHUB_TOKEN: githubToken,
+    RUNNER: 'github',
   };
 
   // Step 1: Send job status if enabled

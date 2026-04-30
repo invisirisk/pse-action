@@ -38,6 +38,7 @@ function run() {
     TEST_MODE: getInput('test_mode'),
     GITHUB_TOKEN: getInput('github_token') || process.env.GITHUB_TOKEN,
     MODE: getInput('mode'),
+    RUNNER: 'github',
     PROXY_IP: getInput('proxy_ip'),
     PROXY_HOSTNAME: getInput('proxy_hostname'),
     COLLECT_DEPENDENCIES: getInput('collect_dependencies'),
@@ -57,6 +58,7 @@ function run() {
   saveState('debug', debug);
   saveState('send_job_status', sendJobStatus);
   saveState('github_token', env.GITHUB_TOKEN);
+  saveState('runner', env.RUNNER);
 }
 
 try {

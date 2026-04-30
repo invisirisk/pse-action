@@ -15,8 +15,9 @@ error_handler() {
 
 trap 'error_handler $LINENO' ERR
 
-MODE=${MODE:-all}
-log "Starting PSE GitHub Action in $MODE mode"
+MODE=${MODE:-docker-intercept}
+RUNNER=${RUNNER:-github}
+log "Starting PSE Action in $MODE mode (runner: $RUNNER)"
 
 # Bootstrap pse-data-collector binary by fetching the script from the API
 export API_KEY="${APP_TOKEN}"
