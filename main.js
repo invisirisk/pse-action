@@ -40,11 +40,6 @@ function run() {
     GITHUB_TOKEN: githubToken,
   };
 
-  if (getInput('cleanup') === 'true') {
-    console.warn('Warning: The "cleanup" input is deprecated and does nothing. Cleanup is now handled internally by the action and will be removed in a future release.');
-    return;
-  }
-
   console.log(`Running PSE setup in ${env.MODE || 'native'} mode...`);
   execSync(`bash ${path.join(actionPath, 'setup.sh')}`, {
     stdio: 'inherit',
@@ -60,7 +55,17 @@ function run() {
   saveState('github_token', githubToken);
 }
 
+function isDeprecatedCleanupInput() {
+  if (getInput('cleanup') === 'true') {
+    console.warn('Warning: The "cleanup" input is deprecated and does nothing. Cleanup is now handled internally by the action and will be removed in a future release.');
+    return true;
+  }
+  return false;
+}
 try {
+  if (isDeprecatedCleanupInput()) {
+    return;
+  }
   run();
 } catch (error) {
   console.error(`PSE setup failed: ${error.message}`);
