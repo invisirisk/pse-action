@@ -15,6 +15,7 @@ function run() {
   const apiUrl = getState('api_url') || process.env.PSE_API_URL || '';
   const appToken = getState('app_token') || process.env.PSE_APP_TOKEN || '';
   const debug = getState('debug') || process.env.DEBUG || 'false';
+  const githubToken = getState('github_token') || process.env.GITHUB_TOKEN || '';
 
   const env = {
     ...process.env,
@@ -22,7 +23,7 @@ function run() {
     APP_TOKEN: appToken,
     DEBUG: debug,
     RUNNER: 'github',
-    GITHUB_TOKEN: process.env.GITHUB_TOKEN || '',
+    GITHUB_TOKEN: githubToken,
   };
 
   // Step 1: Send job status if enabled
