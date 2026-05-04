@@ -20,7 +20,7 @@ function run() {
   const env = {
     ...process.env,
     IR_URL: apiUrl,
-    APP_TOKEN: appToken,
+    IR_APP_TOKEN: appToken,
     DEBUG: debug,
     RUNNER: 'github',
     GITHUB_TOKEN: githubToken,
