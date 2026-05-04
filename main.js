@@ -34,6 +34,7 @@ function run() {
     TEST_MODE: getInput('test_mode'),
     MODE: getInput('mode'),
     RUNNER: 'github',
+    GITHUB_TOKEN: process.env.GITHUB_TOKEN || '',
     COLLECT_DEPENDENCIES: getInput('collect_dependencies'),
     WORKDIR: getInput('workdir'),
   };

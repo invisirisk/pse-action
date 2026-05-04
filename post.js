@@ -22,6 +22,7 @@ function run() {
     APP_TOKEN: appToken,
     DEBUG: debug,
     RUNNER: 'github',
+    GITHUB_TOKEN: process.env.GITHUB_TOKEN || '',
   };
 
   // Step 1: Send job status if enabled
