@@ -40,6 +40,11 @@ function run() {
     GITHUB_TOKEN: githubToken,
   };
 
+  if (getInput('cleanup') === 'true') {
+    console.warn('Warning: The "cleanup" input is deprecated and does nothing. Cleanup is now handled internally by the action and will be removed in a future release.');
+    return;
+  }
+
   console.log(`Running PSE setup in ${env.MODE || 'native'} mode...`);
   execSync(`bash ${path.join(actionPath, 'setup.sh')}`, {
     stdio: 'inherit',
