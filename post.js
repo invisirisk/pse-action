@@ -59,7 +59,11 @@ function run() {
 }
 
 try {
-  run();
+  if (getState('skip_post') === 'true') {
+    console.warn('Warning: The "cleanup" input is deprecated. Cleanup is now handled automatically by the setup step\'s post hook. Please remove the cleanup step from your workflow.');
+  } else {
+    run();
+  }
 } catch (error) {
   console.error(`PSE cleanup failed: ${error.message}`);
   // Don't exit with error in post step — cleanup failures shouldn't fail the job

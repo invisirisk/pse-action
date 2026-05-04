@@ -57,7 +57,8 @@ function run() {
 
 function isDeprecatedCleanupInput() {
   if (getInput('cleanup') === 'true') {
-    console.warn('Warning: The "cleanup" input is deprecated and does nothing. Cleanup is now handled internally by the action and will be removed in a future release.');
+    console.warn('Warning: The "cleanup" input is deprecated. Cleanup is now handled automatically by the setup step. Please remove the cleanup step from your workflow.');
+    saveState('skip_post', 'true');
     return true;
   }
   return false;
