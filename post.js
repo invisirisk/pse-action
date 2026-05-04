@@ -1,5 +1,4 @@
 const { execSync } = require('child_process');
-const fs = require('fs');
 
 function getInput(name) {
   const key = `INPUT_${name.replace(/ /g, '_').replace(/-/g, '_').toUpperCase()}`;
@@ -16,6 +15,7 @@ function run() {
   const appToken = getState('app_token') || process.env.PSE_APP_TOKEN || '';
   const debug = getState('debug') || process.env.DEBUG || 'false';
   const githubToken = getState('github_token') || process.env.GITHUB_TOKEN || '';
+  const sendJobStatus = getState('send_job_status') || getInput('send_job_status');
 
   const env = {
     ...process.env,
@@ -24,35 +24,11 @@ function run() {
     DEBUG: debug,
     RUNNER: 'github',
     GITHUB_TOKEN: githubToken,
+    SEND_JOB_STATUS: sendJobStatus === 'true' ? 'true' : 'false',
   };
 
-  // Step 1: Send job status if enabled
-  const sendJobStatus = getState('send_job_status') || getInput('send_job_status');
-  if (sendJobStatus === 'true') {
-    console.log('Running PSE send job status...');
-    try {
-      execSync('pse-data-collector get-jobs-status', {
-        stdio: 'inherit',
-        env,
-      });
-    } catch (error) {
-      console.error(`Warning: Failed to send job status: ${error.message}`);
-      // Continue with cleanup even if job status fails
-    }
-  }
-
-  // Step 2: Read computed job status from get-jobs-status and pass to cleanup
-  let jobStatus = 'unknown';
-  try {
-    jobStatus = fs.readFileSync('/tmp/pse_computed_job_status', 'utf8').trim();
-  } catch (_) {
-    // File won't exist if job status step was skipped or failed
-  }
-  env.INPUT_JOB_STATUS = jobStatus;
-
-  // Step 3: Run cleanup via pse-data-collector
   console.log('Running PSE cleanup...');
-  execSync(`pse-data-collector cleanup --job-status ${jobStatus}`, {
+  execSync('pse-data-collector cleanup', {
     stdio: 'inherit',
     env,
   });
