@@ -49,4 +49,4 @@ runs:
   using: 'node20'
   main: 'main.js'
   post: 'post.js'
-  post-if: always() && inputs.cleanup != 'true'
+  post-if: always()
