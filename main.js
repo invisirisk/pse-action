@@ -18,11 +18,9 @@ function saveState(name, value) {
 function run() {
   const actionPath = __dirname;
 
-  // Map action inputs to environment variables expected by setup.sh
   const sendJobStatus = getInput('send_job_status');
   const apiUrl = getInput('api_url');
   const appToken = getInput('app_token');
-  const portalUrl = getInput('portal_url') || apiUrl;
   const debug = getInput('debug');
 
   const env = {
@@ -30,22 +28,17 @@ function run() {
     // Ensure GITHUB_ACTION_PATH points to this action's directory.
     // In node20 actions the runner may not set this automatically (unlike composite actions).
     GITHUB_ACTION_PATH: process.env.GITHUB_ACTION_PATH || actionPath,
-    API_URL: apiUrl,
+    IR_URL: apiUrl,
     APP_TOKEN: appToken,
-    PORTAL_URL: portalUrl,
-    SCAN_ID: getInput('scan_id'),
     DEBUG: debug,
     TEST_MODE: getInput('test_mode'),
-    GITHUB_TOKEN: getInput('github_token') || process.env.GITHUB_TOKEN,
     MODE: getInput('mode'),
     RUNNER: 'github',
-    PROXY_IP: getInput('proxy_ip'),
-    PROXY_HOSTNAME: getInput('proxy_hostname'),
     COLLECT_DEPENDENCIES: getInput('collect_dependencies'),
     WORKDIR: getInput('workdir'),
   };
 
-  console.log(`Running PSE setup in ${env.MODE || 'all'} mode...`);
+  console.log(`Running PSE setup in ${env.MODE || 'native'} mode...`);
   execSync(`bash ${path.join(actionPath, 'setup.sh')}`, {
     stdio: 'inherit',
     env,
@@ -54,10 +47,8 @@ function run() {
   // Save inputs to state for the post step (cleanup/job-status)
   saveState('api_url', apiUrl);
   saveState('app_token', appToken);
-  saveState('portal_url', portalUrl);
   saveState('debug', debug);
   saveState('send_job_status', sendJobStatus);
-  saveState('github_token', env.GITHUB_TOKEN);
   saveState('runner', env.RUNNER);
 }
 

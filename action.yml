@@ -7,19 +7,11 @@ branding:
 
 inputs:
   api_url:
-    description: 'URL of the InvisiRisk API (required for prepare and setup modes)'
+    description: 'InvisiRisk API URL'
     required: false
   app_token:
-    description: 'Authentication token for the InvisiRisk API (required for prepare and setup modes)'
+    description: 'Authentication token for the InvisiRisk API'
     required: false
-  portal_url:
-    description: 'URL of the InvisiRisk Portal (defaults to api_url if not provided)'
-    required: false
-    default: ''
-  github_token:
-    description: 'GitHub token to be passed to the PSE container for GitHub authentication'
-    required: false
-    default: ${{ github.token }}
   debug:
     description: 'Enable debug mode for verbose logging'
     required: false
@@ -33,21 +25,9 @@ inputs:
     required: false
     default: 'true'
   mode:
-    description: 'The operation mode: "prepare" only gets scan ID and ECR credentials, "setup" pulls and runs the proxy container, "binary-setup" pulls and runs the proxy container with binary mode, "intercept" configures iptables and certificates, "docker-intercept" downloads and runs PSE binary then intercepts. Default is "docker-intercept".'
+    description: 'The operation mode: "native" (default) downloads and runs the PSE binary directly, "sidecar" pulls and runs the PSE proxy as a Docker container.'
     required: false
-    default: 'docker-intercept'
-  proxy_ip:
-    description: 'IP address of the PSE proxy container when using "intercept" mode. Required for intercept mode unless proxy_hostname is provided.'
-    required: false
-    default: ''
-  proxy_hostname:
-    description: 'Hostname of the PSE proxy container when using "intercept" mode with service containers. Use this instead of proxy_ip.'
-    required: false
-    default: ''
-  scan_id:
-    description: 'Scan ID from the prepare step. Required for setup and intercept modes unless test_mode is true.'
-    required: false
-    default: ''
+    default: 'native'
   collect_dependencies:
     description: 'Set to true to collect dependency graphs during cleanup, false to skip. Default is true if not specified.'
     required: false
@@ -56,19 +36,6 @@ inputs:
     description: 'Working directory to use as the project path for dependency graph collection. Defaults to the current directory (pwd) if not specified.'
     required: false
     default: ''
-
-# Define outputs for the action
-outputs:
-  scan_id:
-    description: 'The scan ID generated or used by the action'
-  ecr_username:
-    description: 'ECR username for accessing the PSE container'
-  ecr_region:
-    description: 'ECR region for accessing the PSE container'
-  ecr_registry_id:
-    description: 'ECR registry ID for accessing the PSE container'
-  proxy_ip:
-    description: 'IP address of the PSE proxy container'
 
 runs:
   using: 'node20'

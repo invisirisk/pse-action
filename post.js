@@ -14,17 +14,13 @@ function run() {
   // Resolve env vars: prefer state saved from main step, fall back to PSE_* from GITHUB_ENV
   const apiUrl = getState('api_url') || process.env.PSE_API_URL || '';
   const appToken = getState('app_token') || process.env.PSE_APP_TOKEN || '';
-  const portalUrl = getState('portal_url') || process.env.PSE_PORTAL_URL || apiUrl;
   const debug = getState('debug') || process.env.DEBUG || 'false';
-  const githubToken = getState('github_token') || process.env.GITHUB_TOKEN || '';
 
   const env = {
     ...process.env,
-    API_URL: apiUrl,
+    IR_URL: apiUrl,
     APP_TOKEN: appToken,
-    PORTAL_URL: portalUrl,
     DEBUG: debug,
-    GITHUB_TOKEN: githubToken,
     RUNNER: 'github',
   };
 
