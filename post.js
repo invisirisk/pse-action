@@ -1,0 +1,71 @@
+const { execSync } = require('child_process');
+const fs = require('fs');
+
+function getInput(name) {
+  const key = `INPUT_${name.replace(/ /g, '_').replace(/-/g, '_').toUpperCase()}`;
+  return (process.env[key] || '').trim();
+}
+
+function getState(name) {
+  return (process.env[`STATE_${name}`] || '').trim();
+}
+
+function run() {
+  // Resolve env vars: prefer state saved from main step, fall back to PSE_* from GITHUB_ENV
+  const apiUrl = getState('api_url') || process.env.PSE_API_URL || '';
+  const appToken = getState('app_token') || process.env.PSE_APP_TOKEN || '';
+  const debug = getState('debug') || process.env.DEBUG || 'false';
+  const githubToken = getState('github_token') || process.env.GITHUB_TOKEN || '';
+
+  const env = {
+    ...process.env,
+    IR_URL: apiUrl,
+    IR_APP_TOKEN: appToken,
+    DEBUG: debug,
+    RUNNER: 'github',
+    GITHUB_TOKEN: githubToken,
+  };
+
+  // Step 1: Send job status if enabled
+  const sendJobStatus = getState('send_job_status') || getInput('send_job_status');
+  if (sendJobStatus === 'true') {
+    console.log('Running PSE send job status...');
+    try {
+      execSync('pse-data-collector get-jobs-status', {
+        stdio: 'inherit',
+        env,
+      });
+    } catch (error) {
+      console.error(`Warning: Failed to send job status: ${error.message}`);
+      // Continue with cleanup even if job status fails
+    }
+  }
+
+  // Step 2: Read computed job status from get-jobs-status and pass to cleanup
+  let jobStatus = 'unknown';
+  try {
+    jobStatus = fs.readFileSync('/tmp/pse_computed_job_status', 'utf8').trim();
+  } catch (_) {
+    // File won't exist if job status step was skipped or failed
+  }
+  env.INPUT_JOB_STATUS = jobStatus;
+
+  // Step 3: Run cleanup via pse-data-collector
+  console.log('Running PSE cleanup...');
+  execSync(`pse-data-collector cleanup --job-status ${jobStatus}`, {
+    stdio: 'inherit',
+    env,
+  });
+}
+
+try {
+  if (getState('skip_post') === 'true') {
+    console.warn('Warning: The "cleanup" input is deprecated. Cleanup is now handled automatically by the setup step\'s post hook. Please remove the cleanup step from your workflow.');
+  } else {
+    run();
+  }
+} catch (error) {
+  console.error(`PSE cleanup failed: ${error.message}`);
+  // Don't exit with error in post step — cleanup failures shouldn't fail the job
+  process.exit(0);
+}
