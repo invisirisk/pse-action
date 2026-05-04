@@ -50,7 +50,7 @@ function run() {
   saveState('debug', debug);
   saveState('send_job_status', sendJobStatus);
   saveState('runner', env.RUNNER);
-  saveState('github_token', process.env.GITHUB_TOKEN || '');
+  saveState('github_token', getInput('github_token') || process.env.GITHUB_TOKEN || '');
 }
 
 try {
