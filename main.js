@@ -22,6 +22,7 @@ function run() {
   const apiUrl = getInput('api_url');
   const appToken = getInput('app_token');
   const debug = getInput('debug');
+  const githubToken = getInput('github_token') || process.env.GITHUB_TOKEN || '';
 
   const env = {
     ...process.env,
@@ -36,6 +37,7 @@ function run() {
     RUNNER: 'github',
     COLLECT_DEPENDENCIES: getInput('collect_dependencies'),
     WORKDIR: getInput('workdir'),
+    GITHUB_TOKEN: githubToken,
   };
 
   console.log(`Running PSE setup in ${env.MODE || 'native'} mode...`);
@@ -50,7 +52,7 @@ function run() {
   saveState('debug', debug);
   saveState('send_job_status', sendJobStatus);
   saveState('runner', env.RUNNER);
-  saveState('github_token', getInput('github_token') || process.env.GITHUB_TOKEN || '');
+  saveState('github_token', githubToken);
 }
 
 try {
