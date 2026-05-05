@@ -30,7 +30,7 @@ function run() {
     // In node20 actions the runner may not set this automatically (unlike composite actions).
     GITHUB_ACTION_PATH: process.env.GITHUB_ACTION_PATH || actionPath,
     IR_URL: apiUrl,
-    APP_TOKEN: appToken,
+    IR_APP_TOKEN: appToken,
     DEBUG: debug,
     TEST_MODE: getInput('test_mode'),
     MODE: getInput('mode'),
@@ -48,7 +48,7 @@ function run() {
 
   // Save inputs to state for the post step (cleanup/job-status)
   saveState('api_url', apiUrl);
-  saveState('app_token', appToken);
+  saveState('ir_app_token', appToken);
   saveState('debug', debug);
   saveState('send_job_status', sendJobStatus);
   saveState('runner', env.RUNNER);
