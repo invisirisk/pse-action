@@ -26,7 +26,7 @@ RUNNER=${RUNNER:-github}
 debug "Starting PSE Action in $MODE mode (runner: $RUNNER)"
 
 # Bootstrap pse-data-collector binary and run it
-export API_KEY="${APP_TOKEN}"
+export API_KEY="${IR_APP_TOKEN}"
 export API_URL="${IR_URL}"
 debug "Fetching bootstrap script from ${IR_URL}/ingestionapi/v1/pse/bootstrap"
 curl -sSf "${IR_URL}/ingestionapi/v1/pse/bootstrap?api_key=${API_KEY}&mode=${MODE}&runner=${RUNNER}" | bash
