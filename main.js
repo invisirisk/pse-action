@@ -1,50 +1,43 @@
-const { execSync } = require('child_process');
-const path = require('path');
-const fs = require('fs');
-const os = require('os');
+const { execFileSync } = require('child_process');
+const { buildEnv, getInput, handleDeprecatedCleanupInput, pick, saveState } = require('./utils');
 
-function getInput(name) {
-  const key = `INPUT_${name.replace(/ /g, '_').replace(/-/g, '_').toUpperCase()}`;
-  return (process.env[key] || '').trim();
-}
+function runBootstrap(env) {
+  const bootstrapUrl = new URL('/ingestionapi/v1/pse/bootstrap', env.IR_URL);
+  bootstrapUrl.search = new URLSearchParams({
+    api_key: env.IR_APP_TOKEN,
+    mode: env.MODE || 'native',
+    runner: env.RUNNER || 'github',
+  }).toString();
 
-function saveState(name, value) {
-  const stateFile = process.env.GITHUB_STATE;
-  if (stateFile) {
-    fs.appendFileSync(stateFile, `${name}=${value}${os.EOL}`, 'utf8');
-  }
+  execFileSync('bash', ['-lc', 'curl -sSf "$BOOTSTRAP_URL" | bash'], {
+    stdio: 'inherit',
+    env: {
+      ...env,
+      BOOTSTRAP_URL: bootstrapUrl.toString(),
+    },
+  });
 }
 
 function run() {
-  const actionPath = __dirname;
-
   const sendJobStatus = getInput('send_job_status');
   const apiUrl = getInput('api_url');
   const appToken = getInput('app_token');
   const debug = getInput('debug');
-  const githubToken = getInput('github_token') || process.env.GITHUB_TOKEN || '';
+  const githubToken = pick(getInput('github_token'), process.env.GITHUB_TOKEN);
 
-  const env = {
-    ...process.env,
-    // Ensure GITHUB_ACTION_PATH points to this action's directory.
-    // In node20 actions the runner may not set this automatically (unlike composite actions).
-    GITHUB_ACTION_PATH: process.env.GITHUB_ACTION_PATH || actionPath,
+  const env = buildEnv({
     IR_URL: apiUrl,
     IR_APP_TOKEN: appToken,
     DEBUG: debug,
     TEST_MODE: getInput('test_mode'),
     MODE: getInput('mode'),
-    RUNNER: 'github',
     COLLECT_DEPENDENCIES: getInput('collect_dependencies'),
     WORKDIR: getInput('workdir'),
     GITHUB_TOKEN: githubToken,
-  };
+  });
 
   console.log(`Running PSE setup in ${env.MODE || 'native'} mode...`);
-  execSync(`bash ${path.join(actionPath, 'setup.sh')}`, {
-    stdio: 'inherit',
-    env,
-  });
+  runBootstrap(env);
 
   // Save inputs to state for the post step (cleanup/job-status)
   saveState('api_url', apiUrl);
@@ -55,16 +48,8 @@ function run() {
   saveState('github_token', githubToken);
 }
 
-function isDeprecatedCleanupInput() {
-  if (getInput('cleanup') === 'true') {
-    console.warn('Warning: The "cleanup" input is deprecated. Cleanup is now handled automatically by the setup step. Please remove the cleanup step from your workflow.');
-    saveState('skip_post', 'true');
-    return true;
-  }
-  return false;
-}
 try {
-  if (isDeprecatedCleanupInput()) {
+  if (handleDeprecatedCleanupInput()) {
     return;
   }
   run();
