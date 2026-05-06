@@ -12,7 +12,7 @@ function getState(name) {
 function run() {
   // Resolve env vars: prefer state saved from main step, fall back to PSE_* from GITHUB_ENV
   const apiUrl = getState('api_url') || process.env.PSE_API_URL || '';
-  const appToken = getState('app_token') || process.env.PSE_APP_TOKEN || '';
+  const appToken = getState('ir_app_token') || getState('app_token') || process.env.PSE_APP_TOKEN || '';
   const debug = getState('debug') || process.env.DEBUG || 'false';
   const githubToken = getState('github_token') || process.env.GITHUB_TOKEN || '';
   const sendJobStatus = getState('send_job_status') || getInput('send_job_status');
