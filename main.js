@@ -13,6 +13,8 @@ function runBootstrap(env) {
     stdio: 'inherit',
     env: {
       ...env,
+      API_KEY: env.IR_APP_TOKEN,
+      API_URL: env.IR_URL,
       BOOTSTRAP_URL: bootstrapUrl.toString(),
     },
   });
