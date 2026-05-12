@@ -1,7 +1,9 @@
 const { execSync } = require('child_process');
 const { buildEnv, getInput, getState, handleDeprecatedCleanupInput, pick } = require('./utils');
 
-function run() {
+const POLICY_FAILURE_EXIT_CODE = 42;
+
+function run(exec = execSync) {
   const apiUrl = pick(getState('api_url'), process.env.PSE_API_URL);
   const appToken = pick(getState('ir_app_token'), getState('app_token'), process.env.PSE_APP_TOKEN);
   const debug = pick(getState('debug'), process.env.DEBUG, 'false');
@@ -17,19 +19,46 @@ function run() {
   });
 
   console.log('Running PSE cleanup...');
-  execSync('pse-data-collector cleanup', {
+  exec('pse-data-collector cleanup', {
     stdio: 'inherit',
     env,
   });
 }
 
-try {
-  if (handleDeprecatedCleanupInput(true)) {
+function isPolicyFailure(error) {
+  return Number(error?.status) === POLICY_FAILURE_EXIT_CODE;
+}
+
+function handleCleanupError(error, exit = process.exit) {
+  console.error(`PSE cleanup failed: ${error.message}`);
+  if (isPolicyFailure(error)) {
+    exit(1);
     return;
   }
-  run();
-} catch (error) {
-  console.error(`PSE cleanup failed: ${error.message}`);
+
   // Don't exit with error in post step — cleanup failures shouldn't fail the job
-  process.exit(0);
+  exit(0);
 }
+
+function main(exec = execSync, exit = process.exit) {
+  try {
+    if (handleDeprecatedCleanupInput(true)) {
+      return;
+    }
+    run(exec);
+  } catch (error) {
+    handleCleanupError(error, exit);
+  }
+}
+
+if (require.main === module) {
+  main();
+}
+
+module.exports = {
+  POLICY_FAILURE_EXIT_CODE,
+  handleCleanupError,
+  isPolicyFailure,
+  main,
+  run,
+};

@@ -13,6 +13,8 @@ InvisiRisk provides unparalleled protection for your software supply chain by en
 - Partner Portal with customer data access, and step-by-step coaching from IR Team Members
 - Network layer to ensure approved repositories, auth methods, and stop redirects of URLs, IPs, or Domains
 
+Blocking InvisiRisk policy violations now fail the workflow during the action post step. Non-policy cleanup issues still remain non-blocking so teardown problems do not mask the underlying build result.
+
 
 ## 
 
