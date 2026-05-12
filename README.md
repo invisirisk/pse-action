@@ -15,6 +15,8 @@ InvisiRisk provides unparalleled protection for your software supply chain by en
 
 Blocking InvisiRisk policy violations and /end finalization failures now fail the workflow during the action post step. Ordinary teardown issues still remain non-blocking so cleanup problems do not mask the underlying build result.
 
+For sidecar mode, use the `pse_image_tag` action input to override the tag for the fixed `invisirisk/pse-proxy` image. If you do not set it, the action passes `latest` by default.
+
 
 ## 
 
