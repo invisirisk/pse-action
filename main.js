@@ -1,7 +1,7 @@
 const { execFileSync } = require('child_process');
 const { buildEnv, getInput, handleDeprecatedCleanupInput, pick, saveState } = require('./utils');
 
-function runBootstrap(env) {
+function runBootstrap(env, execFile = execFileSync) {
   const bootstrapUrl = new URL('/ingestionapi/v1/pse/bootstrap', env.IR_URL);
   bootstrapUrl.search = new URLSearchParams({
     api_key: env.IR_APP_TOKEN,
@@ -9,7 +9,7 @@ function runBootstrap(env) {
     runner: env.RUNNER || 'github',
   }).toString();
 
-  execFileSync('bash', ['-lc', 'curl -sSf "$BOOTSTRAP_URL" | bash'], {
+  execFile('bash', ['-lc', 'curl -sSf "$BOOTSTRAP_URL" | bash'], {
     stdio: 'inherit',
     env: {
       ...env,
@@ -20,42 +20,55 @@ function runBootstrap(env) {
   });
 }
 
-function run() {
-  const sendJobStatus = getInput('send_job_status');
-  const apiUrl = getInput('api_url');
-  const appToken = getInput('app_token');
-  const debug = getInput('debug');
-  const githubToken = pick(getInput('github_token'), process.env.GITHUB_TOKEN);
+function buildRuntimeEnv(inputReader = getInput, envSource = process.env) {
+  const githubToken = pick(inputReader('github_token'), envSource.GITHUB_TOKEN);
 
-  const env = buildEnv({
-    IR_URL: apiUrl,
-    IR_APP_TOKEN: appToken,
-    DEBUG: debug,
-    TEST_MODE: getInput('test_mode'),
-    MODE: getInput('mode'),
-    COLLECT_DEPENDENCIES: getInput('collect_dependencies'),
-    WORKDIR: getInput('workdir'),
+  return buildEnv({
+    IR_URL: inputReader('api_url'),
+    IR_APP_TOKEN: inputReader('app_token'),
+    DEBUG: inputReader('debug'),
+    TEST_MODE: inputReader('test_mode'),
+    MODE: inputReader('mode'),
+    PSE_IMAGE_TAG: pick(inputReader('pse_image_tag'), 'latest'),
+    COLLECT_DEPENDENCIES: inputReader('collect_dependencies'),
+    WORKDIR: inputReader('workdir'),
     GITHUB_TOKEN: githubToken,
   });
+}
+
+function run({ execFile = execFileSync, inputReader = getInput, stateWriter = saveState, envSource = process.env } = {}) {
+  const sendJobStatus = inputReader('send_job_status');
+  const apiUrl = inputReader('api_url');
+  const appToken = inputReader('app_token');
+  const debug = inputReader('debug');
+
+  const env = buildRuntimeEnv(inputReader, envSource);
 
   console.log(`Running PSE setup in ${env.MODE || 'native'} mode...`);
-  runBootstrap(env);
+  runBootstrap(env, execFile);
 
   // Save inputs to state for the post step (cleanup/job-status)
-  saveState('api_url', apiUrl);
-  saveState('ir_app_token', appToken);
-  saveState('debug', debug);
-  saveState('send_job_status', sendJobStatus);
-  saveState('runner', env.RUNNER);
-  saveState('github_token', githubToken);
+  stateWriter('api_url', apiUrl);
+  stateWriter('ir_app_token', appToken);
+  stateWriter('debug', debug);
+  stateWriter('send_job_status', sendJobStatus);
+  stateWriter('runner', env.RUNNER);
+  stateWriter('github_token', env.GITHUB_TOKEN);
 }
 
-try {
-  if (handleDeprecatedCleanupInput()) {
-    return;
+if (require.main === module) {
+  try {
+    if (!handleDeprecatedCleanupInput()) {
+      run();
+    }
+  } catch (error) {
+    console.error(`PSE setup failed: ${error.message}`);
+    process.exit(1);
   }
-  run();
-} catch (error) {
-  console.error(`PSE setup failed: ${error.message}`);
-  process.exit(1);
 }
+
+module.exports = {
+  buildRuntimeEnv,
+  runBootstrap,
+  run,
+};

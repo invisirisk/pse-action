@@ -32,6 +32,10 @@ inputs:
     description: 'The operation mode: "native" (default) downloads and runs the PSE binary directly, "sidecar" pulls and runs the PSE proxy as a Docker container.'
     required: false
     default: 'native'
+  pse_image_tag:
+    description: 'Sidecar mode only: tag for the fixed invisirisk/pse-proxy image. Defaults to latest.'
+    required: false
+    default: 'latest'
   collect_dependencies:
     description: 'Set to true to collect dependency graphs during cleanup, false to skip. Default is true if not specified.'
     required: false
