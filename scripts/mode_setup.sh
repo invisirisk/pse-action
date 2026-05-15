@@ -104,7 +104,7 @@ pull_and_start_pse_container() {
   echo "$ECR_TOKEN" | run_with_privilege docker login --username "$ECR_USERNAME" --password-stdin "$ECR_REGISTRY_ID.dkr.ecr.$ECR_REGION.amazonaws.com"
 
 
-  local image_tag="${PSE_IMAGE_TAG:-dev-test}"
+  local image_tag="${PSE_IMAGE_TAG:-latest}"
 
   # Define possible repository paths to try
   local REPO_PATHS=(
