@@ -66,9 +66,9 @@ inputs:
     required: false
     default: ''
   pse_image_tag:
-    description: 'Tag for invisirisk/pse-proxy image. Defaults to dev-test for backward-compatible intermediate rollout.'
+    description: 'Tag for invisirisk/pse-proxy image. Defaults to latest for backward-compatible intermediate rollout.'
     required: false
-    default: 'dev-test'
+    default: 'latest'
 # Define outputs for the action
 outputs:
   scan_id:
