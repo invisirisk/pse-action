@@ -376,6 +376,8 @@ cleanup_certificates() {
   # Clean up environment variables
   unset NODE_EXTRA_CA_CERTS
   unset REQUESTS_CA_BUNDLE
+  unset DENO_CERT
+  unset CARGO_HTTP_CAINFO
 
   # Re-enable IPv6 if it was disabled
   log "Re-enabling IPv6"

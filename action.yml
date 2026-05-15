@@ -65,6 +65,10 @@ inputs:
     description: 'Working directory to use as the project path for dependency graph collection. Defaults to the current directory (pwd) if not specified.'
     required: false
     default: ''
+  pse_image_tag:
+    description: 'Tag for invisirisk/pse-proxy image. Defaults to dev-test for backward-compatible intermediate rollout.'
+    required: false
+    default: 'dev-test'
 # Define outputs for the action
 outputs:
   scan_id:
@@ -118,4 +122,5 @@ runs:
         CLEANUP_STEP_NAME: ${{ inputs.cleanup_step_name }}
         COLLECT_DEPENDENCIES: ${{ inputs.collect_dependencies}}
         WORKDIR: ${{ inputs.workdir }}
+        PSE_IMAGE_TAG: ${{ inputs.pse_image_tag }}
         

@@ -450,10 +450,14 @@ setup_certificates() {
   # Set environment variables for other tools
   export NODE_EXTRA_CA_CERTS="$CA_CERT_PATH"
   export REQUESTS_CA_BUNDLE="$CA_CERT_PATH"
+  export DENO_CERT="$CA_CERT_PATH"
+  export CARGO_HTTP_CAINFO="$CA_CERT_PATH"
   
   # Add to GITHUB_ENV to persist these variables
   echo "NODE_EXTRA_CA_CERTS=$CA_CERT_PATH" >> $GITHUB_ENV
   echo "REQUESTS_CA_BUNDLE=$CA_CERT_PATH" >> $GITHUB_ENV
+  echo "DENO_CERT=$CA_CERT_PATH" >> $GITHUB_ENV
+  echo "CARGO_HTTP_CAINFO=$CA_CERT_PATH" >> $GITHUB_ENV
 
   # Add handling for docker
   if command -v docker >/dev/null 2>&1; then
