@@ -4,7 +4,7 @@ const { buildEnv, getInput, handleDeprecatedCleanupInput, pick, saveState } = re
 function runBootstrap(env, execFile = execFileSync) {
   const bootstrapUrl = new URL('/ingestionapi/v1/pse/bootstrap', env.IR_URL);
   bootstrapUrl.search = new URLSearchParams({
-    api_key: env.IR_APP_TOKEN,
+    api_key: env.IR_TOKEN,
     mode: env.MODE || 'native',
     runner: env.RUNNER || 'github',
   }).toString();
@@ -13,7 +13,7 @@ function runBootstrap(env, execFile = execFileSync) {
     stdio: 'inherit',
     env: {
       ...env,
-      API_KEY: env.IR_APP_TOKEN,
+      API_KEY: env.IR_TOKEN,
       API_URL: env.IR_URL,
       BOOTSTRAP_URL: bootstrapUrl.toString(),
     },
@@ -25,7 +25,7 @@ function buildRuntimeEnv(inputReader = getInput, envSource = process.env) {
 
   return buildEnv({
     IR_URL: inputReader('api_url'),
-    IR_APP_TOKEN: inputReader('app_token'),
+    IR_TOKEN: inputReader('app_token'),
     DEBUG: inputReader('debug'),
     TEST_MODE: inputReader('test_mode'),
     MODE: inputReader('mode'),
@@ -49,7 +49,7 @@ function run({ execFile = execFileSync, inputReader = getInput, stateWriter = sa
 
   // Save inputs to state for the post step (cleanup/job-status)
   stateWriter('api_url', apiUrl);
-  stateWriter('ir_app_token', appToken);
+  stateWriter('ir_token', appToken);
   stateWriter('debug', debug);
   stateWriter('send_job_status', sendJobStatus);
   stateWriter('runner', env.RUNNER);

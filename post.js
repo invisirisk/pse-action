@@ -9,14 +9,14 @@ const END_SIGNAL_FAILURE_MESSAGE = /InvisiRisk could not complete build finaliza
 
 function run(spawn = spawnSync, stdout = process.stdout, stderr = process.stderr) {
   const apiUrl = pick(getState('api_url'), process.env.PSE_API_URL);
-  const appToken = pick(getState('ir_app_token'), getState('app_token'), process.env.PSE_APP_TOKEN);
+  const appToken = pick(getState('ir_token'), getState('app_token'), process.env.PSE_APP_TOKEN);
   const debug = pick(getState('debug'), process.env.DEBUG, 'false');
   const githubToken = pick(getState('github_token'), process.env.GITHUB_TOKEN);
   const sendJobStatus = pick(getState('send_job_status'), getInput('send_job_status'));
 
   const env = buildEnv({
     IR_URL: apiUrl,
-    IR_APP_TOKEN: appToken,
+    IR_TOKEN: appToken,
     DEBUG: debug,
     GITHUB_TOKEN: githubToken,
     SEND_JOB_STATUS: sendJobStatus === 'true' ? 'true' : 'false',

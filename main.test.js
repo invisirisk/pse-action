@@ -56,7 +56,7 @@ test('run passes pse_image_tag through to bootstrap environment', () => {
   assert.match(execCall[2].env.BOOTSTRAP_URL, /mode=sidecar/);
   assert.deepEqual(stateWrites, [
     ['api_url', 'https://ir.example'],
-    ['ir_app_token', 'token'],
+    ['ir_token', 'token'],
     ['debug', 'true'],
     ['send_job_status', 'true'],
     ['runner', 'github'],
