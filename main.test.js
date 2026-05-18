@@ -8,7 +8,6 @@ test('buildRuntimeEnv defaults pse_image_tag to latest', () => {
     api_url: 'https://ir.example',
     app_token: '',
     debug: 'false',
-    test_mode: 'false',
     mode: 'sidecar',
     pse_image_tag: '',
     collect_dependencies: 'true',
@@ -28,18 +27,15 @@ test('buildRuntimeEnv defaults pse_image_tag to latest', () => {
 
 test('run passes pse_image_tag through to bootstrap environment', () => {
   const inputs = {
-    send_job_status: 'true',
     api_url: 'https://ir.example',
     app_token: 'token',
     debug: 'true',
-    test_mode: 'false',
     mode: 'sidecar',
     pse_image_tag: 'release-2026-05',
     collect_dependencies: 'true',
     workdir: '/workspace',
     github_token: '',
   };
-  const stateWrites = [];
   let execCall;
 
   run({
@@ -47,9 +43,6 @@ test('run passes pse_image_tag through to bootstrap environment', () => {
       execCall = args;
     },
     inputReader: (name) => inputs[name] || '',
-    stateWriter: (name, value) => {
-      stateWrites.push([name, value]);
-    },
     envSource: { GITHUB_TOKEN: 'default-gh-token' },
   });
 
@@ -60,41 +53,30 @@ test('run passes pse_image_tag through to bootstrap environment', () => {
   assert.match(execCall[2].env.BOOTSTRAP_URL, /mode=sidecar/);
   assert.match(execCall[2].env.BOOTSTRAP_URL, /api_key=token/);
   assert.match(execCall[2].env.BOOTSTRAP_URL, /ir_token=token/);
-  assert.deepEqual(stateWrites, [
-    ['api_url', 'https://ir.example'],
-    ['ir_token', 'token'],
-    ['debug', 'true'],
-    ['send_job_status', 'true'],
-    ['runner', 'github'],
-    ['github_token', 'default-gh-token'],
-  ]);
 });
 
-test('run stores resolved token from env fallback in state', () => {
+test('run resolves token from env fallback', () => {
   const inputs = {
-    send_job_status: 'true',
     api_url: 'https://ir.example',
     app_token: '',
     debug: 'true',
-    test_mode: 'false',
     mode: 'native',
     pse_image_tag: 'latest',
     collect_dependencies: 'true',
     workdir: '/workspace',
     github_token: '',
   };
-  const stateWrites = [];
+  let execCall;
 
   run({
-    execFile: () => {},
-    inputReader: (name) => inputs[name] || '',
-    stateWriter: (name, value) => {
-      stateWrites.push([name, value]);
+    execFile: (...args) => {
+      execCall = args;
     },
+    inputReader: (name) => inputs[name] || '',
     envSource: { GITHUB_TOKEN: 'default-gh-token', IR_TOKEN: 'fallback-token' },
   });
 
-  assert.ok(stateWrites.some(([name, value]) => name === 'ir_token' && value === 'fallback-token'));
+  assert.equal(execCall[2].env.IR_TOKEN, 'fallback-token');
 });
 
 test('run throws helpful error when api_url is missing', () => {
@@ -102,11 +84,9 @@ test('run throws helpful error when api_url is missing', () => {
     run({
       inputReader: (name) => {
         const inputs = {
-          send_job_status: 'true',
           api_url: '',
           app_token: 'token',
           debug: 'true',
-          test_mode: 'false',
           mode: 'native',
           pse_image_tag: 'latest',
           collect_dependencies: 'true',
@@ -124,11 +104,9 @@ test('run throws helpful error when token is missing', () => {
     run({
       inputReader: (name) => {
         const inputs = {
-          send_job_status: 'true',
           api_url: 'https://ir.example',
           app_token: '',
           debug: 'true',
-          test_mode: 'false',
           mode: 'native',
           pse_image_tag: 'latest',
           collect_dependencies: 'true',

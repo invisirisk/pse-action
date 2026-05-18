@@ -4,8 +4,6 @@ const assert = require('node:assert/strict');
 const {
   END_SIGNAL_FAILURE_EXIT_CODE,
   POLICY_FAILURE_EXIT_CODE,
-  extractEndSignalFailureMessage,
-  extractPolicyFailureMessage,
   handleCleanupError,
   isEndSignalFailure,
   isPolicyFailure,
@@ -38,22 +36,6 @@ test('isEndSignalFailure detects dedicated end-signal exit code', () => {
   assert.equal(isEndSignalFailure({ status: 1 }), false);
 });
 
-test('extractEndSignalFailureMessage returns the end-signal failure message from cleanup logs', () => {
-  const message = extractEndSignalFailureMessage({
-    stderr: '[2026-05-12 04:20:27] InvisiRisk could not complete build finalization because the /end request failed.\n',
-  });
-
-  assert.equal(message, 'InvisiRisk could not complete build finalization because the /end request failed.');
-});
-
-test('extractPolicyFailureMessage returns the layman-friendly message from cleanup logs', () => {
-  const message = extractPolicyFailureMessage({
-    stdout: '[2026-05-12 04:20:27] Policy gate failed: InvisiRisk blocked this build because accessing vbirmock.free.beeceptor.com violated security policy. Review the InvisiRisk report for details.\n',
-  });
-
-  assert.equal(message, 'InvisiRisk blocked this build because accessing vbirmock.free.beeceptor.com violated security policy. Review the InvisiRisk report for details.');
-});
-
 test('handleCleanupError fails the workflow on policy failures', () => {
   let exitCode = null;
   const annotations = [];
@@ -76,7 +58,7 @@ test('handleCleanupError fails the workflow on policy failures', () => {
 
   assert.equal(exitCode, 1);
   assert.deepEqual(annotations, [{
-    message: 'InvisiRisk blocked this build because accessing vbirmock.free.beeceptor.com violated security policy. Review the InvisiRisk report for details.',
+    message: '[2026-05-12 04:20:27] Policy gate failed: InvisiRisk blocked this build because accessing vbirmock.free.beeceptor.com violated security policy. Review the InvisiRisk report for details.',
     title: 'Policy gate failed',
   }]);
 });
@@ -103,7 +85,7 @@ test('handleCleanupError fails the workflow on end-signal failures', () => {
 
   assert.equal(exitCode, 1);
   assert.deepEqual(annotations, [{
-    message: 'InvisiRisk could not complete build finalization because the /end request failed.',
+    message: '[2026-05-12 04:20:27] InvisiRisk could not complete build finalization because the /end request failed.',
     title: 'InvisiRisk /end failed',
   }]);
 });
@@ -136,6 +118,7 @@ test('run replays cleanup output and throws enriched error on failure', () => {
     );
   }, (error) => {
     assert.equal(error.status, 1);
+    assert.equal(error.message, 'policy output\ncleanup stderr');
     assert.equal(error.stdout, 'policy output\n');
     assert.equal(error.stderr, 'cleanup stderr\n');
     return true;

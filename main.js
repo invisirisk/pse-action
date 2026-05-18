@@ -1,5 +1,5 @@
 const { execFileSync } = require('child_process');
-const { buildEnv, getInput, handleDeprecatedCleanupInput, pick, saveState } = require('./utils');
+const { buildEnv, getInput, handleDeprecatedCleanupInput, pick } = require('./utils');
 
 function runBootstrap(env, execFile = execFileSync) {
   const bootstrapUrl = new URL('/ingestionapi/v1/pse/bootstrap', env.IR_URL);
@@ -24,28 +24,44 @@ function runBootstrap(env, execFile = execFileSync) {
 }
 
 function buildRuntimeEnv(inputReader = getInput, envSource = process.env) {
-  const irToken = pick(inputReader('app_token'), envSource.IR_TOKEN, envSource.APP_TOKEN);
-  const githubToken = pick(inputReader('github_token'), envSource.GITHUB_TOKEN);
-
-  return buildEnv({
+  const env = buildEnv({
     IR_URL: inputReader('api_url'),
-    IR_TOKEN: irToken,
-    DEBUG: inputReader('debug'),
-    TEST_MODE: inputReader('test_mode'),
-    MODE: inputReader('mode'),
-    PSE_IMAGE_TAG: pick(inputReader('pse_image_tag'), 'latest'),
-    COLLECT_DEPENDENCIES: inputReader('collect_dependencies'),
-    WORKDIR: inputReader('workdir'),
-    GITHUB_TOKEN: githubToken,
+    IR_TOKEN: pick(inputReader('app_token'), envSource.IR_TOKEN, envSource.APP_TOKEN),
   });
+
+  const mode = pick(inputReader('mode'));
+  if (mode) {
+    env.MODE = mode;
+  }
+
+  if ((mode || 'native') === 'sidecar') {
+    env.PSE_IMAGE_TAG = pick(inputReader('pse_image_tag'), 'latest');
+  }
+
+  const debug = pick(inputReader('debug'));
+  if (debug === 'true') {
+    env.DEBUG = 'true';
+  }
+
+  const collectDependencies = pick(inputReader('collect_dependencies'));
+  if (collectDependencies) {
+    env.COLLECT_DEPENDENCIES = collectDependencies;
+  }
+
+  const workdir = pick(inputReader('workdir'));
+  if (workdir) {
+    env.WORKDIR = workdir;
+  }
+
+  const githubToken = pick(inputReader('github_token'), envSource.GITHUB_TOKEN);
+  if (githubToken) {
+    env.GITHUB_TOKEN = githubToken;
+  }
+
+  return env;
 }
 
-function run({ execFile = execFileSync, inputReader = getInput, stateWriter = saveState, envSource = process.env } = {}) {
-  const sendJobStatus = inputReader('send_job_status');
-  const apiUrl = inputReader('api_url');
-  const appToken = inputReader('app_token');
-  const debug = inputReader('debug');
-
+function run({ execFile = execFileSync, inputReader = getInput, envSource = process.env } = {}) {
   const env = buildRuntimeEnv(inputReader, envSource);
 
   if (!env.IR_URL) {
@@ -57,14 +73,6 @@ function run({ execFile = execFileSync, inputReader = getInput, stateWriter = sa
 
   console.log(`Running PSE setup in ${env.MODE || 'native'} mode...`);
   runBootstrap(env, execFile);
-
-  // Save inputs to state for the post step (cleanup/job-status)
-  stateWriter('api_url', apiUrl);
-  stateWriter('ir_token', env.IR_TOKEN);
-  stateWriter('debug', debug);
-  stateWriter('send_job_status', sendJobStatus);
-  stateWriter('runner', env.RUNNER);
-  stateWriter('github_token', env.GITHUB_TOKEN);
 }
 
 if (require.main === module) {

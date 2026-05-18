@@ -20,10 +20,6 @@ inputs:
     description: 'Enable debug mode for verbose logging'
     required: false
     default: 'false'
-  test_mode:
-    description: 'Enable test mode to bypass API calls and container setup for testing'
-    required: false
-    default: 'false'
   send_job_status:
     description: 'Set to true to allow SaaS platform to fetch job status for current action run. Runs automatically during cleanup.'
     required: false

@@ -1,26 +1,32 @@
 const { spawnSync } = require('child_process');
-const { buildEnv, error: annotateError, getInput, getState, handleDeprecatedCleanupInput, pick } = require('./utils');
+const { buildEnv, error: annotateError, getInput, handleDeprecatedCleanupInput, pick } = require('./utils');
+
 
 const POLICY_FAILURE_EXIT_CODE = 42;
 const END_SIGNAL_FAILURE_EXIT_CODE = 43;
 const POLICY_FAILURE_MESSAGE = /InvisiRisk blocked this build because/i;
-const POLICY_FAILURE_LINE = /^.*Policy gate failed:\s*(InvisiRisk blocked this build because.*)$/m;
 const END_SIGNAL_FAILURE_MESSAGE = /InvisiRisk could not complete build finalization because the \/end request failed\./i;
 
-function run(spawn = spawnSync, stdout = process.stdout, stderr = process.stderr) {
-  const apiUrl = pick(getState('api_url'), process.env.PSE_API_URL);
-  const appToken = pick(getState('ir_token'), getState('app_token'), process.env.PSE_APP_TOKEN);
-  const debug = pick(getState('debug'), process.env.DEBUG, 'false');
-  const githubToken = pick(getState('github_token'), process.env.GITHUB_TOKEN);
-  const sendJobStatus = pick(getState('send_job_status'), getInput('send_job_status'));
+function getCleanupMessage(error) {
+  return `${error?.stdout || ''}${error?.stderr || ''}`.trim() || error?.message || '';
+}
 
+function run(spawn = spawnSync, stdout = process.stdout, stderr = process.stderr) {
   const env = buildEnv({
-    IR_URL: apiUrl,
-    IR_TOKEN: appToken,
-    DEBUG: debug,
-    GITHUB_TOKEN: githubToken,
-    SEND_JOB_STATUS: sendJobStatus === 'true' ? 'true' : 'false',
+    IR_URL: pick(getInput('api_url'), process.env.PSE_API_URL),
+    IR_TOKEN: pick(getInput('app_token'), process.env.PSE_APP_TOKEN),
+    SEND_JOB_STATUS: getInput('send_job_status') === 'false' ? 'false' : 'true',
   });
+
+  const debug = pick(getInput('debug'), process.env.DEBUG);
+  if (debug === 'true') {
+    env.DEBUG = 'true';
+  }
+
+  const githubToken = pick(getInput('github_token'), process.env.GITHUB_TOKEN);
+  if (githubToken) {
+    env.GITHUB_TOKEN = githubToken;
+  }
 
   console.log('Running PSE cleanup...');
   const result = spawn('pse-data-collector', ['cleanup'], {
@@ -40,7 +46,7 @@ function run(spawn = spawnSync, stdout = process.stdout, stderr = process.stderr
   }
 
   if (result.status !== 0) {
-    const error = new Error('Command failed: pse-data-collector cleanup');
+    const error = new Error(getCleanupMessage(result) || 'pse-data-collector cleanup failed');
     error.status = result.status;
     error.stdout = result.stdout || '';
     error.stderr = result.stderr || '';
@@ -53,8 +59,7 @@ function isPolicyFailure(error) {
     return true;
   }
 
-  const output = `${error?.stdout || ''}\n${error?.stderr || ''}`;
-  return POLICY_FAILURE_MESSAGE.test(output);
+  return POLICY_FAILURE_MESSAGE.test(getCleanupMessage(error));
 }
 
 function isEndSignalFailure(error) {
@@ -62,47 +67,20 @@ function isEndSignalFailure(error) {
     return true;
   }
 
-  const output = `${error?.stdout || ''}\n${error?.stderr || ''}`;
-  return END_SIGNAL_FAILURE_MESSAGE.test(output);
-}
-
-function extractPolicyFailureMessage(error) {
-  const output = `${error?.stdout || ''}\n${error?.stderr || ''}`;
-  const matchedLine = output.match(POLICY_FAILURE_LINE);
-  if (matchedLine && matchedLine[1]) {
-    return matchedLine[1].trim();
-  }
-
-  const matchedMessage = output.match(POLICY_FAILURE_MESSAGE);
-  if (matchedMessage) {
-    return output.trim();
-  }
-
-  return '';
-}
-
-function extractEndSignalFailureMessage(error) {
-  const output = `${error?.stdout || ''}\n${error?.stderr || ''}`;
-  const matchedMessage = output.match(END_SIGNAL_FAILURE_MESSAGE);
-  if (matchedMessage) {
-    return matchedMessage[0].trim();
-  }
-
-  return '';
+  return END_SIGNAL_FAILURE_MESSAGE.test(getCleanupMessage(error));
 }
 
 function handleCleanupError(error, exit = process.exit, emitAnnotation = annotateError) {
-  console.error(`PSE cleanup failed: ${error.message}`);
+  const message = getCleanupMessage(error);
+  console.error(`PSE cleanup failed: ${message || error.message}`);
   if (isPolicyFailure(error)) {
-    const policyMessage = extractPolicyFailureMessage(error);
-    emitAnnotation(policyMessage || 'InvisiRisk blocked this build because a policy violation was detected.', 'Policy gate failed');
+    emitAnnotation(message || error.message, 'Policy gate failed');
     exit(1);
     return;
   }
 
   if (isEndSignalFailure(error)) {
-    const endSignalMessage = extractEndSignalFailureMessage(error);
-    emitAnnotation(endSignalMessage || 'InvisiRisk could not complete build finalization because the /end request failed.', 'InvisiRisk /end failed');
+    emitAnnotation(message || error.message, 'InvisiRisk /end failed');
     exit(1);
     return;
   }
@@ -130,10 +108,7 @@ module.exports = {
   END_SIGNAL_FAILURE_EXIT_CODE,
   END_SIGNAL_FAILURE_MESSAGE,
   POLICY_FAILURE_EXIT_CODE,
-  POLICY_FAILURE_LINE,
   POLICY_FAILURE_MESSAGE,
-  extractEndSignalFailureMessage,
-  extractPolicyFailureMessage,
   handleCleanupError,
   isEndSignalFailure,
   isPolicyFailure,
