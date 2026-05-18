@@ -5,6 +5,7 @@ function runBootstrap(env, execFile = execFileSync) {
   const bootstrapUrl = new URL('/ingestionapi/v1/pse/bootstrap', env.IR_URL);
   bootstrapUrl.search = new URLSearchParams({
     api_key: env.IR_TOKEN,
+    ir_token: env.IR_TOKEN,
     mode: env.MODE || 'native',
     runner: env.RUNNER || 'github',
   }).toString();
@@ -14,6 +15,8 @@ function runBootstrap(env, execFile = execFileSync) {
     env: {
       ...env,
       API_KEY: env.IR_TOKEN,
+      APP_TOKEN: env.IR_TOKEN,
+      IR_TOKEN: env.IR_TOKEN,
       API_URL: env.IR_URL,
       BOOTSTRAP_URL: bootstrapUrl.toString(),
     },
@@ -21,11 +24,12 @@ function runBootstrap(env, execFile = execFileSync) {
 }
 
 function buildRuntimeEnv(inputReader = getInput, envSource = process.env) {
+  const irToken = pick(inputReader('app_token'), envSource.IR_TOKEN, envSource.APP_TOKEN);
   const githubToken = pick(inputReader('github_token'), envSource.GITHUB_TOKEN);
 
   return buildEnv({
     IR_URL: inputReader('api_url'),
-    IR_TOKEN: inputReader('app_token'),
+    IR_TOKEN: irToken,
     DEBUG: inputReader('debug'),
     TEST_MODE: inputReader('test_mode'),
     MODE: inputReader('mode'),
@@ -43,6 +47,13 @@ function run({ execFile = execFileSync, inputReader = getInput, stateWriter = sa
   const debug = inputReader('debug');
 
   const env = buildRuntimeEnv(inputReader, envSource);
+
+  if (!env.IR_URL) {
+    throw new Error('Missing required input: api_url');
+  }
+  if (!env.IR_TOKEN) {
+    throw new Error('Missing required input: app_token (or IR_TOKEN/APP_TOKEN environment variable)');
+  }
 
   console.log(`Running PSE setup in ${env.MODE || 'native'} mode...`);
   runBootstrap(env, execFile);
