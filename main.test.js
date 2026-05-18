@@ -70,6 +70,33 @@ test('run passes pse_image_tag through to bootstrap environment', () => {
   ]);
 });
 
+test('run stores resolved token from env fallback in state', () => {
+  const inputs = {
+    send_job_status: 'true',
+    api_url: 'https://ir.example',
+    app_token: '',
+    debug: 'true',
+    test_mode: 'false',
+    mode: 'native',
+    pse_image_tag: 'latest',
+    collect_dependencies: 'true',
+    workdir: '/workspace',
+    github_token: '',
+  };
+  const stateWrites = [];
+
+  run({
+    execFile: () => {},
+    inputReader: (name) => inputs[name] || '',
+    stateWriter: (name, value) => {
+      stateWrites.push([name, value]);
+    },
+    envSource: { GITHUB_TOKEN: 'default-gh-token', IR_TOKEN: 'fallback-token' },
+  });
+
+  assert.ok(stateWrites.some(([name, value]) => name === 'ir_token' && value === 'fallback-token'));
+});
+
 test('run throws helpful error when api_url is missing', () => {
   assert.throws(() => {
     run({

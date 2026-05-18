@@ -60,7 +60,7 @@ function run({ execFile = execFileSync, inputReader = getInput, stateWriter = sa
 
   // Save inputs to state for the post step (cleanup/job-status)
   stateWriter('api_url', apiUrl);
-  stateWriter('ir_token', appToken);
+  stateWriter('ir_token', env.IR_TOKEN);
   stateWriter('debug', debug);
   stateWriter('send_job_status', sendJobStatus);
   stateWriter('runner', env.RUNNER);
