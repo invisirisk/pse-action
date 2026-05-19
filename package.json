@@ -5,13 +5,10 @@
   "description": "InvisiRisk PSE Security Proxy GitHub Action",
   "main": "src/index.js",
   "scripts": {
-    "build": "node ./src/build.js",
+    "build": "node -e \"require('./src/index'); require('./src/post');\"",
     "test": "node --test"
   },
   "engines": {
     "node": ">=20"
-  },
-  "devDependencies": {
-    "@vercel/ncc": "^0.36.1"
   }
 }

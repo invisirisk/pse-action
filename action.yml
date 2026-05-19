@@ -47,6 +47,6 @@ inputs:
 
 runs:
   using: 'node20'
-  main: 'dist/index.js'
-  post: 'dist/post.js'
+  main: 'src/index.js'
+  post: 'src/post.js'
   post-if: always()
