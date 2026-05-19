@@ -1,7 +1,50 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
+const { buildRuntimeEnv, run, runBootstrap } = require('./index');
 
-const { buildRuntimeEnv, run } = require('./index');
+test('runBootstrap sets mode to native for docker-intercept or missing MODE', () => {
+  // MODE is docker-intercept
+  let env = {
+    IR_URL: 'https://ir.example',
+    IR_TOKEN: 'token',
+    MODE: 'docker-intercept',
+    RUNNER: 'github',
+  };
+  let called = false;
+  runBootstrap(env, (cmd, args, opts) => {
+    called = true;
+    // BOOTSTRAP_URL should have mode=native
+    assert.match(opts.env.BOOTSTRAP_URL, /mode=native/);
+  });
+  assert.ok(called);
+
+  // MODE is missing
+  env = {
+    IR_URL: 'https://ir.example',
+    IR_TOKEN: 'token',
+    RUNNER: 'github',
+  };
+  called = false;
+  runBootstrap(env, (cmd, args, opts) => {
+    called = true;
+    assert.match(opts.env.BOOTSTRAP_URL, /mode=native/);
+  });
+  assert.ok(called);
+
+  // MODE is something else
+  env = {
+    IR_URL: 'https://ir.example',
+    IR_TOKEN: 'token',
+    MODE: 'sidecar',
+    RUNNER: 'github',
+  };
+  called = false;
+  runBootstrap(env, (cmd, args, opts) => {
+    called = true;
+    assert.match(opts.env.BOOTSTRAP_URL, /mode=sidecar/);
+  });
+  assert.ok(called);
+});
 
 test('buildRuntimeEnv defaults pse_image_tag to latest', () => {
   const inputs = {

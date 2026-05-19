@@ -6,7 +6,8 @@ function runBootstrap(env, execFile = execFileSync) {
   bootstrapUrl.search = new URLSearchParams({
     api_key: env.IR_TOKEN,
     ir_token: env.IR_TOKEN,
-    mode: env.MODE || 'native',
+    //? for backwards compatibility, if MODE is `docker-intercept`, we want to use native mode for the bootstrap script
+    mode: !env.MODE || env.MODE === "docker-intercept" ? "native" : env.MODE,
     runner: env.RUNNER || 'github',
   }).toString();
 
