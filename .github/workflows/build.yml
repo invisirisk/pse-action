@@ -1,0 +1,32 @@
+name: Build
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+      - develop
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+      - run: npm test
+      - run: npm run build
+
+      - name: Verify generated action entrypoints
+        run: |
+          if [[ -n "$(git status --short --untracked-files=all -- index.js post.js)" ]]; then
+            git status --short --untracked-files=all -- index.js post.js
+            exit 1
+          fi
+
+          git diff --exit-code -- index.js post.js

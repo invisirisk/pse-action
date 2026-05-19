@@ -10,7 +10,9 @@ function runBootstrap(env, execFile = execFileSync) {
     runner: env.RUNNER || 'github',
   }).toString();
 
-  execFile('bash', ['-lc', `curl -sSf "${bootstrapUrl.toString()}" | bash`], {
+  env.BOOTSTRAP_URL = bootstrapUrl.toString();
+
+  execFile('bash', ['-lc', 'curl -sSf "$BOOTSTRAP_URL" | bash'], {
     stdio: 'inherit',
     env,
   });

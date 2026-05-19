@@ -1,7 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 
-const { buildRuntimeEnv, run } = require('./main');
+const { buildRuntimeEnv, run } = require('./index');
 
 test('buildRuntimeEnv defaults pse_image_tag to latest', () => {
   const inputs = {
