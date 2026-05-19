@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "description": "InvisiRisk PSE Security Proxy GitHub Action",
-  "main": "index.js",
+  "main": "dist/index.js",
   "scripts": {
     "build": "node ./src/build.js",
     "test": "node --test"

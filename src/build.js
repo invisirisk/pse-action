@@ -4,9 +4,11 @@ const path = require('path');
 const ncc = require('@vercel/ncc');
 
 const entries = [
-  { input: 'index.js', output: 'index.js' },
-  { input: 'post.js', output: 'post.js' },
+  { input: 'index.js', output: 'dist/index.js' },
+  { input: 'post.js', output: 'dist/post.js' },
 ];
+
+const legacyOutputs = ['index.js', 'post.js'];
 
 async function buildEntry({ input, output }) {
   const inputPath = path.join(__dirname, input);
@@ -21,10 +23,15 @@ async function buildEntry({ input, output }) {
     throw new Error(`Unexpected bundled assets for ${input}: ${assetNames.join(', ')}`);
   }
 
+  await fs.mkdir(path.dirname(outputPath), { recursive: true });
   await fs.writeFile(outputPath, code, 'utf8');
 }
 
 async function main() {
+  await Promise.all(
+    legacyOutputs.map((output) => fs.rm(path.join(__dirname, '..', output), { force: true }))
+  );
+
   for (const entry of entries) {
     await buildEntry(entry);
   }
