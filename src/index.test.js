@@ -90,7 +90,7 @@ test('run passes pse_image_tag through to bootstrap environment', () => {
   });
 
   assert.equal(execCall[0], 'bash');
-  assert.deepEqual(execCall[1], ['-lc', 'curl -sSf -H "x-api-key: $IR_TOKEN" "$BOOTSTRAP_URL" | bash']);
+  assert.deepEqual(execCall[1], ['-lc', 'set -euo pipefail; curl -sSf -H "x-api-key: $IR_TOKEN" "$BOOTSTRAP_URL" | bash']);
   assert.equal(execCall[2].env.PSE_IMAGE_TAG, 'release-2026-05');
   assert.equal(execCall[2].env.GITHUB_TOKEN, 'default-gh-token');
   assert.match(execCall[2].env.BOOTSTRAP_URL, /mode=sidecar/);

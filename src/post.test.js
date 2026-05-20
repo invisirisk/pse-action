@@ -90,7 +90,7 @@ test('handleCleanupError fails the workflow on end-signal failures', () => {
   }]);
 });
 
-test('handleCleanupError keeps non-policy cleanup failures non-blocking', () => {
+test('handleCleanupError fails the workflow on non-policy cleanup failures', () => {
   let exitCode = null;
 
   withoutConsoleError(() => {
@@ -99,7 +99,7 @@ test('handleCleanupError keeps non-policy cleanup failures non-blocking', () => 
     });
   });
 
-  assert.equal(exitCode, 0);
+  assert.equal(exitCode, 1);
 });
 
 test('run replays cleanup output and throws enriched error on failure', () => {

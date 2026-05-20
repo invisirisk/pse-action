@@ -84,7 +84,8 @@ function handleCleanupError(error, exit = process.exit, emitAnnotation = annotat
     return;
   }
 
-  exit(0);
+  // Any cleanup failure is build-blocking.
+  exit(1);
 }
 
 function main(spawn = spawnSync, exit = process.exit) {

@@ -11,7 +11,10 @@ function runBootstrap(env, execFile = execFileSync) {
 
   env.BOOTSTRAP_URL = bootstrapUrl.toString();
 
-  execFile('bash', ['-lc', 'curl -sSf -H "x-api-key: $IR_TOKEN" "$BOOTSTRAP_URL" | bash'], {
+  // Ensure curl failures in the pipeline fail the action step.
+  const bootstrapCommand = 'set -euo pipefail; curl -sSf -H "x-api-key: $IR_TOKEN" "$BOOTSTRAP_URL" | bash';
+
+  execFile('bash', ['-lc', bootstrapCommand], {
     stdio: 'inherit',
     env,
   });
