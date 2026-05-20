@@ -4,8 +4,6 @@ const { buildEnv, getInput, handleDeprecatedCleanupInput, pick } = require('./ut
 function runBootstrap(env, execFile = execFileSync) {
   const bootstrapUrl = new URL('/ingestionapi/v1/pse/bootstrap', env.IR_URL);
   bootstrapUrl.search = new URLSearchParams({
-    api_key: env.IR_TOKEN,
-    ir_token: env.IR_TOKEN,
     //? for backwards compatibility, if MODE is `docker-intercept`, we want to use native mode for the bootstrap script
     mode: !env.MODE || env.MODE === "docker-intercept" ? "native" : env.MODE,
     runner: env.RUNNER || 'github',
@@ -13,7 +11,7 @@ function runBootstrap(env, execFile = execFileSync) {
 
   env.BOOTSTRAP_URL = bootstrapUrl.toString();
 
-  execFile('bash', ['-lc', 'curl -sSf "$BOOTSTRAP_URL" | bash'], {
+  execFile('bash', ['-lc', 'curl -sSf -H "x-api-key: $IR_TOKEN" "$BOOTSTRAP_URL" | bash'], {
     stdio: 'inherit',
     env,
   });
