@@ -79,14 +79,11 @@ function isEndSignalFailure(error) {
 }
 
 function handleCleanupError(error, exit = process.exit, emitAnnotation = annotateError) {
-  const message = getCleanupMessage(error);
-  const annotationMessage = getAnnotationMessage(error) || error.message || 'PSE cleanup failed';
-  const summaryMessage = annotationMessage || message || error.message || 'PSE cleanup failed';
-
-  console.error(`PSE cleanup failed: ${summaryMessage}`);
+  const annotationMessage = getAnnotationMessage(error) || error?.message || 'PSE cleanup failed';
+  const existingAnnotation = hasExistingErrorAnnotation(error);
 
   if (isPolicyFailure(error)) {
-    if (!hasExistingErrorAnnotation(error)) {
+    if (!existingAnnotation) {
       emitAnnotation(annotationMessage, 'Policy gate failed');
     }
     exit(1);
@@ -94,14 +91,14 @@ function handleCleanupError(error, exit = process.exit, emitAnnotation = annotat
   }
 
   if (isEndSignalFailure(error)) {
-    if (!hasExistingErrorAnnotation(error)) {
+    if (!existingAnnotation) {
       emitAnnotation(annotationMessage, 'InvisiRisk /end failed');
     }
     exit(1);
     return;
   }
 
-  if (!hasExistingErrorAnnotation(error)) {
+  if (!existingAnnotation) {
     emitAnnotation(annotationMessage, 'PSE cleanup failed');
   }
 
