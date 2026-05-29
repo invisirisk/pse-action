@@ -1,6 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { buildRuntimeEnv, run, runBootstrap } = require('./index');
+const { run, runBootstrap } = require('./index');
 
 test('runBootstrap sets mode to native for docker-intercept or missing MODE', () => {
   // MODE is docker-intercept
@@ -46,28 +46,6 @@ test('runBootstrap sets mode to native for docker-intercept or missing MODE', ()
   assert.ok(called);
 });
 
-test('buildRuntimeEnv defaults pse_image_tag to latest', () => {
-  const inputs = {
-    api_url: 'https://ir.example',
-    app_token: '',
-    debug: 'false',
-    mode: 'sidecar',
-    pse_image_tag: '',
-    collect_dependencies: 'true',
-    workdir: '/workspace',
-    github_token: '',
-  };
-
-  const env = buildRuntimeEnv((name) => inputs[name] || '', {
-    GITHUB_TOKEN: 'default-gh-token',
-    IR_TOKEN: 'token-from-env',
-  });
-
-  assert.equal(env.PSE_IMAGE_TAG, 'latest');
-  assert.equal(env.GITHUB_TOKEN, 'default-gh-token');
-  assert.equal(env.IR_TOKEN, 'token-from-env');
-});
-
 test('run passes pse_image_tag through to bootstrap environment', () => {
   const inputs = {
     api_url: 'https://ir.example',
@@ -103,8 +81,8 @@ test('run resolves token from env fallback', () => {
     api_url: 'https://ir.example',
     app_token: '',
     debug: 'true',
-    mode: 'native',
-    pse_image_tag: 'latest',
+    mode: 'sidecar',
+    pse_image_tag: '',
     collect_dependencies: 'true',
     workdir: '/workspace',
     github_token: '',
@@ -120,6 +98,8 @@ test('run resolves token from env fallback', () => {
   });
 
   assert.equal(execCall[2].env.IR_TOKEN, 'fallback-token');
+  assert.equal(execCall[2].env.PSE_IMAGE_TAG, 'latest');
+  assert.equal(execCall[2].env.GITHUB_TOKEN, 'default-gh-token');
 });
 
 test('run throws helpful error when api_url is missing', () => {

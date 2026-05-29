@@ -45,10 +45,6 @@ function warn(message, title = 'PSE Action') {
   console.warn(`::warning title=${title}::${message}`);
 }
 
-function error(message, title = 'PSE Action') {
-  console.error(`::error title=${title}::${message}`);
-}
-
 function handleDeprecatedCleanupInput(isPost = false) {
   const shouldWarn = isPost ? getState('skip_post') === 'true' : getInput('cleanup') === 'true';
   if (!shouldWarn) {
@@ -64,11 +60,7 @@ function handleDeprecatedCleanupInput(isPost = false) {
 
 module.exports = {
   buildEnv,
-  error,
   getInput,
-  getState,
   handleDeprecatedCleanupInput,
   pick,
-  saveState,
-  warn,
 };
