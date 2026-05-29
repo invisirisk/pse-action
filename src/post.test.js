@@ -73,7 +73,7 @@ test('main does not replay the cleanup transcript after a collector failure', ()
   main(
     () => ({
       status: 1,
-      stdout: '::error title=Policy gate failed::blocked by policy\n',
+      stdout: '::error title=Policy Violation::blocked by policy\n',
       stderr: 'collector failure details\n',
     }),
     (code) => {
@@ -84,6 +84,6 @@ test('main does not replay the cleanup transcript after a collector failure', ()
   );
 
   assert.equal(exitCode, 1);
-  assert.equal(stdout, '::error title=Policy gate failed::blocked by policy\n');
+  assert.equal(stdout, '::error title=Policy Violation::blocked by policy\n');
   assert.equal(stderr, 'collector failure details\n');
 });
