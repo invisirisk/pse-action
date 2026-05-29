@@ -81,8 +81,9 @@ function isEndSignalFailure(error) {
 function handleCleanupError(error, exit = process.exit, emitAnnotation = annotateError) {
   const message = getCleanupMessage(error);
   const annotationMessage = getAnnotationMessage(error) || error.message || 'PSE cleanup failed';
+  const summaryMessage = annotationMessage || message || error.message || 'PSE cleanup failed';
 
-  console.error(`PSE cleanup failed: ${message || error.message}`);
+  console.error(`PSE cleanup failed: ${summaryMessage}`);
 
   if (isPolicyFailure(error)) {
     if (!hasExistingErrorAnnotation(error)) {

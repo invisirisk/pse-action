@@ -12,14 +12,18 @@ const {
   run,
 } = require('./post');
 
-function withoutConsoleError(fn) {
+function captureConsoleError(fn) {
   const originalError = console.error;
-  console.error = () => {};
+  const messages = [];
+  console.error = (...args) => {
+    messages.push(args.join(' '));
+  };
   try {
-    fn();
+    fn(messages);
   } finally {
     console.error = originalError;
   }
+  return messages;
 }
 
 test('isPolicyFailure detects dedicated policy exit code', () => {
@@ -55,16 +59,21 @@ test('hasExistingErrorAnnotation detects workflow error commands from cleanup ou
   assert.equal(hasExistingErrorAnnotation({ stdout: 'plain log output\n' }), false);
 });
 
-test('handleCleanupError fails the workflow on policy failures', () => {
+test('handleCleanupError logs only the policy summary instead of replaying the full cleanup transcript', () => {
   let exitCode = null;
   const annotations = [];
 
-  withoutConsoleError(() => {
+  const messages = captureConsoleError(() => {
     handleCleanupError(
       {
         message: 'blocked',
         status: POLICY_FAILURE_EXIT_CODE,
-        stdout: '[2026-05-12 04:20:27] Policy gate failed: InvisiRisk blocked this build because accessing vbirmock.free.beeceptor.com violated security policy. Review the InvisiRisk report for details.\n',
+        stdout: [
+          'INFO: 2026/05/29 05:58:53 [cleanup] Using computed GitHub job status for /end: success',
+          'INFO: 2026/05/29 05:58:53 [cleanup] Sending /end to PSE service',
+          'Error: InvisiRisk blocked this build because accessing bad-actor.com violated security policy. Review the InvisiRisk report for details.',
+          'INFO: 2026/05/29 05:58:54 [cleanup] /end processing completed',
+        ].join('\n'),
       },
       (code) => {
         exitCode = code;
@@ -77,16 +86,19 @@ test('handleCleanupError fails the workflow on policy failures', () => {
 
   assert.equal(exitCode, 1);
   assert.deepEqual(annotations, [{
-    message: 'InvisiRisk blocked this build because accessing vbirmock.free.beeceptor.com violated security policy. Review the InvisiRisk report for details.',
+    message: 'InvisiRisk blocked this build because accessing bad-actor.com violated security policy. Review the InvisiRisk report for details.',
     title: 'Policy gate failed',
   }]);
+  assert.deepEqual(messages, [
+    'PSE cleanup failed: InvisiRisk blocked this build because accessing bad-actor.com violated security policy. Review the InvisiRisk report for details.',
+  ]);
 });
 
 test('handleCleanupError does not duplicate a policy annotation already emitted by cleanup.sh', () => {
   let exitCode = null;
   const annotations = [];
 
-  withoutConsoleError(() => {
+  captureConsoleError(() => {
     handleCleanupError(
       {
         message: 'blocked',
@@ -110,7 +122,7 @@ test('handleCleanupError fails the workflow on end-signal failures', () => {
   let exitCode = null;
   const annotations = [];
 
-  withoutConsoleError(() => {
+  captureConsoleError(() => {
     handleCleanupError(
       {
         message: 'end failed',
@@ -137,7 +149,7 @@ test('handleCleanupError annotates non-policy cleanup failures with the last act
   let exitCode = null;
   const annotations = [];
 
-  withoutConsoleError(() => {
+  const messages = captureConsoleError(() => {
     handleCleanupError(
       {
         message: 'cleanup failed',
@@ -161,6 +173,9 @@ test('handleCleanupError annotates non-policy cleanup failures with the last act
     message: 'PSE cleanup failed on line 312 while running: update-ca-certificates --fresh',
     title: 'PSE cleanup failed',
   }]);
+  assert.deepEqual(messages, [
+    'PSE cleanup failed: PSE cleanup failed on line 312 while running: update-ca-certificates --fresh',
+  ]);
 });
 
 test('run replays cleanup output and throws enriched error on failure', () => {
