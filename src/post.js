@@ -4,10 +4,107 @@ const { buildEnv, error: annotateError, getInput, handleDeprecatedCleanupInput, 
 const POLICY_FAILURE_EXIT_CODE = 42;
 const END_SIGNAL_FAILURE_EXIT_CODE = 43;
 const POLICY_FAILURE_MESSAGE = /InvisiRisk blocked this build because/i;
-const END_SIGNAL_FAILURE_MESSAGE = /InvisiRisk could not complete build finalization because the \/end request failed\./i;
+const END_SIGNAL_FAILURE_MESSAGE = /InvisiRisk could not complete build finalization because the \/end (request failed|response could not be parsed)\./i;
+const WORKFLOW_ERROR_COMMAND = /^::error\b/m;
 
 function getCleanupMessage(error) {
   return `${error?.stdout || ''}${error?.stderr || ''}`.trim() || error?.message || '';
+}
+
+function splitNonEmptyLines(value) {
+  return `${value || ''}`
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+}
+
+function stripWorkflowCommands(value) {
+  return splitNonEmptyLines(value)
+    .filter((line) => !line.startsWith('::'))
+    .join('\n')
+    .trim();
+}
+
+function normalizeAnnotationLine(line) {
+  return line
+    .replace(/^\[[^\]]+\]\s*/, '')
+    .replace(/^Policy gate failed:\s*/i, '')
+    .replace(/^ERROR:\s*/i, '')
+    .trim();
+}
+
+function getAnnotationMessage(error) {
+  const combined = stripWorkflowCommands(getCleanupMessage(error));
+  if (!combined) {
+    return error?.message || '';
+  }
+
+  const lines = splitNonEmptyLines(combined).map(normalizeAnnotationLine).filter(Boolean);
+  const priorityMatchers = [
+    /InvisiRisk blocked this build because/i,
+    /InvisiRisk could not complete build finalization because the \/end/i,
+    /Failed to send end signal/i,
+    /cleanup failed/i,
+    /^failed to /i,
+  ];
+
+  for (const matcher of priorityMatchers) {
+    const match = [...lines].reverse().find((line) => matcher.test(line));
+    if (match) {
+      return match;
+    }
+  }
+
+  return lines[lines.length - 1] || combined;
+}
+
+function hasExistingErrorAnnotation(error) {
+  return WORKFLOW_ERROR_COMMAND.test(`${error?.stdout || ''}\n${error?.stderr || ''}`);
+}
+
+function isPolicyFailure(error) {
+  if (Number(error?.status) === POLICY_FAILURE_EXIT_CODE) {
+    return true;
+  }
+
+  return POLICY_FAILURE_MESSAGE.test(getCleanupMessage(error));
+}
+
+function isEndSignalFailure(error) {
+  if (Number(error?.status) === END_SIGNAL_FAILURE_EXIT_CODE) {
+    return true;
+  }
+
+  return END_SIGNAL_FAILURE_MESSAGE.test(getCleanupMessage(error));
+}
+
+function handleCleanupError(error, exit = process.exit, emitAnnotation = annotateError) {
+  const message = getCleanupMessage(error);
+  const annotationMessage = getAnnotationMessage(error) || error.message || 'PSE cleanup failed';
+
+  console.error(`PSE cleanup failed: ${message || error.message}`);
+
+  if (isPolicyFailure(error)) {
+    if (!hasExistingErrorAnnotation(error)) {
+      emitAnnotation(annotationMessage, 'Policy gate failed');
+    }
+    exit(1);
+    return;
+  }
+
+  if (isEndSignalFailure(error)) {
+    if (!hasExistingErrorAnnotation(error)) {
+      emitAnnotation(annotationMessage, 'InvisiRisk /end failed');
+    }
+    exit(1);
+    return;
+  }
+
+  if (!hasExistingErrorAnnotation(error)) {
+    emitAnnotation(annotationMessage, 'PSE cleanup failed');
+  }
+
+  exit(1);
 }
 
 function run(spawn = spawnSync, stdout = process.stdout, stderr = process.stderr) {
@@ -53,41 +150,6 @@ function run(spawn = spawnSync, stdout = process.stdout, stderr = process.stderr
   }
 }
 
-function isPolicyFailure(error) {
-  if (Number(error?.status) === POLICY_FAILURE_EXIT_CODE) {
-    return true;
-  }
-
-  return POLICY_FAILURE_MESSAGE.test(getCleanupMessage(error));
-}
-
-function isEndSignalFailure(error) {
-  if (Number(error?.status) === END_SIGNAL_FAILURE_EXIT_CODE) {
-    return true;
-  }
-
-  return END_SIGNAL_FAILURE_MESSAGE.test(getCleanupMessage(error));
-}
-
-function handleCleanupError(error, exit = process.exit, emitAnnotation = annotateError) {
-  const message = getCleanupMessage(error);
-  console.error(`PSE cleanup failed: ${message || error.message}`);
-  if (isPolicyFailure(error)) {
-    emitAnnotation(message || error.message, 'Policy gate failed');
-    exit(1);
-    return;
-  }
-
-  if (isEndSignalFailure(error)) {
-    emitAnnotation(message || error.message, 'InvisiRisk /end failed');
-    exit(1);
-    return;
-  }
-
-  // Any cleanup failure is build-blocking.
-  exit(1);
-}
-
 function main(spawn = spawnSync, exit = process.exit) {
   try {
     if (handleDeprecatedCleanupInput(true)) {
@@ -108,7 +170,9 @@ module.exports = {
   END_SIGNAL_FAILURE_MESSAGE,
   POLICY_FAILURE_EXIT_CODE,
   POLICY_FAILURE_MESSAGE,
+  getAnnotationMessage,
   handleCleanupError,
+  hasExistingErrorAnnotation,
   isEndSignalFailure,
   isPolicyFailure,
   main,
