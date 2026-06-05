@@ -24,10 +24,14 @@ if ! curl -sSf -H "x-api-key: $IR_TOKEN" "$BOOTSTRAP_URL" | bash; then
 fi
 `;
 
-  execFile('bash', ['-lc', bootstrapCommand], {
-    stdio: 'inherit',
-    env,
-  });
+  try {
+    execFile('bash', ['-lc', bootstrapCommand], {
+      stdio: 'inherit',
+      env,
+    });
+  } catch (error) {
+    throw new Error('PSE bootstrap failed. See the annotated error above for details.');
+  }
 }
 
 function buildRuntimeEnv(inputReader = getInput, envSource = process.env) {
