@@ -13,38 +13,21 @@ function runBootstrap(env, execFile = execFileSync) {
 
   const bootstrapCommand = `
 set -euo pipefail
-response_file=$(mktemp)
-http_status=$(curl -sS -o "$response_file" -w "%{http_code}" -H "x-api-key: $IR_TOKEN" "$BOOTSTRAP_URL")
-if [ "$http_status" = "401" ]; then
-  echo "::error title=PSE bootstrap unauthorized::Unauthorized request from InvisiRisk bootstrap API. Verify app_token is valid for $IR_URL."
-  rm -f "$response_file"
+if ! curl -sSf -H "x-api-key: $IR_TOKEN" "$BOOTSTRAP_URL" | bash; then
+  http_status=$(curl -sS -o /dev/null -w "%{http_code}" -H "x-api-key: $IR_TOKEN" "$BOOTSTRAP_URL" || true)
+  if [ "$http_status" = "401" ]; then
+    echo "::error title=PSE bootstrap unauthorized::Unauthorized request from InvisiRisk bootstrap API. Verify app_token is valid for $IR_URL."
+  elif [ "$http_status" = "403" ]; then
+    echo "::error title=PSE bootstrap forbidden::Forbidden request from InvisiRisk bootstrap API. Verify app_token is authorized for $IR_URL and has access to the target project."
+  fi
   exit 1
 fi
-if [ "$http_status" = "403" ]; then
-  echo "::error title=PSE bootstrap forbidden::Forbidden request from InvisiRisk bootstrap API. Verify app_token is authorized for $IR_URL and has access to the target project."
-  rm -f "$response_file"
-  exit 1
-fi
-if [ "$http_status" -lt 200 ] || [ "$http_status" -ge 300 ]; then
-  echo "::error title=PSE bootstrap failed::Bootstrap API request failed with HTTP $http_status from $IR_URL."
-  cat "$response_file" >&2 || true
-  rm -f "$response_file"
-  exit 1
-fi
-bash "$response_file"
-bootstrap_exit=$?
-rm -f "$response_file"
-exit "$bootstrap_exit"
 `;
 
-  try {
-    execFile('bash', ['-lc', bootstrapCommand], {
-      stdio: 'inherit',
-      env,
-    });
-  } catch (error) {
-    throw new Error('PSE bootstrap failed. See the annotated error above for details.');
-  }
+  execFile('bash', ['-lc', bootstrapCommand], {
+    stdio: 'inherit',
+    env,
+  });
 }
 
 function buildRuntimeEnv(inputReader = getInput, envSource = process.env) {
