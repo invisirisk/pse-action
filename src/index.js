@@ -37,10 +37,14 @@ rm -f "$response_file"
 exit "$bootstrap_exit"
 `;
 
-  execFile('bash', ['-lc', bootstrapCommand], {
-    stdio: 'inherit',
-    env,
-  });
+  try {
+    execFile('bash', ['-lc', bootstrapCommand], {
+      stdio: 'inherit',
+      env,
+    });
+  } catch (error) {
+    throw new Error('PSE bootstrap failed. See the annotated error above for details.');
+  }
 }
 
 function buildRuntimeEnv(inputReader = getInput, envSource = process.env) {
