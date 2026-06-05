@@ -68,7 +68,10 @@ test('run passes pse_image_tag through to bootstrap environment', () => {
   });
 
   assert.equal(execCall[0], 'bash');
-  assert.deepEqual(execCall[1], ['-lc', 'set -euo pipefail; curl -sSf -H "x-api-key: $IR_TOKEN" "$BOOTSTRAP_URL" | bash']);
+  assert.equal(execCall[1][0], '-lc');
+  assert.match(execCall[1][1], /curl -sS -o "\$response_file" -w "%\{http_code\}" -H "x-api-key: \$IR_TOKEN" "\$BOOTSTRAP_URL"/);
+  assert.match(execCall[1][1], /::error title=PSE bootstrap forbidden::Forbidden request from InvisiRisk bootstrap API\./);
+  assert.match(execCall[1][1], /bash "\$response_file"/);
   assert.equal(execCall[2].env.PSE_IMAGE_TAG, 'release-2026-05');
   assert.equal(execCall[2].env.GITHUB_TOKEN, 'default-gh-token');
   assert.match(execCall[2].env.BOOTSTRAP_URL, /mode=sidecar/);
