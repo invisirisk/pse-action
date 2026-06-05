@@ -60,7 +60,9 @@ function handleDeprecatedCleanupInput(isPost = false) {
 
 module.exports = {
   buildEnv,
+  getState,
   getInput,
   handleDeprecatedCleanupInput,
   pick,
+  saveState,
 };

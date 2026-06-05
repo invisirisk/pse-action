@@ -1,5 +1,5 @@
 const { execFileSync } = require('child_process');
-const { buildEnv, getInput, handleDeprecatedCleanupInput, pick } = require('./utils');
+const { buildEnv, getInput, handleDeprecatedCleanupInput, pick, saveState } = require('./utils');
 
 function runBootstrap(env, execFile = execFileSync) {
   const bootstrapUrl = new URL('/ingestionapi/v1/pse/bootstrap', env.IR_URL);
@@ -84,6 +84,7 @@ function run({ execFile = execFileSync, inputReader = getInput, envSource = proc
 
   console.log(`Running PSE setup in ${env.MODE || 'native'} mode...`);
   runBootstrap(env, execFile);
+  saveState('pse_setup_completed', 'true');
 }
 
 if (require.main === module) {

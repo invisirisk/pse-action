@@ -1,5 +1,5 @@
 const { spawnSync } = require('child_process');
-const { buildEnv, getInput, handleDeprecatedCleanupInput, pick } = require('./utils');
+const { buildEnv, getInput, getState, handleDeprecatedCleanupInput, pick } = require('./utils');
 
 function run(spawn = spawnSync, stdout = process.stdout, stderr = process.stderr) {
   const env = buildEnv({
@@ -42,9 +42,12 @@ function run(spawn = spawnSync, stdout = process.stdout, stderr = process.stderr
   return result.signal ? 1 : 0;
 }
 
-function main(spawn = spawnSync, exit = process.exit, stdout = process.stdout, stderr = process.stderr) {
+function main(spawn = spawnSync, exit = process.exit, stdout = process.stdout, stderr = process.stderr, stateReader = getState) {
   try {
     if (handleDeprecatedCleanupInput(true)) {
+      return;
+    }
+    if (stateReader('pse_setup_completed') !== 'true') {
       return;
     }
     const status = run(spawn, stdout, stderr);

@@ -3,6 +3,27 @@ const assert = require('node:assert/strict');
 
 const { main, run } = require('./post');
 
+test('main skips cleanup when setup did not complete', () => {
+  let called = false;
+  let exitCode = null;
+
+  main(
+    () => {
+      called = true;
+      return { status: 0, stdout: '', stderr: '' };
+    },
+    (code) => {
+      exitCode = code;
+    },
+    { write: () => {} },
+    { write: () => {} },
+    () => '',
+  );
+
+  assert.equal(called, false);
+  assert.equal(exitCode, null);
+});
+
 test('run streams collector stdout and stderr once', () => {
   let stdout = '';
   let stderr = '';
@@ -38,6 +59,7 @@ test('main fails the post step with the collector exit code', () => {
     },
     { write: (chunk) => { stdout += chunk; } },
     { write: (chunk) => { stderr += chunk; } },
+    () => 'true',
   );
 
   assert.equal(exitCode, 43);
@@ -59,6 +81,7 @@ test('main reports wrapper-local invocation failures', () => {
     },
     { write: () => {} },
     { write: (chunk) => { stderr += chunk; } },
+    () => 'true',
   );
 
   assert.equal(exitCode, 1);
@@ -81,6 +104,7 @@ test('main does not replay the cleanup transcript after a collector failure', ()
     },
     { write: (chunk) => { stdout += chunk; } },
     { write: (chunk) => { stderr += chunk; } },
+    () => 'true',
   );
 
   assert.equal(exitCode, 1);
