@@ -9,7 +9,7 @@ inputs:
   api_url:
     description: 'InvisiRisk API URL'
     required: false
-    default: "https://app.invisirisk.com"
+    default: 'https://app.invisirisk.com'
   app_token:
     description: 'Authentication token for the InvisiRisk API'
     required: true
