@@ -43,6 +43,52 @@ test('run streams collector stdout and stderr once', () => {
   assert.equal(stderr, 'cleanup stderr\n');
 });
 
+test('run maps collect_job_status to SEND_JOB_STATUS', () => {
+  let collectorEnv;
+
+  try {
+    process.env.INPUT_COLLECT_JOB_STATUS = 'false';
+    run((cmd, args, options) => {
+      collectorEnv = options.env;
+      return { status: 0, stdout: '', stderr: '' };
+    }, { write: () => {} }, { write: () => {} });
+  } finally {
+    delete process.env.INPUT_COLLECT_JOB_STATUS;
+  }
+
+  assert.equal(collectorEnv.SEND_JOB_STATUS, 'false');
+});
+
+test('main skips cleanup and exits early for deprecated send_job_status input', () => {
+  let called = false;
+
+  const originalWarn = console.warn;
+  let warning = '';
+  console.warn = (message) => {
+    warning = message;
+  };
+
+  try {
+    process.env.STATE_skip_post = 'send_job_status';
+    main(
+      () => {
+        called = true;
+        return { status: 0, stdout: '', stderr: '' };
+      },
+      () => {},
+      { write: () => {} },
+      { write: () => {} },
+      () => 'true',
+    );
+  } finally {
+    console.warn = originalWarn;
+    delete process.env.STATE_skip_post;
+  }
+
+  assert.equal(called, false);
+  assert.match(warning, /send_job_status.*deprecated/i);
+});
+
 test('main fails the post step with the collector exit code', () => {
   let stdout = '';
   let stderr = '';

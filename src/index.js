@@ -1,5 +1,5 @@
 const { execFileSync } = require('child_process');
-const { buildEnv, getInput, handleDeprecatedCleanupInput, pick, saveState } = require('./utils');
+const { buildEnv, getInput, handleDeprecatedInputs, pick, saveState } = require('./utils');
 
 function runBootstrap(env, execFile = execFileSync) {
   const bootstrapUrl = new URL('/ingestionapi/v1/pse/bootstrap', env.IR_URL);
@@ -89,7 +89,7 @@ function run({ execFile = execFileSync, inputReader = getInput, envSource = proc
 
 if (require.main === module) {
   try {
-    if (!handleDeprecatedCleanupInput()) {
+    if (!handleDeprecatedInputs()) {
       run();
     }
   } catch (error) {
