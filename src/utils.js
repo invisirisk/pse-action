@@ -2,7 +2,7 @@ const fs = require('fs');
 const os = require('os');
 
 const DEPRECATED_CLEANUP_MESSAGE = 'The "cleanup" input is deprecated. Cleanup runs automatically through the action post step. Remove the cleanup step from your workflow.';
-const DEPRECATED_SEND_JOB_STATUS_MESSAGE = 'The "send_job_status" input is deprecated. GitHub Actions workflow status collection is now handled internally by the action. Remove the send_job_status step from your workflow.';
+const DEPRECATED_SEND_JOB_STATUS_MESSAGE = 'The "send_job_status" input is deprecated. GitHub Actions workflow status collection is now handled internally by the action. Remove the InvisiRisk\'s Gather Analytics job from your workflow.';
 
 function readNamedValue(prefix, name) {
   const key = `${prefix}_${name.replace(/ /g, '_').replace(/-/g, '_').toUpperCase()}`;
