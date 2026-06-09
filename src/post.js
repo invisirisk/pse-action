@@ -1,11 +1,11 @@
 const { spawnSync } = require('child_process');
-const { buildEnv, getInput, getState, handleDeprecatedCleanupInput, pick } = require('./utils');
+const { buildEnv, getInput, getState, handleDeprecatedInputs, pick } = require('./utils');
 
 function run(spawn = spawnSync, stdout = process.stdout, stderr = process.stderr) {
   const env = buildEnv({
     IR_URL: pick(getInput('api_url'), process.env.PSE_API_URL),
     IR_TOKEN: pick(getInput('app_token'), process.env.PSE_APP_TOKEN),
-    SEND_JOB_STATUS: getInput('send_job_status') === 'false' ? 'false' : 'true',
+    SEND_JOB_STATUS: getInput('collect_job_status') === 'false' ? 'false' : 'true',
   });
 
   const debug = pick(getInput('debug'), process.env.DEBUG);
@@ -44,7 +44,7 @@ function run(spawn = spawnSync, stdout = process.stdout, stderr = process.stderr
 
 function main(spawn = spawnSync, exit = process.exit, stdout = process.stdout, stderr = process.stderr, stateReader = getState) {
   try {
-    if (handleDeprecatedCleanupInput(true)) {
+    if (handleDeprecatedInputs(true)) {
       return;
     }
     if (stateReader('pse_setup_completed') !== 'true') {

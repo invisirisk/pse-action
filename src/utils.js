@@ -2,6 +2,7 @@ const fs = require('fs');
 const os = require('os');
 
 const DEPRECATED_CLEANUP_MESSAGE = 'The "cleanup" input is deprecated. Cleanup runs automatically through the action post step. Remove the cleanup step from your workflow.';
+const DEPRECATED_SEND_JOB_STATUS_MESSAGE = 'The "send_job_status" input is deprecated. GitHub Actions workflow status collection is now handled internally by the action. Remove the InvisiRisk\'s Gather Analytics job from your workflow.';
 
 function readNamedValue(prefix, name) {
   const key = `${prefix}_${name.replace(/ /g, '_').replace(/-/g, '_').toUpperCase()}`;
@@ -46,16 +47,33 @@ function warn(message, title = 'PSE Action') {
 }
 
 function handleDeprecatedCleanupInput(isPost = false) {
-  const shouldWarn = isPost ? getState('skip_post') === 'true' : getInput('cleanup') === 'true';
+  const shouldWarn = isPost ? getState('skip_post') === 'cleanup' : getInput('cleanup') === 'true';
   if (!shouldWarn) {
     return false;
   }
 
   warn(DEPRECATED_CLEANUP_MESSAGE, 'Deprecated cleanup input');
   if (!isPost) {
-    saveState('skip_post', 'true');
+    saveState('skip_post', 'cleanup');
   }
   return true;
+}
+
+function handleDeprecatedSendJobStatusInput(isPost = false) {
+  const shouldWarn = isPost ? getState('skip_post') === 'send_job_status' : getInput('send_job_status') === 'true';
+  if (!shouldWarn) {
+    return false;
+  }
+
+  warn(DEPRECATED_SEND_JOB_STATUS_MESSAGE, 'Deprecated send_job_status input');
+  if (!isPost) {
+    saveState('skip_post', 'send_job_status');
+  }
+  return true;
+}
+
+function handleDeprecatedInputs(isPost = false) {
+  return handleDeprecatedCleanupInput(isPost) || handleDeprecatedSendJobStatusInput(isPost);
 }
 
 module.exports = {
@@ -63,6 +81,8 @@ module.exports = {
   getState,
   getInput,
   handleDeprecatedCleanupInput,
+  handleDeprecatedInputs,
+  handleDeprecatedSendJobStatusInput,
   pick,
   saveState,
 };
