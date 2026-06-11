@@ -119,8 +119,6 @@ test('run exchanges GitHub OIDC for token when app_token is missing', async () =
   const inputs = {
     api_url: 'https://ir.example',
     app_token: '',
-    project_id: 'project-123',
-    workflow_path: '.github/workflows/build.yml',
     oidc_exchange_url: 'https://auth.example/oidc/exchange',
     oidc_audience: 'invisirisk-oidc-validator',
     debug: 'false',
@@ -172,11 +170,7 @@ test('run exchanges GitHub OIDC for token when app_token is missing', async () =
   assert.equal(calls[0].options.headers.Authorization, 'Bearer github-request-token');
   assert.equal(calls[1].url, 'https://auth.example/oidc/exchange');
   assert.deepEqual(JSON.parse(calls[1].options.body), {
-    api_url: 'https://ir.example',
-    project_id: 'project-123',
-    workflow_path: '.github/workflows/build.yml',
     oidc_token: 'github-oidc-token',
-    audience: 'invisirisk-oidc-validator',
   });
   assert.equal(execCall[2].env.IR_TOKEN, 'exchanged-runtime-token');
   assert.match(fs.readFileSync(githubEnvFile, 'utf8'), /IR_TOKEN=exchanged-runtime-token/);
@@ -186,7 +180,6 @@ test('run uses GITHUB_OIDC_AUDIENCE when oidc_audience input is missing', async 
   const inputs = {
     api_url: 'https://ir.example',
     app_token: '',
-    project_id: 'project-123',
     debug: 'false',
     mode: 'native',
     github_token: '',
@@ -241,27 +234,6 @@ test('run throws helpful error when api_url is missing', async () => {
   }, /Missing required input: api_url/);
 });
 
-test('run throws helpful error when token and project_id are missing', async () => {
-  await assert.rejects(async () => {
-    await run({
-      inputReader: (name) => {
-        const inputs = {
-          api_url: 'https://ir.example',
-          app_token: '',
-          debug: 'true',
-          mode: 'native',
-          pse_image_tag: 'latest',
-          collect_dependencies: 'true',
-          workdir: '/workspace',
-          github_token: '',
-        };
-        return inputs[name] || '';
-      },
-      envSource: {},
-    });
-  }, /Missing required input: project_id/);
-});
-
 test('run throws helpful error when GitHub OIDC environment is unavailable', async () => {
   await assert.rejects(async () => {
     await run({
@@ -269,7 +241,6 @@ test('run throws helpful error when GitHub OIDC environment is unavailable', asy
         const inputs = {
           api_url: 'https://ir.example',
           app_token: '',
-          project_id: 'project-123',
           debug: 'false',
           mode: 'native',
         };
@@ -285,11 +256,8 @@ test('exchangeOidcForToken includes exchange failure detail', async () => {
 
   await assert.rejects(async () => {
     await exchangeOidcForToken({
-      apiUrl: 'https://ir.example',
       exchangeUrl: 'https://ir.example/oidc/exchange',
       audience: 'invisirisk-oidc-validator',
-      projectId: 'project-123',
-      workflowPath: '',
       envSource: {
         ACTIONS_ID_TOKEN_REQUEST_URL: 'https://token.actions.githubusercontent.com/id-token',
         ACTIONS_ID_TOKEN_REQUEST_TOKEN: 'github-request-token',
@@ -318,11 +286,8 @@ test('exchangeOidcForToken rejects non-JSON exchange response', async () => {
 
   await assert.rejects(async () => {
     await exchangeOidcForToken({
-      apiUrl: 'https://ir.example',
       exchangeUrl: 'https://ir.example/oidc/exchange',
       audience: 'invisirisk-oidc-validator',
-      projectId: 'project-123',
-      workflowPath: '',
       envSource: {
         ACTIONS_ID_TOKEN_REQUEST_URL: 'https://token.actions.githubusercontent.com/id-token',
         ACTIONS_ID_TOKEN_REQUEST_TOKEN: 'github-request-token',

@@ -100,27 +100,18 @@ function extractTokenFromExchangeResponse(payload) {
 }
 
 async function exchangeOidcForToken({
-  apiUrl,
   exchangeUrl,
   audience,
-  projectId,
-  workflowPath,
   envSource,
   fetchImpl = fetch,
   debugEnabled = false,
 }) {
-  if (!projectId) {
-    throw new Error('Missing required input: project_id when app_token is not provided');
-  }
   if (!exchangeUrl) {
     throw new Error('Missing OIDC exchange URL.');
   }
 
   const oidcToken = await requestGithubOidcToken(audience, envSource, fetchImpl, debugEnabled);
-  debug(
-    debugEnabled,
-    `Exchanging GitHub OIDC token at ${exchangeUrl} for project_id=${projectId}${workflowPath ? ` workflow_path=${workflowPath}` : ''}.`,
-  );
+  debug(debugEnabled, `Exchanging GitHub OIDC token at ${exchangeUrl}.`);
 
   let response;
   try {
@@ -131,11 +122,7 @@ async function exchangeOidcForToken({
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        api_url: apiUrl,
-        project_id: projectId,
-        workflow_path: workflowPath || '',
         oidc_token: oidcToken,
-        audience,
       }),
     });
   } catch (error) {
@@ -245,11 +232,8 @@ async function run({
     const audience = pick(inputReader('oidc_audience'), envSource.GITHUB_OIDC_AUDIENCE, DEFAULT_OIDC_AUDIENCE);
     const exchangeUrl = buildOidcExchangeUrl(env.IR_URL, pick(inputReader('oidc_exchange_url')));
     env.IR_TOKEN = await exchangeOidcForToken({
-      apiUrl: env.IR_URL,
       exchangeUrl,
       audience,
-      projectId: pick(inputReader('project_id'), envSource.PSE_PROJECT_ID, envSource.PROJECT_ID),
-      workflowPath: pick(inputReader('workflow_path'), envSource.PSE_WORKFLOW_PATH),
       envSource,
       fetchImpl,
       debugEnabled,
