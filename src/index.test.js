@@ -1,6 +1,16 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { run, runBootstrap } = require('./index');
+const fs = require('node:fs');
+const os = require('node:os');
+const path = require('node:path');
+const { buildOidcExchangeUrl, exchangeOidcForToken, run, runBootstrap } = require('./index');
+
+test('buildOidcExchangeUrl defaults to /oidc/exchange', () => {
+  assert.equal(
+    buildOidcExchangeUrl('https://ir.example'),
+    'https://ir.example/oidc/exchange',
+  );
+});
 
 test('runBootstrap sets mode to native for docker-intercept or missing MODE', () => {
   // MODE is docker-intercept
@@ -46,7 +56,7 @@ test('runBootstrap sets mode to native for docker-intercept or missing MODE', ()
   assert.ok(called);
 });
 
-test('run passes pse_image_tag through to bootstrap environment', () => {
+test('run passes pse_image_tag through to bootstrap environment', async () => {
   const inputs = {
     api_url: 'https://ir.example',
     app_token: 'token',
@@ -59,7 +69,7 @@ test('run passes pse_image_tag through to bootstrap environment', () => {
   };
   let execCall;
 
-  run({
+  await run({
     execFile: (...args) => {
       execCall = args;
     },
@@ -79,7 +89,7 @@ test('run passes pse_image_tag through to bootstrap environment', () => {
   assert.doesNotMatch(execCall[2].env.BOOTSTRAP_URL, /ir_token=/);
 });
 
-test('run resolves token from env fallback', () => {
+test('run resolves token from env fallback', async () => {
   const inputs = {
     api_url: 'https://ir.example',
     app_token: '',
@@ -92,7 +102,7 @@ test('run resolves token from env fallback', () => {
   };
   let execCall;
 
-  run({
+  await run({
     execFile: (...args) => {
       execCall = args;
     },
@@ -105,9 +115,115 @@ test('run resolves token from env fallback', () => {
   assert.equal(execCall[2].env.GITHUB_TOKEN, 'default-gh-token');
 });
 
-test('run throws helpful error when api_url is missing', () => {
-  assert.throws(() => {
-    run({
+test('run exchanges GitHub OIDC for token when app_token is missing', async () => {
+  const inputs = {
+    api_url: 'https://ir.example',
+    app_token: '',
+    project_id: 'project-123',
+    workflow_path: '.github/workflows/build.yml',
+    oidc_exchange_url: 'https://auth.example/oidc/exchange',
+    oidc_audience: 'invisirisk-oidc-validator',
+    debug: 'false',
+    mode: 'native',
+    github_token: '',
+  };
+  const githubEnvFile = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'pse-action-')), 'env');
+  const originalGithubEnv = process.env.GITHUB_ENV;
+  process.env.GITHUB_ENV = githubEnvFile;
+  const calls = [];
+  let execCall;
+
+  try {
+    await run({
+      execFile: (...args) => {
+        execCall = args;
+      },
+      inputReader: (name) => inputs[name] || '',
+      envSource: {
+        ACTIONS_ID_TOKEN_REQUEST_URL: 'https://token.actions.githubusercontent.com/id-token',
+        ACTIONS_ID_TOKEN_REQUEST_TOKEN: 'github-request-token',
+      },
+      fetchImpl: async (url, options) => {
+        calls.push({ url, options });
+        if (url.startsWith('https://token.actions.githubusercontent.com/id-token')) {
+          return {
+            ok: true,
+            status: 200,
+            json: async () => ({ value: 'github-oidc-token' }),
+          };
+        }
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({ api_key: 'exchanged-runtime-token' }),
+        };
+      },
+    });
+  } finally {
+    if (originalGithubEnv === undefined) {
+      delete process.env.GITHUB_ENV;
+    } else {
+      process.env.GITHUB_ENV = originalGithubEnv;
+    }
+  }
+
+  assert.equal(calls.length, 2);
+  assert.match(calls[0].url, /audience=invisirisk-oidc-validator/);
+  assert.equal(calls[0].options.headers.Authorization, 'Bearer github-request-token');
+  assert.equal(calls[1].url, 'https://auth.example/oidc/exchange');
+  assert.deepEqual(JSON.parse(calls[1].options.body), {
+    api_url: 'https://ir.example',
+    project_id: 'project-123',
+    workflow_path: '.github/workflows/build.yml',
+    oidc_token: 'github-oidc-token',
+    audience: 'invisirisk-oidc-validator',
+  });
+  assert.equal(execCall[2].env.IR_TOKEN, 'exchanged-runtime-token');
+  assert.match(fs.readFileSync(githubEnvFile, 'utf8'), /IR_TOKEN=exchanged-runtime-token/);
+});
+
+test('run uses GITHUB_OIDC_AUDIENCE when oidc_audience input is missing', async () => {
+  const inputs = {
+    api_url: 'https://ir.example',
+    app_token: '',
+    project_id: 'project-123',
+    debug: 'false',
+    mode: 'native',
+    github_token: '',
+  };
+  const calls = [];
+
+  await run({
+    execFile: () => {},
+    inputReader: (name) => inputs[name] || '',
+    envSource: {
+      ACTIONS_ID_TOKEN_REQUEST_URL: 'https://token.actions.githubusercontent.com/id-token',
+      ACTIONS_ID_TOKEN_REQUEST_TOKEN: 'github-request-token',
+      GITHUB_OIDC_AUDIENCE: 'invisirisk-oidc-validator',
+    },
+    fetchImpl: async (url) => {
+      calls.push(url);
+      if (url.startsWith('https://token.actions.githubusercontent.com/id-token')) {
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({ value: 'github-oidc-token' }),
+        };
+      }
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({ api_key: 'exchanged-runtime-token' }),
+      };
+    },
+  });
+
+  assert.match(calls[0], /audience=invisirisk-oidc-validator/);
+});
+
+test('run throws helpful error when api_url is missing', async () => {
+  await assert.rejects(async () => {
+    await run({
       inputReader: (name) => {
         const inputs = {
           api_url: '',
@@ -125,9 +241,9 @@ test('run throws helpful error when api_url is missing', () => {
   }, /Missing required input: api_url/);
 });
 
-test('run throws helpful error when token is missing', () => {
-  assert.throws(() => {
-    run({
+test('run throws helpful error when token and project_id are missing', async () => {
+  await assert.rejects(async () => {
+    await run({
       inputReader: (name) => {
         const inputs = {
           api_url: 'https://ir.example',
@@ -143,5 +259,91 @@ test('run throws helpful error when token is missing', () => {
       },
       envSource: {},
     });
-  }, /Missing required input: app_token/);
+  }, /Missing required input: project_id/);
+});
+
+test('run throws helpful error when GitHub OIDC environment is unavailable', async () => {
+  await assert.rejects(async () => {
+    await run({
+      inputReader: (name) => {
+        const inputs = {
+          api_url: 'https://ir.example',
+          app_token: '',
+          project_id: 'project-123',
+          debug: 'false',
+          mode: 'native',
+        };
+        return inputs[name] || '';
+      },
+      envSource: {},
+    });
+  }, /GitHub OIDC is unavailable/);
+});
+
+test('exchangeOidcForToken includes exchange failure detail', async () => {
+  let callCount = 0;
+
+  await assert.rejects(async () => {
+    await exchangeOidcForToken({
+      apiUrl: 'https://ir.example',
+      exchangeUrl: 'https://ir.example/oidc/exchange',
+      audience: 'invisirisk-oidc-validator',
+      projectId: 'project-123',
+      workflowPath: '',
+      envSource: {
+        ACTIONS_ID_TOKEN_REQUEST_URL: 'https://token.actions.githubusercontent.com/id-token',
+        ACTIONS_ID_TOKEN_REQUEST_TOKEN: 'github-request-token',
+      },
+      fetchImpl: async () => {
+        callCount += 1;
+        if (callCount === 1) {
+          return {
+            ok: true,
+            status: 200,
+            json: async () => ({ value: 'github-oidc-token' }),
+          };
+        }
+        return {
+          ok: false,
+          status: 403,
+          json: async () => ({ detail: 'repository is not mapped to project' }),
+        };
+      },
+    });
+  }, /OIDC token exchange failed with status 403: repository is not mapped to project/);
+});
+
+test('exchangeOidcForToken rejects non-JSON exchange response', async () => {
+  let callCount = 0;
+
+  await assert.rejects(async () => {
+    await exchangeOidcForToken({
+      apiUrl: 'https://ir.example',
+      exchangeUrl: 'https://ir.example/oidc/exchange',
+      audience: 'invisirisk-oidc-validator',
+      projectId: 'project-123',
+      workflowPath: '',
+      envSource: {
+        ACTIONS_ID_TOKEN_REQUEST_URL: 'https://token.actions.githubusercontent.com/id-token',
+        ACTIONS_ID_TOKEN_REQUEST_TOKEN: 'github-request-token',
+      },
+      fetchImpl: async () => {
+        callCount += 1;
+        if (callCount === 1) {
+          return {
+            ok: true,
+            status: 200,
+            json: async () => ({ value: 'github-oidc-token' }),
+          };
+        }
+        return {
+          ok: true,
+          status: 200,
+          json: async () => {
+            throw new Error('invalid json');
+          },
+        };
+      },
+    });
+  }, /OIDC token exchange returned a non-JSON response/);
 });

@@ -34,6 +34,28 @@ function saveState(name, value) {
   }
 }
 
+function exportVariable(name, value) {
+  process.env[name] = value;
+  const envFile = process.env.GITHUB_ENV;
+  if (envFile) {
+    if (String(value).includes('\n')) {
+      let delimiter = `PSE_${name}_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+      while (String(value).includes(delimiter)) {
+        delimiter = `PSE_${name}_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+      }
+      fs.appendFileSync(envFile, `${name}<<${delimiter}${os.EOL}${value}${os.EOL}${delimiter}${os.EOL}`, 'utf8');
+      return;
+    }
+    fs.appendFileSync(envFile, `${name}=${value}${os.EOL}`, 'utf8');
+  }
+}
+
+function maskSecret(value) {
+  if (value) {
+    console.log(`::add-mask::${value}`);
+  }
+}
+
 function buildEnv(overrides = {}) {
   return {
     ...process.env,
@@ -78,11 +100,13 @@ function handleDeprecatedInputs(isPost = false) {
 
 module.exports = {
   buildEnv,
+  exportVariable,
   getState,
   getInput,
   handleDeprecatedCleanupInput,
   handleDeprecatedInputs,
   handleDeprecatedSendJobStatusInput,
+  maskSecret,
   pick,
   saveState,
 };
