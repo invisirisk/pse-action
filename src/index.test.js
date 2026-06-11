@@ -3,7 +3,13 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
-const { buildOidcExchangeUrl, exchangeOidcForToken, run, runBootstrap } = require('./index');
+const {
+  buildOidcExchangeUrl,
+  exchangeOidcForToken,
+  extractTokenFromExchangeResponse,
+  run,
+  runBootstrap,
+} = require('./index');
 
 test('buildOidcExchangeUrl defaults to /oidc/exchange', () => {
   assert.equal(
@@ -176,6 +182,20 @@ test('run exchanges GitHub OIDC for token when app_token is missing', async () =
   assert.match(fs.readFileSync(githubEnvFile, 'utf8'), /IR_TOKEN=exchanged-runtime-token/);
 });
 
+test('extractTokenFromExchangeResponse handles Lambda proxy response body', () => {
+  const token = extractTokenFromExchangeResponse({
+    statusCode: 200,
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      success: true,
+      project_id: '0ed5e5c5-823c-4d5c-bafa-d5962ee4738c',
+      api_key: 'lambda-proxy-api-key',
+    }),
+  });
+
+  assert.equal(token, 'lambda-proxy-api-key');
+});
+
 test('run uses GITHUB_OIDC_AUDIENCE when oidc_audience input is missing', async () => {
   const inputs = {
     api_url: 'https://ir.example',
@@ -279,6 +299,42 @@ test('exchangeOidcForToken includes exchange failure detail', async () => {
       },
     });
   }, /OIDC token exchange failed with status 403: repository is not mapped to project/);
+});
+
+test('exchangeOidcForToken rejects Lambda proxy error response', async () => {
+  let callCount = 0;
+
+  await assert.rejects(async () => {
+    await exchangeOidcForToken({
+      exchangeUrl: 'https://ir.example/oidc/exchange',
+      audience: 'invisirisk-oidc-validator',
+      envSource: {
+        ACTIONS_ID_TOKEN_REQUEST_URL: 'https://token.actions.githubusercontent.com/id-token',
+        ACTIONS_ID_TOKEN_REQUEST_TOKEN: 'github-request-token',
+      },
+      fetchImpl: async () => {
+        callCount += 1;
+        if (callCount === 1) {
+          return {
+            ok: true,
+            status: 200,
+            json: async () => ({ value: 'github-oidc-token' }),
+          };
+        }
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({
+            statusCode: 403,
+            body: JSON.stringify({
+              success: false,
+              message: 'No active repository mapping found for repository',
+            }),
+          }),
+        };
+      },
+    });
+  }, /OIDC token exchange failed with status 403: No active repository mapping found for repository/);
 });
 
 test('exchangeOidcForToken rejects non-JSON exchange response', async () => {

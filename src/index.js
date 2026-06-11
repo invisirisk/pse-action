@@ -87,15 +87,41 @@ async function requestGithubOidcToken(
 }
 
 function extractTokenFromExchangeResponse(payload) {
+  const normalizedPayload = unwrapLambdaProxyPayload(payload);
   return pick(
-    payload && payload.api_key,
-    payload && payload.app_token,
-    payload && payload.access_token,
-    payload && payload.token,
-    payload && payload.data && payload.data.api_key,
-    payload && payload.data && payload.data.app_token,
-    payload && payload.data && payload.data.access_token,
-    payload && payload.data && payload.data.token,
+    normalizedPayload && normalizedPayload.api_key,
+    normalizedPayload && normalizedPayload.app_token,
+    normalizedPayload && normalizedPayload.access_token,
+    normalizedPayload && normalizedPayload.token,
+    normalizedPayload && normalizedPayload.data && normalizedPayload.data.api_key,
+    normalizedPayload && normalizedPayload.data && normalizedPayload.data.app_token,
+    normalizedPayload && normalizedPayload.data && normalizedPayload.data.access_token,
+    normalizedPayload && normalizedPayload.data && normalizedPayload.data.token,
+  );
+}
+
+function unwrapLambdaProxyPayload(payload) {
+  if (!payload || typeof payload !== 'object' || typeof payload.body !== 'string') {
+    return payload;
+  }
+
+  try {
+    return JSON.parse(payload.body);
+  } catch (error) {
+    throw new Error('OIDC token exchange returned a Lambda proxy response with a non-JSON body.');
+  }
+}
+
+function getExchangePayloadStatusCode(payload) {
+  const statusCode = payload && Number(payload.statusCode);
+  return Number.isInteger(statusCode) ? statusCode : null;
+}
+
+function getExchangePayloadErrorDetail(payload) {
+  const normalizedPayload = unwrapLambdaProxyPayload(payload);
+  return (
+    normalizedPayload &&
+    (normalizedPayload.detail || normalizedPayload.message || normalizedPayload.error || '')
   );
 }
 
@@ -136,6 +162,11 @@ async function exchangeOidcForToken({
   }
 
   const payload = await parseJsonResponse(response, 'OIDC token exchange');
+  const payloadStatusCode = getExchangePayloadStatusCode(payload);
+  if (payloadStatusCode !== null && (payloadStatusCode < 200 || payloadStatusCode >= 300)) {
+    const detail = getExchangePayloadErrorDetail(payload);
+    throw new Error(`OIDC token exchange failed with status ${payloadStatusCode}${detail ? `: ${detail}` : ''}.`);
+  }
   const token = extractTokenFromExchangeResponse(payload);
   if (!token) {
     throw new Error('OIDC exchange response did not include an API token or access token.');
