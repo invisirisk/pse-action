@@ -13,14 +13,6 @@ inputs:
   app_token:
     description: 'Authentication token for the InvisiRisk API. If omitted, the action uses GitHub OIDC to request a runtime token.'
     required: false
-  oidc_exchange_url:
-    description: 'OIDC token exchange endpoint. Defaults to <api_url>/oidc/exchange.'
-    required: false
-    default: ''
-  oidc_audience:
-    description: 'Audience to request for the GitHub Actions OIDC token.'
-    required: false
-    default: 'invisirisk-oidc-validator'
   github_token:
     description: 'GitHub token for API access (auto-populated, no need to set explicitly)'
     required: false

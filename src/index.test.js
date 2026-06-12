@@ -125,8 +125,6 @@ test('run exchanges GitHub OIDC for token when app_token is missing', async () =
   const inputs = {
     api_url: 'https://ir.example',
     app_token: '',
-    oidc_exchange_url: 'https://auth.example/oidc/exchange',
-    oidc_audience: 'invisirisk-oidc-validator',
     debug: 'false',
     mode: 'native',
     github_token: '',
@@ -174,7 +172,7 @@ test('run exchanges GitHub OIDC for token when app_token is missing', async () =
   assert.equal(calls.length, 2);
   assert.match(calls[0].url, /audience=invisirisk-oidc-validator/);
   assert.equal(calls[0].options.headers.Authorization, 'Bearer github-request-token');
-  assert.equal(calls[1].url, 'https://auth.example/oidc/exchange');
+  assert.equal(calls[1].url, 'https://ir.example/oidc/exchange');
   assert.deepEqual(JSON.parse(calls[1].options.body), {
     oidc_token: 'github-oidc-token',
   });
@@ -196,42 +194,9 @@ test('extractTokenFromExchangeResponse handles Lambda proxy response body', () =
   assert.equal(token, 'lambda-proxy-api-key');
 });
 
-test('run uses GITHUB_OIDC_AUDIENCE when oidc_audience input is missing', async () => {
-  const inputs = {
-    api_url: 'https://ir.example',
-    app_token: '',
-    debug: 'false',
-    mode: 'native',
-    github_token: '',
-  };
-  const calls = [];
-
-  await run({
-    execFile: () => {},
-    inputReader: (name) => inputs[name] || '',
-    envSource: {
-      ACTIONS_ID_TOKEN_REQUEST_URL: 'https://token.actions.githubusercontent.com/id-token',
-      ACTIONS_ID_TOKEN_REQUEST_TOKEN: 'github-request-token',
-      GITHUB_OIDC_AUDIENCE: 'invisirisk-oidc-validator',
-    },
-    fetchImpl: async (url) => {
-      calls.push(url);
-      if (url.startsWith('https://token.actions.githubusercontent.com/id-token')) {
-        return {
-          ok: true,
-          status: 200,
-          json: async () => ({ value: 'github-oidc-token' }),
-        };
-      }
-      return {
-        ok: true,
-        status: 200,
-        json: async () => ({ api_key: 'exchanged-runtime-token' }),
-      };
-    },
-  });
-
-  assert.match(calls[0], /audience=invisirisk-oidc-validator/);
+test('extractTokenFromExchangeResponse only accepts api_key', () => {
+  assert.equal(extractTokenFromExchangeResponse({ access_token: 'ignored-token' }), '');
+  assert.equal(extractTokenFromExchangeResponse({ data: { api_key: 'ignored-token' } }), '');
 });
 
 test('run throws helpful error when api_url is missing', async () => {

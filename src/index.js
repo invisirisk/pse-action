@@ -13,9 +13,9 @@ function debug(enabled, message) {
   }
 }
 
-function buildOidcExchangeUrl(apiUrl, configuredUrl) {
+function buildOidcExchangeUrl(apiUrl) {
   try {
-    return new URL(configuredUrl || '/oidc/exchange', apiUrl).toString();
+    return new URL('/oidc/exchange', apiUrl).toString();
   } catch (error) {
     throw new Error(`Invalid OIDC exchange URL configuration: ${error.message}`);
   }
@@ -88,16 +88,9 @@ async function requestGithubOidcToken(
 
 function extractTokenFromExchangeResponse(payload) {
   const normalizedPayload = unwrapLambdaProxyPayload(payload);
-  return pick(
-    normalizedPayload && normalizedPayload.api_key,
-    normalizedPayload && normalizedPayload.app_token,
-    normalizedPayload && normalizedPayload.access_token,
-    normalizedPayload && normalizedPayload.token,
-    normalizedPayload && normalizedPayload.data && normalizedPayload.data.api_key,
-    normalizedPayload && normalizedPayload.data && normalizedPayload.data.app_token,
-    normalizedPayload && normalizedPayload.data && normalizedPayload.data.access_token,
-    normalizedPayload && normalizedPayload.data && normalizedPayload.data.token,
-  );
+  return normalizedPayload && typeof normalizedPayload.api_key === 'string'
+    ? normalizedPayload.api_key.trim()
+    : '';
 }
 
 function unwrapLambdaProxyPayload(payload) {
@@ -169,7 +162,7 @@ async function exchangeOidcForToken({
   }
   const token = extractTokenFromExchangeResponse(payload);
   if (!token) {
-    throw new Error('OIDC exchange response did not include an API token or access token.');
+    throw new Error('OIDC exchange response did not include an API token');
   }
   debug(debugEnabled, 'OIDC exchange returned a runtime token.');
   return token;
@@ -190,9 +183,9 @@ set -euo pipefail
 if ! curl -sSf -H "x-api-key: $IR_TOKEN" "$BOOTSTRAP_URL" | bash; then
   http_status=$(curl -sS -o /dev/null -w "%{http_code}" -H "x-api-key: $IR_TOKEN" "$BOOTSTRAP_URL" || true)
   if [ "$http_status" = "401" ]; then
-    echo "::error title=PSE bootstrap unauthorized::Unauthorized request from InvisiRisk bootstrap API. Verify app_token is valid for $IR_URL."
+    echo "::error title=PSE bootstrap unauthorized::Unauthorized request from InvisiRisk bootstrap API. Verify the authentication token is valid for $IR_URL."
   elif [ "$http_status" = "403" ]; then
-    echo "::error title=PSE bootstrap forbidden::Forbidden request from InvisiRisk bootstrap API. Verify app_token is authorized for $IR_URL and has access to the target project."
+    echo "::error title=PSE bootstrap forbidden::Forbidden request from InvisiRisk bootstrap API. Verify the authentication token is authorized for $IR_URL and has access to the target project."
   fi
   exit 1
 fi
@@ -260,11 +253,10 @@ async function run({
   const debugEnabled = pick(inputReader('debug'), env.DEBUG, envSource.DEBUG) === 'true';
   if (!env.IR_TOKEN) {
     info('No API token provided; using GitHub OIDC token exchange.');
-    const audience = pick(inputReader('oidc_audience'), envSource.GITHUB_OIDC_AUDIENCE, DEFAULT_OIDC_AUDIENCE);
-    const exchangeUrl = buildOidcExchangeUrl(env.IR_URL, pick(inputReader('oidc_exchange_url')));
+    const exchangeUrl = buildOidcExchangeUrl(env.IR_URL);
     env.IR_TOKEN = await exchangeOidcForToken({
       exchangeUrl,
-      audience,
+      audience: DEFAULT_OIDC_AUDIENCE,
       envSource,
       fetchImpl,
       debugEnabled,
