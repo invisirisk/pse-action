@@ -54,6 +54,7 @@ test('run passes pse_image_tag through to bootstrap environment', () => {
     mode: 'sidecar',
     pse_image_tag: 'release-2026-05',
     collect_dependencies: 'true',
+    pse_spool_dir: '/var/tmp/pse-spool',
     workdir: '/workspace',
     github_token: '',
   };
@@ -74,6 +75,7 @@ test('run passes pse_image_tag through to bootstrap environment', () => {
   assert.match(execCall[1][1], /::error title=PSE bootstrap forbidden::Forbidden request from InvisiRisk bootstrap API\./);
   assert.equal(execCall[2].env.PSE_IMAGE_TAG, 'release-2026-05');
   assert.equal(execCall[2].env.GITHUB_TOKEN, 'default-gh-token');
+  assert.equal(execCall[2].env.PSE_SPOOL_DIR, '/var/tmp/pse-spool');
   assert.match(execCall[2].env.BOOTSTRAP_URL, /mode=sidecar/);
   assert.doesNotMatch(execCall[2].env.BOOTSTRAP_URL, /api_key=/);
   assert.doesNotMatch(execCall[2].env.BOOTSTRAP_URL, /ir_token=/);

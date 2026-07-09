@@ -33,6 +33,10 @@ inputs:
     description: 'Set to true to collect dependency graphs during cleanup, false to skip. Default is true if not specified.'
     required: false
     default: ''
+  pse_spool_dir:
+    description: 'Optional spool directory for large PSE response bodies. When unset, PSE uses the platform default temp directory.'
+    required: false
+    default: ''
   collect_job_status:
     description: 'Set to true to collect GitHub Actions workflow status during cleanup, false to skip. Default is true if not specified.'
     required: false

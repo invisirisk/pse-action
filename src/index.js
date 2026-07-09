@@ -64,6 +64,11 @@ function buildRuntimeEnv(inputReader = getInput, envSource = process.env) {
     env.WORKDIR = workdir;
   }
 
+  const spoolDir = pick(inputReader('pse_spool_dir'));
+  if (spoolDir) {
+    env.PSE_SPOOL_DIR = spoolDir;
+  }
+
   const githubToken = pick(inputReader('github_token'), envSource.GITHUB_TOKEN);
   if (githubToken) {
     env.GITHUB_TOKEN = githubToken;
