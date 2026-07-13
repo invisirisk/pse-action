@@ -11,10 +11,10 @@ inputs:
     required: false
     default: 'https://app.invisirisk.com'
   app_token:
-    description: 'Authentication token for the InvisiRisk API. If omitted, the action uses GitHub OIDC to request a runtime token.'
+    description: 'Authentication token for the InvisiRisk API. If omitted, the action signs in securely with GitHub.'
     required: false
   github_token:
-    description: 'GitHub token for API access (auto-populated, no need to set explicitly)'
+    description: 'GitHub token used to resolve the current numeric workflow ID. Auto-populated; OIDC mode requires actions: read permission.'
     required: false
     default: ${{ github.token }}
   debug:

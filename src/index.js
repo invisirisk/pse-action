@@ -13,33 +13,112 @@ function debug(enabled, message) {
   }
 }
 
+class OidcError extends Error {
+  constructor(title, message) {
+    super(message);
+    this.name = 'OidcError';
+    this.title = title;
+  }
+}
+
+function oidcError(title, message) {
+  return new OidcError(title, message);
+}
+
+function escapeWorkflowCommand(value) {
+  return String(value)
+    .replace(/%/g, '%25')
+    .replace(/\r/g, '%0D')
+    .replace(/\n/g, '%0A');
+}
+
+function reportFailure(error, log = console.error) {
+  if (error instanceof OidcError) {
+    log(`::error title=${escapeWorkflowCommand(error.title)}::${escapeWorkflowCommand(error.message)}`);
+    return;
+  }
+  log(`PSE setup failed: ${error.message}`);
+}
+
 function buildOidcExchangeUrl(apiUrl) {
   try {
     return new URL('/oidc/exchange', apiUrl).toString();
-  } catch (error) {
-    throw new Error(`Invalid OIDC exchange URL configuration: ${error.message}`);
+  } catch (_) {
+    throw oidcError(
+      'PSE configuration required',
+      'Secure sign-in is not configured correctly. Contact your PSE administrator.',
+    );
   }
 }
 
-async function parseJsonResponse(response, context) {
+async function parseJsonResponse(response, reference, message) {
   try {
     return await response.json();
-  } catch (error) {
-    throw new Error(`${context} returned a non-JSON response.`);
+  } catch (_) {
+    throw oidcError(reference, message);
   }
 }
 
-async function readErrorDetail(response) {
-  try {
-    const errorPayload = await response.json();
-    return errorPayload.detail || errorPayload.message || errorPayload.error || '';
-  } catch (_) {
-    try {
-      return await response.text();
-    } catch (__) {
-      return '';
-    }
+function githubWorkflowRequestError(status) {
+  if (status === 401 || status === 403) {
+    return oidcError(
+      'PSE requires workflow access',
+      'PSE requires permission to read this workflow run. Add "actions: read" to the workflow permissions, then rerun the workflow.',
+    );
   }
+  if (status === 404) {
+    return oidcError(
+      'PSE could not verify this workflow',
+      'GitHub could not locate the current workflow run. Rerun the workflow; if the issue persists, contact your PSE administrator.',
+    );
+  }
+  if (status === 429 || status >= 500) {
+    return oidcError(
+      'GitHub is temporarily unavailable',
+      'PSE could not verify this workflow with GitHub. Retry the workflow; if the issue persists, contact your PSE administrator.',
+    );
+  }
+  return oidcError(
+    'PSE could not verify this workflow',
+    'PSE could not verify the current workflow run. Retry the workflow; if the issue persists, contact your PSE administrator.',
+  );
+}
+
+function oidcExchangeRequestError(status) {
+  if (status === 401) {
+    return oidcError(
+      'PSE requires secure sign-in access',
+      'GitHub could not verify this workflow for PSE. Add "id-token: write" to the workflow permissions, then rerun the workflow.',
+    );
+  }
+  if (status === 403) {
+    return oidcError(
+      'PSE project connection required',
+      'This repository, branch, or workflow is not connected to an active PSE project. Verify the project mapping and GitHub App installation in PSE, then rerun the workflow.',
+    );
+  }
+  if (status === 404) {
+    return oidcError(
+      'PSE project connection required',
+      'No PSE project connection was found for this workflow. Connect the repository, branch, and workflow to a PSE project, then rerun the workflow.',
+    );
+  }
+  if (status === 429) {
+    return oidcError(
+      'PSE sign-in temporarily unavailable',
+      'PSE cannot accept another secure sign-in request at this time. Retry the workflow shortly.',
+    );
+  }
+  if (status >= 500) {
+    return oidcError(
+      'PSE sign-in temporarily unavailable',
+      'PSE secure sign-in is temporarily unavailable. Retry the workflow; if the issue persists, contact your PSE administrator.',
+    );
+  }
+  return oidcError(
+    'PSE secure sign-in failed',
+    'PSE could not complete secure sign-in. Retry the workflow; if the issue persists, contact your PSE administrator.',
+  );
 }
 
 async function requestGithubOidcToken(
@@ -51,10 +130,16 @@ async function requestGithubOidcToken(
   const requestUrl = envSource.ACTIONS_ID_TOKEN_REQUEST_URL;
   const requestToken = envSource.ACTIONS_ID_TOKEN_REQUEST_TOKEN;
   if (!requestUrl || !requestToken) {
-    throw new Error('GitHub OIDC is unavailable. Set workflow permissions: id-token: write.');
+    throw oidcError(
+      'PSE requires secure sign-in access',
+      'PSE requires permission to verify this workflow with GitHub. Add "id-token: write" to the workflow permissions, then rerun the workflow.',
+    );
   }
   if (!fetchImpl) {
-    throw new Error('Fetch API is unavailable. This action requires Node 20 or newer.');
+    throw oidcError(
+      'PSE secure sign-in unavailable',
+      'This runner does not support PSE secure sign-in. Use a supported GitHub Actions runner or contact your PSE administrator.',
+    );
   }
 
   const separator = requestUrl.includes('?') ? '&' : '?';
@@ -69,21 +154,117 @@ async function requestGithubOidcToken(
         Accept: 'application/json',
       },
     });
-  } catch (error) {
-    throw new Error(`GitHub OIDC token request failed: ${error.message}`);
+  } catch (_) {
+    throw oidcError(
+      'GitHub connection unavailable',
+      'PSE could not reach GitHub for secure sign-in. Verify the runner can connect to GitHub, then rerun the workflow.',
+    );
   }
 
   if (!response.ok) {
-    const detail = await readErrorDetail(response);
-    throw new Error(`GitHub OIDC token request failed with status ${response.status}${detail ? `: ${detail}` : ''}.`);
+    throw oidcError(
+      'PSE requires secure sign-in access',
+      'GitHub did not allow PSE to verify this workflow. Add "id-token: write" to the workflow permissions, then rerun the workflow.',
+    );
   }
 
-  const payload = await parseJsonResponse(response, 'GitHub OIDC token request');
+  const payload = await parseJsonResponse(
+    response,
+    'PSE secure sign-in failed',
+    'GitHub returned an unexpected secure sign-in response. Retry the workflow; if the issue persists, contact your PSE administrator.',
+  );
   if (!payload || typeof payload.value !== 'string' || !payload.value) {
-    throw new Error('GitHub OIDC token response did not include a token value.');
+    throw oidcError(
+      'PSE secure sign-in failed',
+      'GitHub did not complete secure sign-in for this workflow. Retry the workflow; if the issue persists, contact your PSE administrator.',
+    );
   }
   debug(debugEnabled, 'Received GitHub OIDC token.');
   return payload.value;
+}
+
+async function requestGithubWorkflowContext({
+  githubToken,
+  envSource = process.env,
+  fetchImpl = fetch,
+  debugEnabled = false,
+}) {
+  if (!githubToken) {
+    throw oidcError(
+      'PSE requires workflow access',
+      'PSE requires permission to read this workflow run. Add "actions: read" to the workflow permissions, then rerun the workflow.',
+    );
+  }
+  if (!envSource.GITHUB_REPOSITORY || !envSource.GITHUB_RUN_ID) {
+    throw oidcError(
+      'PSE could not verify this workflow',
+      'PSE could not identify the current GitHub Actions run. Ensure PSE is running inside a GitHub Actions workflow.',
+    );
+  }
+  if (!fetchImpl) {
+    throw oidcError(
+      'PSE workflow verification unavailable',
+      'This runner cannot provide the current workflow details. Use a supported GitHub Actions runner or contact your PSE administrator.',
+    );
+  }
+
+  const [owner, repository] = envSource.GITHUB_REPOSITORY.split('/');
+  if (!owner || !repository) {
+    throw oidcError(
+      'PSE could not verify this workflow',
+      'PSE could not identify the current GitHub Actions run. Ensure PSE is running inside a GitHub Actions workflow.',
+    );
+  }
+
+  const apiUrl = pick(envSource.GITHUB_API_URL, 'https://api.github.com').replace(/\/$/, '');
+  const workflowRunUrl = `${apiUrl}/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repository)}/actions/runs/${encodeURIComponent(envSource.GITHUB_RUN_ID)}`;
+  debug(debugEnabled, `Requesting GitHub workflow context for run ${envSource.GITHUB_RUN_ID}.`);
+
+  let response;
+  try {
+    response = await fetchImpl(workflowRunUrl, {
+      headers: {
+        Authorization: `Bearer ${githubToken}`,
+        Accept: 'application/vnd.github+json',
+        'X-GitHub-Api-Version': '2022-11-28',
+      },
+    });
+  } catch (_) {
+    throw oidcError(
+      'GitHub connection unavailable',
+      'PSE could not reach GitHub to verify this workflow. Verify the runner can connect to GitHub, then rerun the workflow.',
+    );
+  }
+
+  if (!response.ok) {
+    throw githubWorkflowRequestError(response.status);
+  }
+
+  const payload = await parseJsonResponse(
+    response,
+    'PSE could not verify this workflow',
+    'GitHub returned an unexpected response while PSE was verifying this workflow. Retry the workflow; if the issue persists, contact your PSE administrator.',
+  );
+  const workflowId = Number(payload && payload.workflow_id);
+  if (!Number.isInteger(workflowId) || workflowId <= 0) {
+    throw oidcError(
+      'PSE could not verify this workflow',
+      'PSE could not identify the current workflow. Retry the workflow; if the issue persists, contact your PSE administrator.',
+    );
+  }
+
+  const branch = payload && typeof payload.head_branch === 'string'
+    ? payload.head_branch.trim()
+    : '';
+  if (!branch) {
+    throw oidcError(
+      'PSE requires a branch-based run',
+      'PSE could not identify a branch for this run. Workflows started from a tag or without a branch are not supported.',
+    );
+  }
+
+  debug(debugEnabled, `Resolved GitHub branch "${branch}" and workflow_id ${workflowId}.`);
+  return { branch, workflowId };
 }
 
 function extractTokenFromExchangeResponse(payload) {
@@ -100,8 +281,11 @@ function unwrapLambdaProxyPayload(payload) {
 
   try {
     return JSON.parse(payload.body);
-  } catch (error) {
-    throw new Error('OIDC token exchange returned a Lambda proxy response with a non-JSON body.');
+  } catch (_) {
+    throw oidcError(
+      'PSE secure sign-in failed',
+      'PSE received an unexpected secure sign-in response. Retry the workflow; if the issue persists, contact your PSE administrator.',
+    );
   }
 }
 
@@ -110,23 +294,32 @@ function getExchangePayloadStatusCode(payload) {
   return Number.isInteger(statusCode) ? statusCode : null;
 }
 
-function getExchangePayloadErrorDetail(payload) {
-  const normalizedPayload = unwrapLambdaProxyPayload(payload);
-  return (
-    normalizedPayload &&
-    (normalizedPayload.detail || normalizedPayload.message || normalizedPayload.error || '')
-  );
-}
-
 async function exchangeOidcForToken({
   exchangeUrl,
   audience,
+  branch,
+  workflowId,
   envSource,
   fetchImpl = fetch,
   debugEnabled = false,
 }) {
   if (!exchangeUrl) {
-    throw new Error('Missing OIDC exchange URL.');
+    throw oidcError(
+      'PSE configuration required',
+      'Secure sign-in is not configured correctly. Contact your PSE administrator.',
+    );
+  }
+  if (!branch) {
+    throw oidcError(
+      'PSE requires a branch-based run',
+      'PSE could not identify a branch for this run. Workflows started from a tag or without a branch are not supported.',
+    );
+  }
+  if (!Number.isInteger(Number(workflowId)) || Number(workflowId) <= 0) {
+    throw oidcError(
+      'PSE could not verify this workflow',
+      'PSE could not identify the current workflow. Retry the workflow; if the issue persists, contact your PSE administrator.',
+    );
   }
 
   const oidcToken = await requestGithubOidcToken(audience, envSource, fetchImpl, debugEnabled);
@@ -142,27 +335,37 @@ async function exchangeOidcForToken({
       },
       body: JSON.stringify({
         oidc_token: oidcToken,
+        branch,
+        workflow_id: Number(workflowId),
       }),
     });
-  } catch (error) {
-    throw new Error(`OIDC token exchange request failed: ${error.message}`);
+  } catch (_) {
+    throw oidcError(
+      'PSE connection unavailable',
+      'The runner could not reach PSE for secure sign-in. Verify the runner network connection, then rerun the workflow.',
+    );
   }
   debug(debugEnabled, `OIDC exchange response status: ${response.status}.`);
 
   if (!response.ok) {
-    const detail = await readErrorDetail(response);
-    throw new Error(`OIDC token exchange failed with status ${response.status}${detail ? `: ${detail}` : ''}.`);
+    throw oidcExchangeRequestError(response.status);
   }
 
-  const payload = await parseJsonResponse(response, 'OIDC token exchange');
+  const payload = await parseJsonResponse(
+    response,
+    'PSE secure sign-in failed',
+    'PSE received an unexpected secure sign-in response. Retry the workflow; if the issue persists, contact your PSE administrator.',
+  );
   const payloadStatusCode = getExchangePayloadStatusCode(payload);
   if (payloadStatusCode !== null && (payloadStatusCode < 200 || payloadStatusCode >= 300)) {
-    const detail = getExchangePayloadErrorDetail(payload);
-    throw new Error(`OIDC token exchange failed with status ${payloadStatusCode}${detail ? `: ${detail}` : ''}.`);
+    throw oidcExchangeRequestError(payloadStatusCode);
   }
   const token = extractTokenFromExchangeResponse(payload);
   if (!token) {
-    throw new Error('OIDC exchange response did not include an API token');
+    throw oidcError(
+      'PSE secure sign-in failed',
+      'PSE secure sign-in did not complete. Retry the workflow; if the issue persists, contact your PSE administrator.',
+    );
   }
   debug(debugEnabled, 'OIDC exchange returned a runtime token.');
   return token;
@@ -252,18 +455,26 @@ async function run({
   }
   const debugEnabled = pick(inputReader('debug'), env.DEBUG, envSource.DEBUG) === 'true';
   if (!env.IR_TOKEN) {
-    info('No API token provided; using GitHub OIDC token exchange.');
+    info('Signing in securely with GitHub...');
     const exchangeUrl = buildOidcExchangeUrl(env.IR_URL);
+    const workflowContext = await requestGithubWorkflowContext({
+      githubToken: env.GITHUB_TOKEN,
+      envSource,
+      fetchImpl,
+      debugEnabled,
+    });
     env.IR_TOKEN = await exchangeOidcForToken({
       exchangeUrl,
       audience: DEFAULT_OIDC_AUDIENCE,
+      branch: workflowContext.branch,
+      workflowId: workflowContext.workflowId,
       envSource,
       fetchImpl,
       debugEnabled,
     });
     maskSecret(env.IR_TOKEN);
     exportVariable('IR_TOKEN', env.IR_TOKEN);
-    info('OIDC exchange succeeded; runtime token exported as IR_TOKEN.');
+    info('Secure sign-in succeeded.');
   } else {
     debug(debugEnabled, 'Using provided API token.');
   }
@@ -281,7 +492,7 @@ if (require.main === module) {
       }
     })
     .catch((error) => {
-      console.error(`PSE setup failed: ${error.message}`);
+      reportFailure(error);
       process.exit(1);
     });
 }
@@ -291,7 +502,9 @@ module.exports = {
   buildOidcExchangeUrl,
   exchangeOidcForToken,
   extractTokenFromExchangeResponse,
+  requestGithubWorkflowContext,
   requestGithubOidcToken,
+  reportFailure,
   runBootstrap,
   run,
 };

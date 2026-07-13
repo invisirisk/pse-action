@@ -7,6 +7,9 @@ const {
   buildOidcExchangeUrl,
   exchangeOidcForToken,
   extractTokenFromExchangeResponse,
+  requestGithubWorkflowContext,
+  requestGithubOidcToken,
+  reportFailure,
   run,
   runBootstrap,
 } = require('./index');
@@ -16,6 +19,73 @@ test('buildOidcExchangeUrl defaults to /oidc/exchange', () => {
     buildOidcExchangeUrl('https://ir.example'),
     'https://ir.example/oidc/exchange',
   );
+});
+
+test('requestGithubWorkflowContext resolves numeric workflow ID and branch', async () => {
+  const context = await requestGithubWorkflowContext({
+    githubToken: 'github-api-token',
+    envSource: {
+      GITHUB_API_URL: 'https://github.example/api/v3',
+      GITHUB_REPOSITORY: 'invisirisk/pse-action',
+      GITHUB_RUN_ID: '987654',
+      GITHUB_REF_NAME: 'fallback-branch',
+    },
+    fetchImpl: async (url, options) => {
+      assert.equal(url, 'https://github.example/api/v3/repos/invisirisk/pse-action/actions/runs/987654');
+      assert.equal(options.headers.Authorization, 'Bearer github-api-token');
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({ workflow_id: 12345, head_branch: 'feature/oidc-context' }),
+      };
+    },
+  });
+
+  assert.deepEqual(context, {
+    branch: 'feature/oidc-context',
+    workflowId: 12345,
+  });
+});
+
+test('requestGithubWorkflowContext rejects runs without head_branch', async () => {
+  await assert.rejects(async () => {
+    await requestGithubWorkflowContext({
+      githubToken: 'github-api-token',
+      envSource: {
+        GITHUB_REPOSITORY: 'invisirisk/pse-action',
+        GITHUB_RUN_ID: '987654',
+        GITHUB_REF_NAME: 'tag-that-must-not-be-used-as-a-branch',
+      },
+      fetchImpl: async () => ({
+        ok: true,
+        status: 200,
+        json: async () => ({ workflow_id: 12345, head_branch: null }),
+      }),
+    });
+  }, /could not identify a branch.*tag or without a branch are not supported/);
+});
+
+test('requestGithubOidcToken explains how to enable secure sign-in', async () => {
+  await assert.rejects(async () => {
+    await requestGithubOidcToken('invisirisk-oidc-validator', {});
+  }, /requires permission to verify this workflow.*id-token: write/);
+});
+
+test('reportFailure creates a clear GitHub error annotation without a public error code', async () => {
+  let oidcFailure;
+  try {
+    await requestGithubOidcToken('invisirisk-oidc-validator', {});
+  } catch (error) {
+    oidcFailure = error;
+  }
+
+  const messages = [];
+  reportFailure(oidcFailure, (message) => messages.push(message));
+
+  assert.equal(messages.length, 1);
+  assert.match(messages[0], /^::error title=PSE requires secure sign-in access::/);
+  assert.match(messages[0], /Add "id-token: write" to the workflow permissions/);
+  assert.doesNotMatch(messages[0], /PSE-OIDC|Reference:/);
 });
 
 test('runBootstrap sets mode to native for docker-intercept or missing MODE', () => {
@@ -127,7 +197,7 @@ test('run exchanges GitHub OIDC for token when app_token is missing', async () =
     app_token: '',
     debug: 'false',
     mode: 'native',
-    github_token: '',
+    github_token: 'github-api-token',
   };
   const githubEnvFile = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'pse-action-')), 'env');
   const originalGithubEnv = process.env.GITHUB_ENV;
@@ -144,9 +214,19 @@ test('run exchanges GitHub OIDC for token when app_token is missing', async () =
       envSource: {
         ACTIONS_ID_TOKEN_REQUEST_URL: 'https://token.actions.githubusercontent.com/id-token',
         ACTIONS_ID_TOKEN_REQUEST_TOKEN: 'github-request-token',
+        GITHUB_REPOSITORY: 'invisirisk/pse-action',
+        GITHUB_RUN_ID: '987654',
+        GITHUB_REF_NAME: 'fallback-branch',
       },
       fetchImpl: async (url, options) => {
         calls.push({ url, options });
+        if (url === 'https://api.github.com/repos/invisirisk/pse-action/actions/runs/987654') {
+          return {
+            ok: true,
+            status: 200,
+            json: async () => ({ workflow_id: 12345, head_branch: 'feature/oidc-context' }),
+          };
+        }
         if (url.startsWith('https://token.actions.githubusercontent.com/id-token')) {
           return {
             ok: true,
@@ -169,12 +249,15 @@ test('run exchanges GitHub OIDC for token when app_token is missing', async () =
     }
   }
 
-  assert.equal(calls.length, 2);
-  assert.match(calls[0].url, /audience=invisirisk-oidc-validator/);
-  assert.equal(calls[0].options.headers.Authorization, 'Bearer github-request-token');
-  assert.equal(calls[1].url, 'https://ir.example/oidc/exchange');
-  assert.deepEqual(JSON.parse(calls[1].options.body), {
+  assert.equal(calls.length, 3);
+  assert.equal(calls[0].options.headers.Authorization, 'Bearer github-api-token');
+  assert.match(calls[1].url, /audience=invisirisk-oidc-validator/);
+  assert.equal(calls[1].options.headers.Authorization, 'Bearer github-request-token');
+  assert.equal(calls[2].url, 'https://ir.example/oidc/exchange');
+  assert.deepEqual(JSON.parse(calls[2].options.body), {
     oidc_token: 'github-oidc-token',
+    branch: 'feature/oidc-context',
+    workflow_id: 12345,
   });
   assert.equal(execCall[2].env.IR_TOKEN, 'exchanged-runtime-token');
   assert.match(fs.readFileSync(githubEnvFile, 'utf8'), /IR_TOKEN=exchanged-runtime-token/);
@@ -219,7 +302,7 @@ test('run throws helpful error when api_url is missing', async () => {
   }, /Missing required input: api_url/);
 });
 
-test('run throws helpful error when GitHub OIDC environment is unavailable', async () => {
+test('run throws helpful error when GitHub workflow context is unavailable', async () => {
   await assert.rejects(async () => {
     await run({
       inputReader: (name) => {
@@ -233,16 +316,18 @@ test('run throws helpful error when GitHub OIDC environment is unavailable', asy
       },
       envSource: {},
     });
-  }, /GitHub OIDC is unavailable/);
+  }, /requires permission to read this workflow run.*actions: read/);
 });
 
-test('exchangeOidcForToken includes exchange failure detail', async () => {
+test('exchangeOidcForToken explains an inactive project connection without exposing backend detail', async () => {
   let callCount = 0;
 
   await assert.rejects(async () => {
     await exchangeOidcForToken({
       exchangeUrl: 'https://ir.example/oidc/exchange',
       audience: 'invisirisk-oidc-validator',
+      branch: 'develop',
+      workflowId: 12345,
       envSource: {
         ACTIONS_ID_TOKEN_REQUEST_URL: 'https://token.actions.githubusercontent.com/id-token',
         ACTIONS_ID_TOKEN_REQUEST_TOKEN: 'github-request-token',
@@ -263,16 +348,23 @@ test('exchangeOidcForToken includes exchange failure detail', async () => {
         };
       },
     });
-  }, /OIDC token exchange failed with status 403: repository is not mapped to project/);
+  }, (error) => {
+    assert.match(error.message, /not connected to an active PSE project/);
+    assert.doesNotMatch(error.message, /repository is not mapped to project/);
+    assert.doesNotMatch(error.message, /403/);
+    return true;
+  });
 });
 
-test('exchangeOidcForToken rejects Lambda proxy error response', async () => {
+test('exchangeOidcForToken normalizes a Lambda proxy error for the user', async () => {
   let callCount = 0;
 
   await assert.rejects(async () => {
     await exchangeOidcForToken({
       exchangeUrl: 'https://ir.example/oidc/exchange',
       audience: 'invisirisk-oidc-validator',
+      branch: 'develop',
+      workflowId: 12345,
       envSource: {
         ACTIONS_ID_TOKEN_REQUEST_URL: 'https://token.actions.githubusercontent.com/id-token',
         ACTIONS_ID_TOKEN_REQUEST_TOKEN: 'github-request-token',
@@ -299,16 +391,23 @@ test('exchangeOidcForToken rejects Lambda proxy error response', async () => {
         };
       },
     });
-  }, /OIDC token exchange failed with status 403: No active repository mapping found for repository/);
+  }, (error) => {
+    assert.match(error.message, /not connected to an active PSE project/);
+    assert.doesNotMatch(error.message, /No active repository mapping/);
+    assert.doesNotMatch(error.message, /403/);
+    return true;
+  });
 });
 
-test('exchangeOidcForToken rejects non-JSON exchange response', async () => {
+test('exchangeOidcForToken hides malformed response details from the user', async () => {
   let callCount = 0;
 
   await assert.rejects(async () => {
     await exchangeOidcForToken({
       exchangeUrl: 'https://ir.example/oidc/exchange',
       audience: 'invisirisk-oidc-validator',
+      branch: 'develop',
+      workflowId: 12345,
       envSource: {
         ACTIONS_ID_TOKEN_REQUEST_URL: 'https://token.actions.githubusercontent.com/id-token',
         ACTIONS_ID_TOKEN_REQUEST_TOKEN: 'github-request-token',
@@ -331,5 +430,5 @@ test('exchangeOidcForToken rejects non-JSON exchange response', async () => {
         };
       },
     });
-  }, /OIDC token exchange returned a non-JSON response/);
+  }, /unexpected secure sign-in response/);
 });
