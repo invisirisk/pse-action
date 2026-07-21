@@ -4,7 +4,7 @@ const { buildEnv, getInput, getState, handleDeprecatedInputs, pick } = require('
 function run(spawn = spawnSync, stdout = process.stdout, stderr = process.stderr) {
   const env = buildEnv({
     IR_URL: pick(getInput('api_url'), process.env.PSE_API_URL),
-    IR_TOKEN: pick(getInput('app_token'), process.env.PSE_APP_TOKEN),
+    IR_TOKEN: pick(getInput('app_token'), process.env.IR_TOKEN, process.env.PSE_APP_TOKEN, process.env.APP_TOKEN),
     SEND_JOB_STATUS: getInput('collect_job_status') === 'false' ? 'false' : 'true',
   });
 
