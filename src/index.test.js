@@ -65,6 +65,50 @@ test('requestGithubWorkflowContext rejects runs without head_branch', async () =
   }, /could not identify a branch.*tag or without a branch are not supported/);
 });
 
+test('requestGithubWorkflowContext includes the GitHub HTTP status in request errors', async () => {
+  await assert.rejects(async () => {
+    await requestGithubWorkflowContext({
+      githubToken: 'github-api-token',
+      envSource: {
+        GITHUB_REPOSITORY: 'invisirisk/pse-action',
+        GITHUB_RUN_ID: '987654',
+      },
+      fetchImpl: async () => ({ ok: false, status: 403 }),
+    });
+  }, /HTTP status 403/);
+});
+
+test('requestGithubWorkflowContext logs request exceptions only at debug level', async () => {
+  const messages = [];
+  const originalLog = console.log;
+  console.log = (message) => messages.push(message);
+
+  try {
+    for (const debugEnabled of [false, true]) {
+      await assert.rejects(async () => {
+        await requestGithubWorkflowContext({
+          githubToken: 'github-api-token',
+          envSource: {
+            GITHUB_REPOSITORY: 'invisirisk/pse-action',
+            GITHUB_RUN_ID: '987654',
+          },
+          fetchImpl: async () => {
+            throw new Error('socket closed unexpectedly');
+          },
+          debugEnabled,
+        });
+      }, /could not reach GitHub/);
+    }
+  } finally {
+    console.log = originalLog;
+  }
+
+  assert.equal(
+    messages.filter((message) => message === '::debug::GitHub workflow context request failed: socket closed unexpectedly').length,
+    1,
+  );
+});
+
 test('requestGithubOidcToken explains how to enable secure sign-in', async () => {
   await assert.rejects(async () => {
     await requestGithubOidcToken('invisirisk-oidc-validator', {});
@@ -83,9 +127,9 @@ test('reportFailure creates a clear GitHub error annotation without a public err
   reportFailure(oidcFailure, (message) => messages.push(message));
 
   assert.equal(messages.length, 1);
-  assert.match(messages[0], /^::error title=PSE requires secure sign-in access::/);
+  assert.match(messages[0], /^::error title=BAF requires secure sign-in access::/);
   assert.match(messages[0], /Add "id-token: write" to the workflow permissions/);
-  assert.doesNotMatch(messages[0], /PSE-OIDC|Reference:/);
+  assert.doesNotMatch(messages[0], /BAF-OIDC|Reference:/);
 });
 
 test('runBootstrap sets mode to native for docker-intercept or missing MODE', () => {
@@ -189,6 +233,34 @@ test('run resolves token from env fallback', async () => {
   assert.equal(execCall[2].env.IR_TOKEN, 'fallback-token');
   assert.equal(execCall[2].env.PSE_IMAGE_TAG, 'latest');
   assert.equal(execCall[2].env.GITHUB_TOKEN, 'default-gh-token');
+});
+
+test('run logs use of a provided API token only at debug level', async () => {
+  const messages = [];
+  const originalLog = console.log;
+  console.log = (message) => messages.push(message);
+
+  try {
+    for (const debugEnabled of ['false', 'true']) {
+      await run({
+        execFile: () => {},
+        inputReader: (name) => ({
+          api_url: 'https://ir.example',
+          app_token: 'provided-token',
+          debug: debugEnabled,
+          mode: 'native',
+        })[name] || '',
+        envSource: {},
+      });
+    }
+  } finally {
+    console.log = originalLog;
+  }
+
+  assert.equal(
+    messages.filter((message) => message === '::debug::Using provided API token.').length,
+    1,
+  );
 });
 
 test('run exchanges GitHub OIDC for token when app_token is missing', async () => {
@@ -349,9 +421,9 @@ test('exchangeOidcForToken explains an inactive project connection without expos
       },
     });
   }, (error) => {
-    assert.match(error.message, /not connected to an active PSE project/);
+    assert.match(error.message, /not connected to an active BAF project/);
     assert.doesNotMatch(error.message, /repository is not mapped to project/);
-    assert.doesNotMatch(error.message, /403/);
+    assert.match(error.message, /HTTP status 403/);
     return true;
   });
 });
@@ -392,9 +464,9 @@ test('exchangeOidcForToken normalizes a Lambda proxy error for the user', async 
       },
     });
   }, (error) => {
-    assert.match(error.message, /not connected to an active PSE project/);
+    assert.match(error.message, /not connected to an active BAF project/);
     assert.doesNotMatch(error.message, /No active repository mapping/);
-    assert.doesNotMatch(error.message, /403/);
+    assert.match(error.message, /HTTP status 403/);
     return true;
   });
 });
