@@ -1,6 +1,10 @@
 const { execFileSync } = require('child_process');
 const { buildEnv, getInput, handleDeprecatedInputs, pick, saveState } = require('./utils');
 
+function isUnevaluatedExpression(value) {
+  return typeof value === 'string' && value.includes('${{');
+}
+
 function runBootstrap(env, execFile = execFileSync) {
   const bootstrapUrl = new URL('/ingestionapi/v1/pse/bootstrap', env.IR_URL);
   bootstrapUrl.search = new URLSearchParams({
@@ -72,6 +76,14 @@ function buildRuntimeEnv(inputReader = getInput, envSource = process.env) {
   const githubToken = pick(inputReader('github_token'), envSource.GITHUB_TOKEN);
   if (githubToken) {
     env.GITHUB_TOKEN = githubToken;
+  }
+
+  const inputJobName = pick(inputReader('job_name'));
+  const jobName = inputJobName && !isUnevaluatedExpression(inputJobName)
+    ? inputJobName
+    : pick(envSource.JOB_NAME, envSource.GITHUB_JOB);
+  if (jobName) {
+    env.JOB_NAME = jobName;
   }
 
   return env;

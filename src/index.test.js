@@ -147,3 +147,43 @@ test('run throws helpful error when token is missing', () => {
     });
   }, /Missing required input: app_token/);
 });
+
+test('run passes job_name through to bootstrap environment', () => {
+  const inputs = {
+    api_url: 'https://ir.example',
+    app_token: 'token',
+    github_token: '',
+    job_name: 'build {"os":"ubuntu-latest","node":"20"}',
+  };
+  let execCall;
+
+  run({
+    execFile: (...args) => {
+      execCall = args;
+    },
+    inputReader: (name) => inputs[name] || '',
+    envSource: { GITHUB_TOKEN: 'default-gh-token', GITHUB_JOB: 'build' },
+  });
+
+  assert.equal(execCall[2].env.JOB_NAME, 'build {"os":"ubuntu-latest","node":"20"}');
+});
+
+test('run falls back to GITHUB_JOB when job_name expression is not evaluated', () => {
+  const inputs = {
+    api_url: 'https://ir.example',
+    app_token: 'token',
+    github_token: '',
+    job_name: '${{ github.job }}${{ toJson(matrix) }}',
+  };
+  let execCall;
+
+  run({
+    execFile: (...args) => {
+      execCall = args;
+    },
+    inputReader: (name) => inputs[name] || '',
+    envSource: { GITHUB_TOKEN: 'default-gh-token', GITHUB_JOB: 'build' },
+  });
+
+  assert.equal(execCall[2].env.JOB_NAME, 'build');
+});
