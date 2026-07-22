@@ -17,6 +17,10 @@ inputs:
     description: 'GitHub token used to resolve the current numeric workflow ID. Auto-populated; OIDC mode requires actions: read permission.'
     required: false
     default: ${{ github.token }}
+  job_name:
+    description: 'GitHub Actions job label to attach to the scan. Defaults to the job id and appends matrix values when present.'
+    required: false
+    default: "${{ github.job }}${{ toJson(matrix) != '{}' && format(' {0}', toJson(matrix)) || '' }}"
   debug:
     description: 'Enable debug mode for verbose logging'
     required: false
