@@ -313,11 +313,18 @@ function matrixIdentity(value) {
 
 function runBootstrap(env, execFile = execFileSync) {
   const bootstrapUrl = new URL('/ingestionapi/v1/pse/bootstrap', env.IR_URL);
-  bootstrapUrl.search = new URLSearchParams({
+  const bootstrapParams = new URLSearchParams({
     //? for backwards compatibility, if MODE is `docker-intercept`, we want to use native mode for the bootstrap script
     mode: !env.MODE || env.MODE === "docker-intercept" ? "native" : env.MODE,
     runner: env.RUNNER || 'github',
-  }).toString();
+  });
+  if (env.PSE_JOB_IDENTIFIER) {
+    bootstrapParams.set('job_identifier', env.PSE_JOB_IDENTIFIER);
+  }
+  if (env.PSE_JOB_LABEL) {
+    bootstrapParams.set('job_label', env.PSE_JOB_LABEL);
+  }
+  bootstrapUrl.search = bootstrapParams.toString();
 
   env.BOOTSTRAP_URL = bootstrapUrl.toString();
 
@@ -379,20 +386,26 @@ function buildRuntimeEnv(inputReader = getInput, envSource = process.env) {
     env.GITHUB_TOKEN = githubToken;
   }
 
-  const inputJobName = pick(inputReader('job_name'));
-  const baseJobName = inputJobName && !isUnevaluatedExpression(inputJobName)
-    ? inputJobName
-    : pick(envSource.JOB_NAME, envSource.GITHUB_JOB);
+  const baseJobLabel = pick(envSource.GITHUB_JOB);
   const matrix = matrixIdentity(inputReader('matrix_obj'));
-  const jobName = [baseJobName, matrix.scanLabel].filter(Boolean).join(' ');
-  const jobExternalId = [pick(envSource.JOB_EXTERNAL_ID, envSource.GITHUB_JOB, baseJobName), matrix.scanKey]
-    .filter(Boolean)
-    .join(' ');
-  if (jobName) {
-    env.JOB_NAME = jobName;
+  const derivedJobLabel = [baseJobLabel, matrix.scanLabel].filter(Boolean).join(' ');
+  const inputJobLabel = pick(inputReader('job_label'));
+  const jobLabel = inputJobLabel && !isUnevaluatedExpression(inputJobLabel)
+    ? inputJobLabel
+    : derivedJobLabel;
+
+  const baseJobIdentifier = baseJobLabel;
+  const derivedJobIdentifier = [baseJobIdentifier, matrix.scanKey].filter(Boolean).join(' ');
+  const inputJobIdentifier = pick(inputReader('job_identifier'));
+  const jobIdentifier = inputJobIdentifier && !isUnevaluatedExpression(inputJobIdentifier)
+    ? inputJobIdentifier
+    : derivedJobIdentifier;
+
+  if (jobLabel) {
+    env.PSE_JOB_LABEL = jobLabel;
   }
-  if (jobExternalId) {
-    env.JOB_EXTERNAL_ID = jobExternalId;
+  if (jobIdentifier) {
+    env.PSE_JOB_IDENTIFIER = jobIdentifier;
   }
 
   return env;

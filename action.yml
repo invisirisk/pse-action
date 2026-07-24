@@ -17,10 +17,12 @@ inputs:
     description: 'GitHub token used to resolve the current numeric workflow ID. Auto-populated; OIDC mode requires actions: read permission.'
     required: false
     default: ${{ github.token }}
-  job_name:
-    description: 'GitHub Actions job label to attach to the scan. Defaults to the stable job id.'
+  job_identifier:
+    description: 'Stable job identifier used to compare the same job across runs. Derived automatically when omitted.'
     required: false
-    default: "${{ github.job }}"
+  job_label:
+    description: 'Readable job label shown for the scan. Derived automatically when omitted.'
+    required: false
   matrix_obj:
     description: 'GitHub Actions matrix metadata used to distinguish matrix jobs.'
     required: false

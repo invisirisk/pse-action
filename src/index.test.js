@@ -506,12 +506,11 @@ test('exchangeOidcForToken hides malformed response details from the user', asyn
   }, /unexpected secure sign-in response/);
 });
 
-test('run passes job_name through to bootstrap environment', () => {
+test('run derives generic matrix job parameters for bootstrap', () => {
   const inputs = {
     api_url: 'https://ir.example',
     app_token: 'token',
     github_token: '',
-    job_name: 'build',
     matrix_obj: JSON.stringify({ name: 'ubuntu-2204', base_image: 'ubuntu:22.04' }, null, 2),
   };
   let execCall;
@@ -524,8 +523,37 @@ test('run passes job_name through to bootstrap environment', () => {
     envSource: { GITHUB_TOKEN: 'default-gh-token', GITHUB_JOB: 'build' },
   });
 
-  assert.equal(execCall[2].env.JOB_NAME, 'build ubuntu-2204');
-  assert.match(execCall[2].env.JOB_EXTERNAL_ID, /^build matrix-[0-9a-f]{8}$/);
+  assert.equal(execCall[2].env.PSE_JOB_LABEL, 'build ubuntu-2204');
+  assert.match(execCall[2].env.PSE_JOB_IDENTIFIER, /^build matrix-[0-9a-f]{8}$/);
+  const bootstrapUrl = new URL(execCall[2].env.BOOTSTRAP_URL);
+  assert.equal(bootstrapUrl.searchParams.get('job_label'), 'build ubuntu-2204');
+  assert.equal(bootstrapUrl.searchParams.get('job_identifier'), execCall[2].env.PSE_JOB_IDENTIFIER);
+});
+
+test('run forwards explicit generic job parameters without matrix decoration', () => {
+  const inputs = {
+    api_url: 'https://ir.example',
+    app_token: 'token',
+    github_token: '',
+    job_identifier: 'customer-build-linux',
+    job_label: 'Customer Build Linux',
+    matrix_obj: JSON.stringify({ name: 'ubuntu-2204' }),
+  };
+  let execCall;
+
+  run({
+    execFile: (...args) => {
+      execCall = args;
+    },
+    inputReader: (name) => inputs[name] || '',
+    envSource: { GITHUB_TOKEN: 'default-gh-token', GITHUB_JOB: 'build' },
+  });
+
+  assert.equal(execCall[2].env.PSE_JOB_IDENTIFIER, 'customer-build-linux');
+  assert.equal(execCall[2].env.PSE_JOB_LABEL, 'Customer Build Linux');
+  const bootstrapUrl = new URL(execCall[2].env.BOOTSTRAP_URL);
+  assert.equal(bootstrapUrl.searchParams.get('job_identifier'), 'customer-build-linux');
+  assert.equal(bootstrapUrl.searchParams.get('job_label'), 'Customer Build Linux');
 });
 
 test('matrixIdentity separates the stable scan key from the readable scan label', () => {
@@ -542,12 +570,11 @@ test('matrixIdentity separates the stable scan key from the readable scan label'
   assert.equal(fallback.scanKey, matrixIdentity(JSON.stringify({ os: 'ubuntu-latest', node: 20 })).scanKey);
 });
 
-test('run falls back to GITHUB_JOB when job_name expression is not evaluated', () => {
+test('run derives both job values from GITHUB_JOB without explicit inputs', () => {
   const inputs = {
     api_url: 'https://ir.example',
     app_token: 'token',
     github_token: '',
-    job_name: '${{ github.job }}${{ toJson(matrix) }}',
   };
   let execCall;
 
@@ -559,6 +586,6 @@ test('run falls back to GITHUB_JOB when job_name expression is not evaluated', (
     envSource: { GITHUB_TOKEN: 'default-gh-token', GITHUB_JOB: 'build' },
   });
 
-  assert.equal(execCall[2].env.JOB_NAME, 'build');
-  assert.equal(execCall[2].env.JOB_EXTERNAL_ID, 'build');
+  assert.equal(execCall[2].env.PSE_JOB_LABEL, 'build');
+  assert.equal(execCall[2].env.PSE_JOB_IDENTIFIER, 'build');
 });
