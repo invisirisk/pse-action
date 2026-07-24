@@ -286,29 +286,29 @@ function isUnevaluatedExpression(value) {
   return typeof value === 'string' && value.includes('${{');
 }
 
-function matrixIdentifier(value) {
+function matrixIdentity(value) {
   const input = pick(value);
   if (!input || input === 'null' || input === '{}' || isUnevaluatedExpression(input)) {
-    return '';
+    return { scanKey: '', scanLabel: '' };
   }
 
   let matrix;
   try {
     matrix = JSON.parse(input);
   } catch {
-    return '';
+    return { scanKey: '', scanLabel: '' };
   }
   if (!matrix || typeof matrix !== 'object' || Array.isArray(matrix)) {
-    return '';
-  }
-
-  const preferred = matrix.label ?? matrix.name;
-  if (preferred !== undefined && preferred !== null && String(preferred).trim()) {
-    return String(preferred).replace(/\s+/g, ' ').trim();
+    return { scanKey: '', scanLabel: '' };
   }
 
   const hash = createHash('sha256').update(JSON.stringify(matrix)).digest('hex').slice(0, 8);
-  return `matrix-${hash}`;
+  const scanKey = 'matrix-' + hash;
+  const preferred = matrix.label ?? matrix.name;
+  const scanLabel = preferred !== undefined && preferred !== null && String(preferred).trim()
+    ? String(preferred).replace(/\s+/g, ' ').trim()
+    : scanKey;
+  return { scanKey, scanLabel };
 }
 
 function runBootstrap(env, execFile = execFileSync) {
@@ -383,10 +383,16 @@ function buildRuntimeEnv(inputReader = getInput, envSource = process.env) {
   const baseJobName = inputJobName && !isUnevaluatedExpression(inputJobName)
     ? inputJobName
     : pick(envSource.JOB_NAME, envSource.GITHUB_JOB);
-  const matrixName = matrixIdentifier(inputReader('matrix_obj'));
-  const jobName = [baseJobName, matrixName].filter(Boolean).join(' ');
+  const matrix = matrixIdentity(inputReader('matrix_obj'));
+  const jobName = [baseJobName, matrix.scanLabel].filter(Boolean).join(' ');
+  const jobExternalId = [pick(envSource.JOB_EXTERNAL_ID, envSource.GITHUB_JOB, baseJobName), matrix.scanKey]
+    .filter(Boolean)
+    .join(' ');
   if (jobName) {
     env.JOB_NAME = jobName;
+  }
+  if (jobExternalId) {
+    env.JOB_EXTERNAL_ID = jobExternalId;
   }
 
   return env;
@@ -452,7 +458,7 @@ module.exports = {
   buildOidcExchangeUrl,
   exchangeOidcForToken,
   extractTokenFromExchangeResponse,
-  matrixIdentifier,
+  matrixIdentity,
   requestGithubWorkflowContext,
   requestGithubOidcToken,
   reportFailure,

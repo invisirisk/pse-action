@@ -7,7 +7,7 @@ const {
   buildOidcExchangeUrl,
   exchangeOidcForToken,
   extractTokenFromExchangeResponse,
-  matrixIdentifier,
+  matrixIdentity,
   requestGithubWorkflowContext,
   requestGithubOidcToken,
   reportFailure,
@@ -525,15 +525,21 @@ test('run passes job_name through to bootstrap environment', () => {
   });
 
   assert.equal(execCall[2].env.JOB_NAME, 'build ubuntu-2204');
+  assert.match(execCall[2].env.JOB_EXTERNAL_ID, /^build matrix-[0-9a-f]{8}$/);
 });
 
-test('matrixIdentifier prefers label, then name, with a stable hash fallback', () => {
-  assert.equal(matrixIdentifier(JSON.stringify({ label: 'Linux AMD64', name: 'ubuntu-2204' })), 'Linux AMD64');
-  assert.equal(matrixIdentifier(JSON.stringify({ name: 'rockylinux-8' }, null, 2)), 'rockylinux-8');
+test('matrixIdentity separates the stable scan key from the readable scan label', () => {
+  const labeled = matrixIdentity(JSON.stringify({ label: 'Linux AMD64', name: 'ubuntu-2204' }));
+  assert.equal(labeled.scanLabel, 'Linux AMD64');
+  assert.match(labeled.scanKey, /^matrix-[0-9a-f]{8}$/);
 
-  const fallback = matrixIdentifier(JSON.stringify({ os: 'ubuntu-latest', node: 20 }));
-  assert.match(fallback, /^matrix-[0-9a-f]{8}$/);
-  assert.equal(fallback, matrixIdentifier(JSON.stringify({ os: 'ubuntu-latest', node: 20 })));
+  const named = matrixIdentity(JSON.stringify({ name: 'rockylinux-8' }, null, 2));
+  assert.equal(named.scanLabel, 'rockylinux-8');
+  assert.match(named.scanKey, /^matrix-[0-9a-f]{8}$/);
+
+  const fallback = matrixIdentity(JSON.stringify({ os: 'ubuntu-latest', node: 20 }));
+  assert.equal(fallback.scanLabel, fallback.scanKey);
+  assert.equal(fallback.scanKey, matrixIdentity(JSON.stringify({ os: 'ubuntu-latest', node: 20 })).scanKey);
 });
 
 test('run falls back to GITHUB_JOB when job_name expression is not evaluated', () => {
@@ -554,4 +560,5 @@ test('run falls back to GITHUB_JOB when job_name expression is not evaluated', (
   });
 
   assert.equal(execCall[2].env.JOB_NAME, 'build');
+  assert.equal(execCall[2].env.JOB_EXTERNAL_ID, 'build');
 });
