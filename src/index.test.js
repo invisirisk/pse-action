@@ -7,6 +7,7 @@ const {
   buildOidcExchangeUrl,
   exchangeOidcForToken,
   extractTokenFromExchangeResponse,
+  matrixIdentifier,
   requestGithubWorkflowContext,
   requestGithubOidcToken,
   reportFailure,
@@ -510,7 +511,8 @@ test('run passes job_name through to bootstrap environment', () => {
     api_url: 'https://ir.example',
     app_token: 'token',
     github_token: '',
-    job_name: 'build {"os":"ubuntu-latest","node":"20"}',
+    job_name: 'build',
+    matrix_obj: JSON.stringify({ name: 'ubuntu-2204', base_image: 'ubuntu:22.04' }, null, 2),
   };
   let execCall;
 
@@ -522,7 +524,16 @@ test('run passes job_name through to bootstrap environment', () => {
     envSource: { GITHUB_TOKEN: 'default-gh-token', GITHUB_JOB: 'build' },
   });
 
-  assert.equal(execCall[2].env.JOB_NAME, 'build {"os":"ubuntu-latest","node":"20"}');
+  assert.equal(execCall[2].env.JOB_NAME, 'build ubuntu-2204');
+});
+
+test('matrixIdentifier prefers label, then name, with a stable hash fallback', () => {
+  assert.equal(matrixIdentifier(JSON.stringify({ label: 'Linux AMD64', name: 'ubuntu-2204' })), 'Linux AMD64');
+  assert.equal(matrixIdentifier(JSON.stringify({ name: 'rockylinux-8' }, null, 2)), 'rockylinux-8');
+
+  const fallback = matrixIdentifier(JSON.stringify({ os: 'ubuntu-latest', node: 20 }));
+  assert.match(fallback, /^matrix-[0-9a-f]{8}$/);
+  assert.equal(fallback, matrixIdentifier(JSON.stringify({ os: 'ubuntu-latest', node: 20 })));
 });
 
 test('run falls back to GITHUB_JOB when job_name expression is not evaluated', () => {

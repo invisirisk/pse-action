@@ -1,4 +1,5 @@
 const { execFileSync } = require('child_process');
+const { createHash } = require('crypto');
 const { getRequestErrorMessage, OIDC_MESSAGES } = require('./messages');
 const { buildEnv, exportVariable, getInput, handleDeprecatedInputs, maskSecret, pick, saveState } = require('./utils');
 
@@ -285,6 +286,31 @@ function isUnevaluatedExpression(value) {
   return typeof value === 'string' && value.includes('${{');
 }
 
+function matrixIdentifier(value) {
+  const input = pick(value);
+  if (!input || input === 'null' || input === '{}' || isUnevaluatedExpression(input)) {
+    return '';
+  }
+
+  let matrix;
+  try {
+    matrix = JSON.parse(input);
+  } catch {
+    return '';
+  }
+  if (!matrix || typeof matrix !== 'object' || Array.isArray(matrix)) {
+    return '';
+  }
+
+  const preferred = matrix.label ?? matrix.name;
+  if (preferred !== undefined && preferred !== null && String(preferred).trim()) {
+    return String(preferred).replace(/\s+/g, ' ').trim();
+  }
+
+  const hash = createHash('sha256').update(JSON.stringify(matrix)).digest('hex').slice(0, 8);
+  return `matrix-${hash}`;
+}
+
 function runBootstrap(env, execFile = execFileSync) {
   const bootstrapUrl = new URL('/ingestionapi/v1/pse/bootstrap', env.IR_URL);
   bootstrapUrl.search = new URLSearchParams({
@@ -354,9 +380,11 @@ function buildRuntimeEnv(inputReader = getInput, envSource = process.env) {
   }
 
   const inputJobName = pick(inputReader('job_name'));
-  const jobName = inputJobName && !isUnevaluatedExpression(inputJobName)
+  const baseJobName = inputJobName && !isUnevaluatedExpression(inputJobName)
     ? inputJobName
     : pick(envSource.JOB_NAME, envSource.GITHUB_JOB);
+  const matrixName = matrixIdentifier(inputReader('matrix_obj'));
+  const jobName = [baseJobName, matrixName].filter(Boolean).join(' ');
   if (jobName) {
     env.JOB_NAME = jobName;
   }
@@ -424,6 +452,7 @@ module.exports = {
   buildOidcExchangeUrl,
   exchangeOidcForToken,
   extractTokenFromExchangeResponse,
+  matrixIdentifier,
   requestGithubWorkflowContext,
   requestGithubOidcToken,
   reportFailure,
