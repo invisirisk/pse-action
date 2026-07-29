@@ -1,4 +1,5 @@
 const { execFileSync } = require('child_process');
+const { createHash } = require('crypto');
 const { getRequestErrorMessage, OIDC_MESSAGES } = require('./messages');
 const { buildEnv, exportVariable, getInput, handleDeprecatedInputs, maskSecret, pick, saveState } = require('./utils');
 
@@ -281,13 +282,49 @@ async function exchangeOidcForToken({
   return token;
 }
 
+function isUnevaluatedExpression(value) {
+  return typeof value === 'string' && value.includes('${{');
+}
+
+function matrixIdentity(value) {
+  const input = pick(value);
+  if (!input || input === 'null' || input === '{}' || isUnevaluatedExpression(input)) {
+    return { scanKey: '', scanLabel: '' };
+  }
+
+  let matrix;
+  try {
+    matrix = JSON.parse(input);
+  } catch {
+    return { scanKey: '', scanLabel: '' };
+  }
+  if (!matrix || typeof matrix !== 'object' || Array.isArray(matrix)) {
+    return { scanKey: '', scanLabel: '' };
+  }
+
+  const hash = createHash('sha256').update(JSON.stringify(matrix)).digest('hex').slice(0, 8);
+  const scanKey = 'matrix-' + hash;
+  const preferred = matrix.label ?? matrix.name;
+  const scanLabel = preferred !== undefined && preferred !== null && String(preferred).trim()
+    ? String(preferred).replace(/\s+/g, ' ').trim()
+    : scanKey;
+  return { scanKey, scanLabel };
+}
+
 function runBootstrap(env, execFile = execFileSync) {
   const bootstrapUrl = new URL('/ingestionapi/v1/pse/bootstrap', env.IR_URL);
-  bootstrapUrl.search = new URLSearchParams({
+  const bootstrapParams = new URLSearchParams({
     //? for backwards compatibility, if MODE is `docker-intercept`, we want to use native mode for the bootstrap script
     mode: !env.MODE || env.MODE === "docker-intercept" ? "native" : env.MODE,
     runner: env.RUNNER || 'github',
-  }).toString();
+  });
+  if (env.PSE_JOB_IDENTIFIER) {
+    bootstrapParams.set('job_identifier', env.PSE_JOB_IDENTIFIER);
+  }
+  if (env.PSE_JOB_LABEL) {
+    bootstrapParams.set('job_label', env.PSE_JOB_LABEL);
+  }
+  bootstrapUrl.search = bootstrapParams.toString();
 
   env.BOOTSTRAP_URL = bootstrapUrl.toString();
 
@@ -347,6 +384,28 @@ function buildRuntimeEnv(inputReader = getInput, envSource = process.env) {
   const githubToken = pick(inputReader('github_token'), envSource.GITHUB_TOKEN);
   if (githubToken) {
     env.GITHUB_TOKEN = githubToken;
+  }
+
+  const baseJobLabel = pick(envSource.GITHUB_JOB);
+  const matrix = matrixIdentity(inputReader('matrix_obj'));
+  const derivedJobLabel = [baseJobLabel, matrix.scanLabel].filter(Boolean).join(' ');
+  const inputJobLabel = pick(inputReader('job_label'));
+  const jobLabel = inputJobLabel && !isUnevaluatedExpression(inputJobLabel)
+    ? inputJobLabel
+    : derivedJobLabel;
+
+  const baseJobIdentifier = baseJobLabel;
+  const derivedJobIdentifier = [baseJobIdentifier, matrix.scanKey].filter(Boolean).join(' ');
+  const inputJobIdentifier = pick(inputReader('job_identifier'));
+  const jobIdentifier = inputJobIdentifier && !isUnevaluatedExpression(inputJobIdentifier)
+    ? inputJobIdentifier
+    : derivedJobIdentifier;
+
+  if (jobLabel) {
+    env.PSE_JOB_LABEL = jobLabel;
+  }
+  if (jobIdentifier) {
+    env.PSE_JOB_IDENTIFIER = jobIdentifier;
   }
 
   return env;
@@ -412,6 +471,7 @@ module.exports = {
   buildOidcExchangeUrl,
   exchangeOidcForToken,
   extractTokenFromExchangeResponse,
+  matrixIdentity,
   requestGithubWorkflowContext,
   requestGithubOidcToken,
   reportFailure,

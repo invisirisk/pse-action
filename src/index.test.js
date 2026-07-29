@@ -7,6 +7,7 @@ const {
   buildOidcExchangeUrl,
   exchangeOidcForToken,
   extractTokenFromExchangeResponse,
+  matrixIdentity,
   requestGithubWorkflowContext,
   requestGithubOidcToken,
   reportFailure,
@@ -503,4 +504,88 @@ test('exchangeOidcForToken hides malformed response details from the user', asyn
       },
     });
   }, /unexpected secure sign-in response/);
+});
+
+test('run derives generic matrix job parameters for bootstrap', () => {
+  const inputs = {
+    api_url: 'https://ir.example',
+    app_token: 'token',
+    github_token: '',
+    matrix_obj: JSON.stringify({ name: 'ubuntu-2204', base_image: 'ubuntu:22.04' }, null, 2),
+  };
+  let execCall;
+
+  run({
+    execFile: (...args) => {
+      execCall = args;
+    },
+    inputReader: (name) => inputs[name] || '',
+    envSource: { GITHUB_TOKEN: 'default-gh-token', GITHUB_JOB: 'build' },
+  });
+
+  assert.equal(execCall[2].env.PSE_JOB_LABEL, 'build ubuntu-2204');
+  assert.match(execCall[2].env.PSE_JOB_IDENTIFIER, /^build matrix-[0-9a-f]{8}$/);
+  const bootstrapUrl = new URL(execCall[2].env.BOOTSTRAP_URL);
+  assert.equal(bootstrapUrl.searchParams.get('job_label'), 'build ubuntu-2204');
+  assert.equal(bootstrapUrl.searchParams.get('job_identifier'), execCall[2].env.PSE_JOB_IDENTIFIER);
+});
+
+test('run forwards explicit generic job parameters without matrix decoration', () => {
+  const inputs = {
+    api_url: 'https://ir.example',
+    app_token: 'token',
+    github_token: '',
+    job_identifier: 'customer-build-linux',
+    job_label: 'Customer Build Linux',
+    matrix_obj: JSON.stringify({ name: 'ubuntu-2204' }),
+  };
+  let execCall;
+
+  run({
+    execFile: (...args) => {
+      execCall = args;
+    },
+    inputReader: (name) => inputs[name] || '',
+    envSource: { GITHUB_TOKEN: 'default-gh-token', GITHUB_JOB: 'build' },
+  });
+
+  assert.equal(execCall[2].env.PSE_JOB_IDENTIFIER, 'customer-build-linux');
+  assert.equal(execCall[2].env.PSE_JOB_LABEL, 'Customer Build Linux');
+  const bootstrapUrl = new URL(execCall[2].env.BOOTSTRAP_URL);
+  assert.equal(bootstrapUrl.searchParams.get('job_identifier'), 'customer-build-linux');
+  assert.equal(bootstrapUrl.searchParams.get('job_label'), 'Customer Build Linux');
+});
+
+test('matrixIdentity separates the stable scan key from the readable scan label', () => {
+  const labeled = matrixIdentity(JSON.stringify({ label: 'Linux AMD64', name: 'ubuntu-2204' }));
+  assert.equal(labeled.scanLabel, 'Linux AMD64');
+  assert.match(labeled.scanKey, /^matrix-[0-9a-f]{8}$/);
+
+  const named = matrixIdentity(JSON.stringify({ name: 'rockylinux-8' }, null, 2));
+  assert.equal(named.scanLabel, 'rockylinux-8');
+  assert.match(named.scanKey, /^matrix-[0-9a-f]{8}$/);
+
+  const fallback = matrixIdentity(JSON.stringify({ os: 'ubuntu-latest', node: 20 }));
+  assert.equal(fallback.scanLabel, fallback.scanKey);
+  assert.equal(fallback.scanKey, matrixIdentity(JSON.stringify({ os: 'ubuntu-latest', node: 20 })).scanKey);
+});
+
+test('run derives both job values from GITHUB_JOB without explicit inputs', () => {
+  const inputs = {
+    api_url: 'https://ir.example',
+    app_token: 'token',
+    github_token: '',
+  };
+  let execCall;
+
+  run({
+    execFile: (...args) => {
+      execCall = args;
+    },
+    inputReader: (name) => inputs[name] || '',
+    envSource: { GITHUB_TOKEN: 'default-gh-token', GITHUB_JOB: 'build' },
+  });
+
+  assert.equal(execCall[2].env.PSE_JOB_LABEL, 'build');
+  assert.equal(execCall[2].env.PSE_JOB_IDENTIFIER, 'build');
 });
